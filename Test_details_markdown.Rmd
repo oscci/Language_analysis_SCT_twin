@@ -1,0 +1,185 @@
+---
+title: "Language test scores"
+author: "Dorothy Bishop"
+date: "16/09/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Language, literacy and neurocognitive assessments
+We aim to combine twin data from this study with that from a previous study (Bishop, D. V. M., McDonald, D., Bird, S., & Hayiou-Thomas, M. E. 2009. Children who read accurately despite language impairment: Who are they and how do they do it? Child Development, 80, 593-605) and so the test battery overlaps substantially with the one used previously. 
+
+The battery had been selected with the goal of assessing expressive and receptive language, reading and nonverbal ability in a single test session lasting no longer than two hours. Tests were selected as being suitable for the age range under study with established norms, reliability and validity. 
+
+As noted below, although all tests had norms in the age range 6 to 12 years (corresponding to the twin sample), some tests lacked norms for older and/or younger children, some of whom were included in the sample with sex chromosome trisomies. We document below how we extrapolated norms for some tests.
+
+(<span style="color:red">need to check manuals for reliability of all subtests</span>).
+
+1. <b>Verbal Comprehension</b> subtest from Woodcock Johnson III Tests of Cognitive Abilities (Woodcock, McGrew, & Mather, 2007)  
+ 
+  In this test, up to six brightly coloured pictures of complex scenes are presented to the child. For each scene, the child responds to a series of commands presented from an audio file, such as 'Point to the monkey before you point to the tallest tree'. A beep occurs after each command and the child is instructed not to respond before they hear the beep. No repetitions are allowed. 
+   
+  The test has a basal and ceiling, with recommended starting points based on age and ability, and stopping points determined by accuracy. Each item is scored 1 for a correct response and zero otherwise. 
+ Raw scores are converted to age-scaled scores with mean of 100 and SD of 15, using automated software provided by the test publisher.  
+<span style="color:red">Need to check manual re age range, reliability, scaled scores</span>
+
+2. <b>Sentence Repetition</b> from NEPSY: A Developmental Neuropsychological Assessment (Korkman, Kirk, & Kemp, 1998)
+
+The child repeats sentences spoken by the examiner, that increase in length and complexity as the test proceeds. There is a basal and ceiling, so the start point is determined by age, and testing stops after a given number of zero responses.
+
+Items are scored 2 if fully correct verbatim recall, 1 if there are up to two errors, and 0 if more than 2 errors.
+
+Norms are available for the age range <span style="color:red">5;0</span> to 12;11 to convert raw scores to scaled scores with a mean of 10 and SD of 3. For older children, norms were extrapolated as described below.
+
+3. <b>Repetition of Nonsense Words</b> from NEPSY
+The child repeats nonsense words heard over headphones from an audio tape. We recorded our own version of the nonsense words in a British accent - we have previously shown typically-developing children score within expected limits when tested on this version (<span style="color:red">need ref here!</span>). There are 13 nonsense words that range in length from 2 to 5 syllables.
+
+Scoring is according to number of syllables correct. The test was scored online, but also audio-recorded to allow the examiner to rescore if uncertain. Stable misarticulations and stress on the wrong syllable are not regarded as errors. All items are administered, but no further points are awarded after four consecutive scores of zero.(<span style="color:red">need to check we did that - can do so from raw scores on file</span>).
+
+Norms are available for the age range 5;0 to 12;11 to convert raw scores to scaled scores with a mean of 10 and SD of 3. For older children, norms were extrapolated as described below.
+
+4. <b>Oromotor Sequences</b> from NEPSY
+
+The test is introduced to the child by saying "Pretend you are a machine that makes a funny noise. The machine makes tin cans and goes 'clonk clonk, clonk clonk'. Say that for me (pause for response). Now see how long you can make the machine's sound. Keep going until I tell you to stop. Begin."
+
+The child is encouraged to continue until five sequences of 'clonk clonk' have been produced. 
+
+The first eight items are repeated nonsense sounds such as 'clinkety clankety'. A further six items are tongue twister sentences such as 'Sue said she should sell shoes.'
+
+For each item, the child is encouraged to continue until five sequences have been produced. Speed is not emphasised. One point is awarded for each correct sequence.
+
+In contrast to the other NEPSY subtests, the manual does not provide conversion to standard scores, but rather allows raw scores to be converted to an ordinal scale of five percentile ranges. For compatibility with the other subtests, and to allow for extension of norms to teenagers, we used normative data to derived standard scores with mean of 10 and SD of 3, as described below.
+
+5. <b>Vocabulary</b> subtest from Wechsler Abbreviated Scale of Intelligence (WASI) (Wechsler, 1999)
+
+
+6. <b>Block Design</b> subtest from WASI
+
+7. <b>Matrices</b> subtest from WASI
+
+8. <b> Picture Naming Test</b> from Phonological Assessment Battery (PhAB) (Frederickson, Frith, & Reason, 1997)
+
+9. <b>Digit Naming Test</b> from PhAB
+
+10. <b>Sight Word Efficiency</b> subtest from Test of Word Reading Efficiency (TOWRE) (Torgesen, Wagner, & Rashotte, 1999)
+
+11. <b>Phonetic Decoding Efficiency</b> subtest from TOWRE
+
+12. <b>Neale Analysis of Reading Ability</b> - 2nd British edition (NARA-II) (Neale, 1999)
+The child reads aloud short passages of increasing difficulty and answers questions about the test. There is a basal and ceiling. The NARA-2 gives three measures: 
+* Reading Accuracy - based on number of errors in reading each passage
+* Reading Comprehension - based on number of questions correctly answered
+* Reading Rate - based on speed of reading
+
+13. <b>The Children's Communication Checklist-2 (CCC-2)</b>
+
+14. <b>The Social Responsiveness Scale (SRS)</b> 
+
+15. <b>Development and Well-Being Assessment (DAWBA)</b>
+
+16. <b>Hand preference questionnaire</b> (Groen et al, 2012).
+
+17. <b>Quantitative test of hand preference</b>
+
+
+### Extrapolation of norms
+Where the child's age falls outside the age range of the norms, we considered whether it would be possible to extrapolate the norms.
+
+For two NEPSY subtests, Repetition of Nonsense Words and Oromotor Sequences, we had data from a previous study from a group of 48 typical adults, who had taken part in a previous study (Barry, J. G., Yasin, I., & Bishop, D. V. M. 2007. Heritable risk factors associated with language impairments. Genes, Brain and Behavior, 6, 66-76). Their mean age was 44 years and all were parents of a control sample of children. We used their data to estimate the mean and SD of adults. 
+
+We illustrate the method first with NEPSY Repetition of Nonsense words. The mean aged-scaled score is 10 and SD is 3. Thus scaled scores of 7 and 13 correspond to scores that are -/+ one SD from the mean. If scores were normally distributed, then the distance in raw scores used from 7 to 10, and from 10 to 13 would be the same, but we cannot assume this to be the case, because tests often show floor and ceiling effects, so we first examine the data. 
+
+To see if extrapolation was feasible, we first made a table of raw scores that corresponded to scaled scores of 7, 10 and 13 at all aged from 8 years upwards. We also looked at scaled scores of 4 and 16 to assess whether it was reasonable to treat the intervals between mean and 1 SD and between 1 and 2 SD as equivalent.
+
+
+```{r getdata}
+myfile<-'~/Dropbox/Assessments/Nepsy for extrapolation.csv'
+mydata<-read.csv(myfile) #myfile has raw score/scaled scores equivs for NEPSY and PhAB subtests
+#Where adult data exist, the mean and scores for +/- 1 and 2 SD also added in final column
+nwrp<-data.frame(mydata[1:5,])
+myage<-seq(from=96,to=150,by=6) #age bands from norms
+myage<-c(myage,240) #add an age band for adults; assign age of 20 yr because
+#scores unlikely to improve further with age beyond then
+myscore10<-nwrp[3,2:12] #mean raw scores at scaled score 10
+myscore7<-nwrp[2,2:12]
+myscore4<-nwrp[1,2:12]
+myscore13<-nwrp[4,2:12]
+myscore16<-nwrp[5,2:12]
+plot(myage,myscore10,type="l",col="black",ylim=c(14,48),
+     xlab="Age (months)", ylab="Raw score",
+     main='NEPSY: Rep of nonsense words',sub='Black = mean; Red = +/- 1 SD, Green = +/- 2 SD' )
+lines(myage,myscore7,col="red")
+lines(myage,myscore4,col="green")
+lines(myage,myscore13,col="red")
+lines(myage,myscore16,col="green")
+abline(v=150)
+text(155,20,'Norms go to 155 mo')
+text(200,15,'Adult data used to estimate 240 mo data')
+```
+
+The plots suggest a gradual upward trend in scores from 13 to 20 years, and so we interpolated values between 155 and 240 months, using linear regression to estimate the three functions: one each for mean, +1 SD and -1 SD.
+
+From this we can compute a norms table for the interpolated range. Below we just display the first few rows of this.
+
+```{r regestimates}
+mod7<-lm(unlist(myscore7)~myage)
+mod10<-lm(unlist(myscore10)~myage)
+mod13<-lm(unlist(myscore13)~myage)
+#Make a table of norms; use values from LM to estimate mean and +/- SD 
+teennorms<-matrix(NA,nrow=48,ncol=4)
+myrow<-0
+colnames(teennorms)<-c('months','mean','SDplus','SDminus')
+for (mo in 156:203){ #ages 13 to 16;11
+  myrow<-myrow+1
+  teennorms[myrow,1]<-mo
+  teennorms[myrow,2]<-mod10$coefficients[1]+mod10$coefficients[2]*mo
+  teennorms[myrow,3]<-mod13$coefficients[1]+mod13$coefficients[2]*mo-teennorms[myrow,2]
+  teennorms[myrow,4]<-mod7$coefficients[1]+mod7$coefficients[2]*mo-teennorms[myrow,2]
+}
+head(teennorms)
+```
+
+In the next step, we read in raw data and use the new teennorms table to assign age-scaled scores to those aged 13 and over.
+
+```{r makess}
+#This code is shown for completeness: for this to work need to have the relevant
+#data file in the working directory.
+# alldata<-read.csv('SCT_data_forupdate_2017-09-15.csv',header=TRUE)
+# mynrow<-nrow(alldata)
+# 
+# for (i in 1:mynrow){
+#   if(alldata$age_at_test[i]>156){
+#     thisage<-as.integer(alldata$age_at_test[i])
+#     thisscore<-alldata$nepsy_nonword_rep_raw[i]
+#     teenrow<-thisage-155
+#     mydiff<-thisscore-teennorms[teenrow,2] #obtained score minus mean
+#     mysd<-teennorms[teenrow,3]
+#     if(mydiff<0){mysd<- -teennorms[teenrow,4]}
+#     # use upper or lower SD depending on whether above or below mean
+#     alldata$nonword_rep_ss[i]<-as.integer(10+3*mydiff/mysd)
+#     if(alldata$nonword_rep_ss[i]<1){alldata$nonword_rep_ss[i]<-1}
+#   }
+# }
+# myvars<-c(1,2,212,213)
+# checkdata<-alldata[,myvars]
+# write.table(checkdata, "check_nwrp.txt", sep=",",row.names=FALSE) 
+# Table containing ID, age, raw and scaled nonword rep scores
+```
+
+### Sanity check on new scaled scores
+We now plot all raw scores against age, showing the corresponding scaled scores in the plot.
+```{r checknuss}
+nwrp.dat<-read.table("~/Dropbox/ERCadvanced/project SCT analysis/Extrapolated_norms/check_nwrp.txt",header=T, sep=",")
+# Read in the data with original and new scaled scores
+plot(nepsy_nonword_rep_raw ~ age_at_test, data=nwrp.dat, type='n')     
+text(nwrp.dat$age_at_test,nwrp.dat$nepsy_nonword_rep_raw,label=nwrp.dat$nonword_rep_ss)
+lines(myage,myscore7,col="red")
+lines(myage,myscore4,col="green")
+lines(myage,myscore13,col="red")
+lines(myage,myscore16,col="green")
+lines(myage,myscore10,col="black")
+```
+
