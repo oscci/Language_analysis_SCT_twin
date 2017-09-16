@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+require(car)
 ```
 
 ## Language, literacy and neurocognitive assessments
@@ -85,49 +86,56 @@ The child reads aloud short passages of increasing difficulty and answers questi
 17. <b>Quantitative test of hand preference</b>
 
 
-### Extrapolation of norms
+## Extrapolation of norms
 Where the child's age falls outside the age range of the norms, we considered whether it would be possible to extrapolate the norms.
 
 For two NEPSY subtests, Repetition of Nonsense Words and Oromotor Sequences, we had data from a previous study from a group of 48 typical adults, who had taken part in a previous study (Barry, J. G., Yasin, I., & Bishop, D. V. M. 2007. Heritable risk factors associated with language impairments. Genes, Brain and Behavior, 6, 66-76). Their mean age was 44 years and all were parents of a control sample of children. We used their data to estimate the mean and SD of adults. 
 
+### NEPSY Repetition of Nonsense words
 We illustrate the method first with NEPSY Repetition of Nonsense words. The mean aged-scaled score is 10 and SD is 3. Thus scaled scores of 7 and 13 correspond to scores that are -/+ one SD from the mean. If scores were normally distributed, then the distance in raw scores used from 7 to 10, and from 10 to 13 would be the same, but we cannot assume this to be the case, because tests often show floor and ceiling effects, so we first examine the data. 
 
 To see if extrapolation was feasible, we first made a table of raw scores that corresponded to scaled scores of 7, 10 and 13 at all aged from 8 years upwards. We also looked at scaled scores of 4 and 16 to assess whether it was reasonable to treat the intervals between mean and 1 SD and between 1 and 2 SD as equivalent.
 
 
-```{r getdata}
+```{r get_nwrp_data}
 myfile<-'~/Dropbox/Assessments/Nepsy for extrapolation.csv'
 mydata<-read.csv(myfile) #myfile has raw score/scaled scores equivs for NEPSY and PhAB subtests
 #Where adult data exist, the mean and scores for +/- 1 and 2 SD also added in final column
 nwrp<-data.frame(mydata[1:5,])
-myage<-seq(from=96,to=150,by=6) #age bands from norms
-myage<-c(myage,240) #add an age band for adults; assign age of 20 yr because
+myage<-seq(from=60,to=150,by=6) #age bands from norms
+myage<-c(myage,204) #add an age band for adults; assign age of 17 yr because
 #scores unlikely to improve further with age beyond then
-myscore10<-nwrp[3,2:12] #mean raw scores at scaled score 10
-myscore7<-nwrp[2,2:12]
-myscore4<-nwrp[1,2:12]
-myscore13<-nwrp[4,2:12]
-myscore16<-nwrp[5,2:12]
-plot(myage,myscore10,type="l",col="black",ylim=c(14,48),
+myscore10<-nwrp[3,2:18] #mean raw scores at scaled score 10
+myscore7<-nwrp[2,2:18]
+myscore4<-nwrp[1,2:18]
+myscore13<-nwrp[4,2:18]
+myscore16<-nwrp[5,2:18]
+plot(myage,myscore10,type="l",col="black",ylim=c(5,48),
      xlab="Age (months)", ylab="Raw score",
      main='NEPSY: Rep of nonsense words',sub='Black = mean; Red = +/- 1 SD, Green = +/- 2 SD' )
 lines(myage,myscore7,col="red")
 lines(myage,myscore4,col="green")
 lines(myage,myscore13,col="red")
 lines(myage,myscore16,col="green")
-abline(v=150)
+abline(v=150,lty=2)
+abline(v=120,lty=2)
 text(155,20,'Norms go to 155 mo')
-text(200,15,'Adult data used to estimate 240 mo data')
+text(200,15,'Adult data used to \nestimate 204 mo data')
+text(120,30,'Slopes look linear after 10 yr')
 ```
 
-The plots suggest a gradual upward trend in scores from 13 to 20 years, and so we interpolated values between 155 and 240 months, using linear regression to estimate the three functions: one each for mean, +1 SD and -1 SD.
+The plots suggest a gradual upward trend in scores from 10 years to adulthood, and so we interpolated values between 155 and 204 months, using linear regression to estimate the three functions: one each for mean, +1 SD and -1 SD.
 
 From this we can compute a norms table for the interpolated range. Below we just display the first few rows of this.
 
 ```{r regestimates}
-mod7<-lm(unlist(myscore7)~myage)
-mod10<-lm(unlist(myscore10)~myage)
-mod13<-lm(unlist(myscore13)~myage)
+#Linear regression used for all score levels; can then get interpolated values
+#for teenagers
+mod7<-lm(unlist(myscore7[11:17])~myage[11:17])
+mod10<-lm(unlist(myscore10[11:17])~myage[11:17])
+mod13<-lm(unlist(myscore13[11:17])~myage[11:17])
+qqPlot(mod10, main="QQ Plot, mean line") #qq plot for studentized resid 
+
 #Make a table of norms; use values from LM to estimate mean and +/- SD 
 teennorms<-matrix(NA,nrow=48,ncol=4)
 myrow<-0
@@ -144,7 +152,7 @@ head(teennorms)
 
 In the next step, we read in raw data and use the new teennorms table to assign age-scaled scores to those aged 13 and over.
 
-```{r makess}
+```{r make_nwrpss}
 #This code is shown for completeness: for this to work need to have the relevant
 #data file in the working directory.
 # alldata<-read.csv('SCT_data_forupdate_2017-09-15.csv',header=TRUE)
@@ -170,16 +178,250 @@ In the next step, we read in raw data and use the new teennorms table to assign 
 ```
 
 ### Sanity check on new scaled scores
-We now plot all raw scores against age, showing the corresponding scaled scores in the plot.
-```{r checknuss}
+We now plot all raw scores against age, showing the corresponding scaled scores in the plot. The results look coherent.
+```{r checknwrpss}
 nwrp.dat<-read.table("~/Dropbox/ERCadvanced/project SCT analysis/Extrapolated_norms/check_nwrp.txt",header=T, sep=",")
 # Read in the data with original and new scaled scores
 plot(nepsy_nonword_rep_raw ~ age_at_test, data=nwrp.dat, type='n')     
 text(nwrp.dat$age_at_test,nwrp.dat$nepsy_nonword_rep_raw,label=nwrp.dat$nonword_rep_ss)
+lines(myage[1:16],myscore7[1:16],col="red")
+lines(myage[1:16],myscore4[1:16],col="green")
+lines(myage[1:16],myscore13[1:16],col="red")
+lines(myage[1:16],myscore16[1:16],col="green")
+lines(myage[1:16],myscore10[1:16],col="black")
+
+lines(myage[16:17],myscore7[16:17],col="red",lty=2)
+lines(myage[16:17],myscore4[16:17],col="green",lty=2)
+lines(myage[16:17],myscore13[16:17],col="red",lty=2)
+lines(myage[16:17],myscore16[16:17],col="green",lty=2)
+lines(myage[16:17],myscore10[16:17],col="black",lty=2)
+abline(v=155, lty=3)
+```
+
+### NEPSY Sentence Repetition
+For sentence repetition we did not have any data on adults, so the only way to obtain norms beyond age 12;11 was to assume linear development after this age. To check whether this was reasonable, we followed the same procedure as for Repetition of Nonsense Words, plotting the raw scores for different scaled scores from the normative data.
+
+```{r checksentrep}
+myage<-seq(from=60,to=150,by=6) #age bands from norms
+sentrep<-data.frame(mydata[8:12,1:17])
+myscore10<-sentrep[3,2:17]
+myscore7<-sentrep[2,2:17]
+myscore4<-sentrep[1,2:17]
+myscore13<-sentrep[4,2:17]
+myscore16<-sentrep[5,2:17]
+plot(myage,myscore10,type="l",col="black",ylim=c(5,35),
+     xlab="Age (months)", ylab="Raw score",
+     main='NEPSY: Sentence rep',sub='Black = mean; Red = +/- 1 SD, Green = +/- 2 SD' )
 lines(myage,myscore7,col="red")
 lines(myage,myscore4,col="green")
 lines(myage,myscore13,col="red")
 lines(myage,myscore16,col="green")
-lines(myage,myscore10,col="black")
+
+abline(v=96,lty=2)
+text(155,20,'Norms go to 155 mo')
+text(96,30,'Slopes look linear after 8 yr')
+
+
 ```
 
+On visual inspection, development with age looks linear, suggestion extrapolation is reasonable. We therefore adopt the same approach as before, using linear regression to derive norms from normative data from 8;0 to 12;11
+```{r regest_sentrep}
+#Linear regression based on norms from 8 to 12;11
+mod7<-lm(unlist(myscore7[7:16])~myage[7:16])
+mod10<-lm(unlist(myscore10[7:16])~myage[7:16])
+mod13<-lm(unlist(myscore13[7:16])~myage[7:16])
+qqPlot(mod10, main="QQ Plot, mean line") #qq plot for studentized resid 
+
+#Make a table of norms; use values from LM to estimate mean and +/- SD 
+teennorms<-matrix(NA,nrow=48,ncol=4)
+myrow<-0
+colnames(teennorms)<-c('months','mean','SDplus','SDminus')
+for (mo in 156:203){ #ages 13 to 16;11
+  myrow<-myrow+1
+  teennorms[myrow,1]<-mo
+  teennorms[myrow,2]<-mod10$coefficients[1]+mod10$coefficients[2]*mo
+  teennorms[myrow,3]<-mod13$coefficients[1]+mod13$coefficients[2]*mo-teennorms[myrow,2]
+  teennorms[myrow,4]<-mod7$coefficients[1]+mod7$coefficients[2]*mo-teennorms[myrow,2]
+}
+head(teennorms)
+```
+
+Teennorms shows first few rows of estimated means/SDs for conversion.
+This is then used with our main datafile to convert raw scores into scaled.
+Commented out here as won't work in markdown without the file.
+
+```{r convert_sentrep}
+# for (i in 1:mynrow){
+#   if(alldata$age_at_test[i]>156){
+#     thisage<-as.integer(alldata$age_at_test[i])
+#     thisscore<-alldata$nepsy_sent_rep_raw[i]
+#     teenrow<-thisage-155
+#     mydiff<-thisscore-teennorms[teenrow,2]
+#     mysd<-teennorms[teenrow,3]
+#     if(mydiff<0){mysd<- -teennorms[teenrow,4]}
+#     alldata$sent_rep_ss[i]<-as.integer(10+3*mydiff/mysd)
+#     if(alldata$sent_rep_ss[i]<1){alldata$sent_rep_ss[i]<-1}
+#   }
+# }
+# myvars<-c(1,2,175,176)
+# checkdata<-alldata[,myvars]
+# write.table(checkdata, "check_sentrep.txt", sep=",",row.names=FALSE) 
+```
+
+Now plot raw scores vs age, with scaled score as number in plot. These look reasonable. In particular, note that where very low scaled scores are obtained, these would be similarly low if compared vs oldest age band with norms (which would be an alternative way of getting a scaled score that assumed no age improvement after 12 yr, so would be rather generous).
+
+```{r check_sentss}
+sentrep.dat<-read.table("~/Dropbox/ERCadvanced/project SCT analysis/Extrapolated_norms/check_sentrep.txt",header=T, sep=",")
+# Read in the data with original and new scaled scores
+plot(nepsy_sent_rep_raw ~ age_at_test, data=sentrep.dat, type='n',
+     ylim=c(5,35),
+     xlab="Age (months)", ylab="Raw score",
+     main='NEPSY: Sentence rep')     
+text(sentrep.dat$age_at_test,sentrep.dat$nepsy_sent_rep_raw,label=sentrep.dat$sent_rep_ss)
+lines(myage[1:16],myscore7[1:16],col="red")
+lines(myage[1:16],myscore4[1:16],col="green")
+lines(myage[1:16],myscore13[1:16],col="red")
+lines(myage[1:16],myscore16[1:16],col="green")
+lines(myage[1:16],myscore10[1:16],col="black")
+
+#Need to create predicted values for last point in series
+myage[17]<-204
+myscore4[17]<-teennorms[48,2]+2*teennorms[48,4]
+myscore7[17]<-teennorms[48,2]+teennorms[48,4]
+myscore10[17]<-teennorms[48,2]
+myscore13[17]<-teennorms[48,2]+teennorms[48,3]
+myscore16[17]<-teennorms[48,2]+2*teennorms[48,3]
+
+#Extrapolated portion shown with dotted lines, lty=2
+lines(myage[16:17],myscore7[16:17],col="red",lty=2)
+lines(myage[16:17],myscore4[16:17],col="green",lty=2)
+lines(myage[16:17],myscore13[16:17],col="red",lty=2)
+lines(myage[16:17],myscore16[16:17],col="green",lty=2)
+lines(myage[16:17],myscore10[16:17],col="black",lty=2)
+
+abline(v=155, lty=3)
+```
+
+
+### NEPSY Oromotor sequences
+
+On this subtest we again have data on the sample of 44 adults.
+The norms for Oromotor sequences are provided differently in the test manual - perhaps because of non-normal data. They are also in whole year bands, rather than 6-monthly.
+Rather than a scaled score, the manual has tables for raw scores to be converted into one of 5 percentile bands:
+* above 75%
+* 26-75%
+* 11-25%
+* 3-10%
+* below 3%
+
+This is not ideal for entering into statistical analyses, and so for this subtest, the norms were used to identify 25th and 75th centiles for all ages, with the middle point between these values treated as the mean.
+
+The statistical approach is then similar to Nonword Repetition, except that rather than transforming scores on the basis of SD units, we take into account that the 25th and 75th centiles correspond to z-scores of  +/- .675.
+
+As before, adults are assigned age of 204 mo for the regression estimates.
+Maximum score on this subtest is 70
+
+```{r get_orodata}
+orodata<-data.frame(mydata[15:18,4:12])
+colnames(orodata)<-c(5,6,7,8,9,10,11,12,17)
+myage<-seq(from=60,to=150,by=12)
+myage<-c(myage,204)
+
+myscoreneg<-orodata[3,]
+myscorepos<-orodata[1,]
+myscoremean<-orodata[2,]
+myscorelow<-orodata[4,]
+
+plot(myage,myscoremean,type="l",col="black",ylim=c(0,70),main='Oromotor seqs', xlab='Raw score',ylab='Age (months)',sub='Black = mean; Blue = +/- .67 SD, Green = below 10th centile' )
+lines(myage,myscoreneg,col="blue")
+lines(myage,myscorepos,col="blue")
+lines(myage,myscorelow,col="green")
+```
+
+
+We need to consider the whole range from 5 yr to 17 yr, and the function looks nonlinear, so here we use log age (yr) as predictor of raw score.
+
+This gives a better fit than a simple linear model with age as predictor
+(Rsquared values are all greater than .9).
+
+```{r oro_regression}
+ageforfit<-log(myage/12)
+mod7<-lm(unlist(myscoreneg)~ageforfit)
+mod10<-lm(unlist(myscoremean)~ageforfit)
+mod13<-lm(unlist(myscorepos)~ageforfit)
+summary(mod10)
+qqPlot(mod10, main="QQ Plot, mean line") #qq plot for studentized resid 
+#NB To keep commands simple, we are reusing the variable names as for previous tests, but note that the values for mod7 and mod13 are here equivalent to 25 and 75th percentile, not SDs
+
+#----------------------------------------------------------
+#Use regression equation to make norms  in file oross
+#NB this time, as they are no scaled scores in the manual, we will create them
+
+#----------------------------------------------------------
+oross<-matrix(NA,nrow=144,ncol=4)
+myrow<-0
+colnames(oross)<-c('logage(yr)','mean','plus25','minus25')
+#Note that this time the boundaries are +/- 25th/75th centile and not in SDs
+for (mo in 60:203){ #ages 5 to 16
+  myrow<-myrow+1
+  oross[myrow,1]<-mo
+  mylogage<-log(mo/12)
+  oross[myrow,2]<-mod10$coefficients[1]+mod10$coefficients[2]*mylogage
+  oross[myrow,3]<-mod13$coefficients[1]+mod13$coefficients[2]*mylogage-oross[myrow,2]
+  oross[myrow,4]<-mod7$coefficients[1]+mod7$coefficients[2]*mylogage-oross[myrow,2]
+}
+head(oross)
+```
+
+This next section is commented out, as it requires the raw data file.
+```{r oro_convert}
+# colnames(alldata)[196]<-'oromotor_ss'
+# for (i in 1:mynrow){
+#   
+#     thisage<-as.integer(alldata$age_at_test[i])
+#     thisscore<-alldata$nepsy_oromotor_seq_raw[i]
+#     if(is.na(thisscore)){thisscore<-999}
+#     thisrow<-thisage-59
+#     mydiff<-thisscore-oross[thisrow,2]
+#     mysd<-oross[thisrow,3]
+#     if(mydiff<0){mysd<- -oross[thisrow,4]}
+#     mysd<-(1/.675)*mysd #
+#     alldata$oromotor_ss[i]<-as.integer(10+3*mydiff/mysd)
+#     if(alldata$oromotor_ss[i]<1){alldata$oromotor_ss[i]<-1}
+#     if(alldata$oromotor_ss[i]>19){alldata$oromotor_ss[i]<-19}
+#     if(thisscore>900){alldata$oromotor_ss[i]<-alldata$nepsy_oromotor_seq_raw[i]}
+# }
+# myvars<-c(1,2,195,196)
+# checkdata<-alldata[,myvars]
+# checkdata<-cbind(checkdata,mytemp)
+# write.table(checkdata, "check_oromotor.txt", sep=",",row.names=FALSE) 
+```
+
+We have created check_oromotor.txt from the raw data, and now can inspect the plot of raw score by age, with scaled scores.
+
+```{r check_oross}
+oromotor.dat<-read.table("~/Dropbox/ERCadvanced/project SCT analysis/Extrapolated_norms/check_oromotor.txt",header=T, sep=",")
+# Read in the data with new scaled scores
+plot(nepsy_oromotor_seq_raw ~ age_at_test, data=oromotor.dat, type='n',
+     ylim=c(5,70),
+     xlab="Age (months)", ylab="Raw score",
+     main='NEPSY: Oromotor')     
+text(oromotor.dat$age_at_test,oromotor.dat$nepsy_oromotor_seq_raw,
+     label=oromotor.dat$oromotor_ss)
+
+lines(myage[1:8],myscoreneg[1:8],col="blue")
+lines(myage[1:8],myscorepos[1:8],col="blue")
+lines(myage[1:8],myscoremean[1:8],col="black")
+lines(myage[1:8],myscorelow[1:8],col="green")
+
+#Extrapolated portion shown with dotted lines
+lines(myage[8:9],myscoreneg[8:9],col="blue",lty=2)
+lines(myage[8:9],myscorepos[8:9],col="blue",lty=2)
+lines(myage[8:9],myscoremean[8:9],col="black",lty=2)
+
+abline(v=144, lty=3)
+```
+
+The plot shows a high level of very poor scores. Note that these are now age-scaled scores with mean 10 and SD 3, rather than the 5-point scale from NEPSY norms.
+
+Although the low scores might suggest something wrong with the transformation, note that these low scores are seen throughout the age range, including the cases aged below 12, who can be evaluated against the normative data (black line shows mean, and blue shows 25th and 75th centiles). The v low scores seem a true reflection of the poor performance on this subtest. This also agreed with observation of children doing the test - many found this subtest remarkably difficult. 
