@@ -585,14 +585,14 @@ lines(myage,myscore130,col="green")
 
 ```
 
-Inspection of these distributions suggests that it would be reasonable to use the norms for the oldest age band (12;09 to 12;11) to obtain scaled scores for the older children.
+Inspection of these distributions suggests that it would be reasonable to use the norms for the oldest age band (12;09 to 12;11) to obtain scaled scores for the older children. In general, few children are above average relative to this criterion, and many are in impaired range. This approach may underestimate severity of impairment, but it will give indication of which children have difficulties.
 This was done by direct lookup from manual.
 ```{r update_NARA}
 # Values then added to this table manually using norms for 12;09 to 12;11
 # Shown here for completeness, but done in separate script.
 myrow<-c(4, 6, 7, 9, 12, 13, 14, 16, 17, 18, 23, 25, 29, 33, 43, 45, 46, 47, 51, 52, 54, 57, 63, 66, 68, 70, 74, 78, 81, 86, 87, 88, 92, 94, 101, 103, 106, 108, 109, 110, 115, 124, 133, 134, 138, 142)
 myacc<-c(69, 85, 84, 81, 82, 102, 997, 92, 102, 91, 98, 87, 104, 69, 69, 98, 87, 69, 87, 70, 111, 100, 89, 99, 90, 70, 86, 82, 100, 89, 69, 106, 997, 997, 88, 102, 78, 104, 81, 87, 98, 999, 96, 100, 88, 98)
-mycomp<-c(69, 81, 84, 84, 86, 10, 999, 98, 90, 108, 101, 79, 105, 76, 69, 108, 98, 75, 80, 70, 117, 98, 93, 86, 84, 87, 77, 76, 86, 83, 69, 108, 997, 997, 83, 91, 73, 100, 83, 76, 97, 999, 87, 97, 90, 100)
+mycomp<-c(69, 81, 84, 84, 86, 101, 999, 98, 90, 108, 101, 79, 105, 76, 69, 108, 98, 75, 80, 70, 117, 98, 93, 86, 84, 87, 77, 76, 86, 83, 69, 108, 997, 997, 83, 91, 73, 100, 83, 76, 97, 999, 87, 97, 90, 100)
 myrate<-c(69, 91, 70, 89, 91, 100, 999, 85, 103, 85, 84, 72, 106, 69, 69, 104, 72, 70, 95, 102, 126, 105, 102, 94, 89, 99, 76, 87, 97, 92, 70, 104, 997, 997, 108, 99, 79, 102, 74, 99, 116, 999, 97, 115, 92, 997)
 #nara.update<-cbind(alldata[myrow,1],myacc,mycomp,myrate)
 #colnames(nara.update)<-c("record_id", "nara_acc_ss" , "nara_comp_ss","nara_rate_ss")
