@@ -91,8 +91,8 @@ Where the child's age falls outside the age range of the norms, we considered wh
 
 For two NEPSY subtests, Repetition of Nonsense Words and Oromotor Sequences, we had data from a previous study from a group of 48 typical adults, who had taken part in a previous study (Barry, J. G., Yasin, I., & Bishop, D. V. M. 2007. Heritable risk factors associated with language impairments. Genes, Brain and Behavior, 6, 66-76). Their mean age was 44 years and all were parents of a control sample of children. We used their data to estimate the mean and SD of adults. 
 
-### NEPSY Repetition of Nonsense words
-We illustrate the method first with NEPSY Repetition of Nonsense words. The mean aged-scaled score is 10 and SD is 3. Thus scaled scores of 7 and 13 correspond to scores that are -/+ one SD from the mean. If scores were normally distributed, then the distance in raw scores used from 7 to 10, and from 10 to 13 would be the same, but we cannot assume this to be the case, because tests often show floor and ceiling effects, so we first examine the data. 
+### NEPSY Repetition of Nonsense Words
+We illustrate the method first with NEPSY Repetition of Nonsense Words. The mean aged-scaled score is 10 and SD is 3. Thus scaled scores of 7 and 13 correspond to scores that are -/+ one SD from the mean. If scores were normally distributed, then the distance in raw scores used from 7 to 10, and from 10 to 13 would be the same, but we cannot assume this to be the case, because tests often show floor and ceiling effects, so we first examine the data. 
 
 To see if extrapolation was feasible, we first made a table of raw scores that corresponded to scaled scores of 7, 10 and 13 at all aged from 8 years upwards. We also looked at scaled scores of 4 and 16 to assess whether it was reasonable to treat the intervals between mean and 1 SD and between 1 and 2 SD as equivalent.
 
@@ -183,7 +183,7 @@ We now plot all raw scores against age, showing the corresponding scaled scores 
 nwrp.dat<-read.table("~/Dropbox/ERCadvanced/project SCT analysis/Extrapolated_norms/check_nwrp.txt",header=T, sep=",")
 # Read in the data with original and new scaled scores
 plot(nepsy_nonword_rep_raw ~ age_at_test, data=nwrp.dat, type='n')     
-text(nwrp.dat$age_at_test,nwrp.dat$nepsy_nonword_rep_raw,label=nwrp.dat$nonword_rep_ss)
+text(nwrp.dat$age_at_test,nwrp.dat$nepsy_nonword_rep_raw,label=nwrp.dat$nonword_rep_ss,cex=.7)
 lines(myage[1:16],myscore7[1:16],col="red")
 lines(myage[1:16],myscore4[1:16],col="green")
 lines(myage[1:16],myscore13[1:16],col="red")
@@ -277,7 +277,7 @@ plot(nepsy_sent_rep_raw ~ age_at_test, data=sentrep.dat, type='n',
      ylim=c(5,35),
      xlab="Age (months)", ylab="Raw score",
      main='NEPSY: Sentence rep')     
-text(sentrep.dat$age_at_test,sentrep.dat$nepsy_sent_rep_raw,label=sentrep.dat$sent_rep_ss)
+text(sentrep.dat$age_at_test,sentrep.dat$nepsy_sent_rep_raw,label=sentrep.dat$sent_rep_ss,cex=.7)
 lines(myage[1:16],myscore7[1:16],col="red")
 lines(myage[1:16],myscore4[1:16],col="green")
 lines(myage[1:16],myscore13[1:16],col="red")
@@ -305,9 +305,9 @@ abline(v=155, lty=3)
 
 ### NEPSY Oromotor sequences
 
-On this subtest we again have data on the sample of 44 adults.
-The norms for Oromotor sequences are provided differently in the test manual - perhaps because of non-normal data. They are also in whole year bands, rather than 6-monthly.
-Rather than a scaled score, the manual has tables for raw scores to be converted into one of 5 percentile bands:
+On this subtest we again have data on the sample of 44 adults studied by Barry et al (2007).
+The norms for Oromotor sequences are provided as percentile bands rather than age-scaled scores in the test manual - perhaps because of non-normal data. They are also given for whole year bands, rather than 6-monthly.
+The manual allows raw scores to be converted into one of 5 percentile bands:
 * above 75%
 * 26-75%
 * 11-25%
@@ -316,7 +316,7 @@ Rather than a scaled score, the manual has tables for raw scores to be converted
 
 This is not ideal for entering into statistical analyses, and so for this subtest, the norms were used to identify 25th and 75th centiles for all ages, with the middle point between these values treated as the mean.
 
-The statistical approach is then similar to Nonword Repetition, except that rather than transforming scores on the basis of SD units, we take into account that the 25th and 75th centiles correspond to z-scores of  +/- .675.
+The statistical approach is then similar to Nonword Repetition, except that rather than transforming scores on the basis of SD units, we take into account that the 25th and 75th centiles correspond to z-scores of  +/- .675, and then estimate the raw scores that correspond to age-scaled scores in units of .33 SD (i.e. scaled scores of 1, 2, 3 etc)
 
 As before, adults are assigned age of 204 mo for the regression estimates.
 Maximum score on this subtest is 70
@@ -407,7 +407,7 @@ plot(nepsy_oromotor_seq_raw ~ age_at_test, data=oromotor.dat, type='n',
      xlab="Age (months)", ylab="Raw score",
      main='NEPSY: Oromotor')     
 text(oromotor.dat$age_at_test,oromotor.dat$nepsy_oromotor_seq_raw,
-     label=oromotor.dat$oromotor_ss)
+     label=oromotor.dat$oromotor_ss,cex=.7)
 
 lines(myage[1:8],myscoreneg[1:8],col="blue")
 lines(myage[1:8],myscorepos[1:8],col="blue")
@@ -425,3 +425,99 @@ abline(v=144, lty=3)
 The plot shows a high level of very poor scores. Note that these are now age-scaled scores with mean 10 and SD 3, rather than the 5-point scale from NEPSY norms.
 
 Although the low scores might suggest something wrong with the transformation, note that these low scores are seen throughout the age range, including the cases aged below 12, who can be evaluated against the normative data (black line shows mean, and blue shows 25th and 75th centiles). The v low scores seem a true reflection of the poor performance on this subtest. This also agreed with observation of children doing the test - many found this subtest remarkably difficult. 
+
+### PhAB rapid naming subtests
+
+The PhAB has norms for ages 6;0 to 14;11, so the published tables did not cover the 11 children aged below 6 years or the 27 children aged 15;0 and above. For those aged 6;0 to 14;11 norm tables are provided to convert raw (time) scores to scaled scores with mean 100 and SD 15.
+
+We did not have adult data for these subtests. 
+
+We considered the same approach as for the NEPSY subtests, taking the raw scores corresponding to scaled scores that were -2 SD, -1 SD, mean, +1 SD and +2 SD (i.e. scaled scores of 70, 85, 100, 115 and 130). 
+
+```{r plot_phab}
+par(mfrow=c(1,2)) #side by side plots
+for (ph in 1:2){ #2 subtests in turn
+  mytitle<-'PhAB Pictures'
+  ylims<-c(50,170)
+phabdata<-mydata[21:25,2:19]
+if (ph>1 ){phabdata<-mydata[28:32,2:19];
+mytitle<-'PhAB Digits'
+ylims<-c(30,140)}
+myage<-seq(from=72,to=174,by=6)
+myscore100<-phabdata[3,1:18]
+myscore70<-phabdata[1,1:18]
+myscore85<-phabdata[2,1:18]
+myscore115<-phabdata[4,1:18]
+myscore130<-phabdata[5,1:18]
+plot(myage,myscore100,type="l",col="black",ylim=ylims,main=mytitle,
+     sub='Green +/- 2 SD, Red = +/- 1 SD, black=mean',ylab='Raw score (s)')
+lines(myage,myscore85,col="red")
+lines(myage,myscore70,col="green")
+lines(myage,myscore115,col="red")
+lines(myage,myscore130,col="green")
+if(ph==1){myscore100p<-myscore100; myscore70p<-myscore70; myscore130p<-myscore130;
+myscore115p<-myscore115; myscore85p<-myscore85}#need these for plotting later
+}
+```
+
+The plots reveal a problem, that is especially marked for the digits test, with a floor effect constraining the range of scores in older children. We experimented with various approaches to estimation, but concluded that the least bad option would be to use norms for the oldest children (14;06-14;11) for the 15- and 16-year-olds.
+
+```{r older_phab}
+#Values in myvals are entered manually from test manual data children
+#Select rows for children aged over 14;11
+#myrows<-which(alldata$age_at_test>179.999)
+myrows<-c(6, 7, 9, 12, 13, 16, 18, 23, 29, 33, 43, 45, 46, 51, 54, 66, 68, 70, 74, 81, 88, 92, 94, 106, 133, 138, 142) #alldata not available so give actual values here
+#Values for picture naming
+myvals<-c(109, 88, 87, 88, 78, 99, 88, 83, 96, 94, 73, 102, 92, 90, 111, 100, 69, 99, 80, 77, 81, 99, 88, 77, 79, 87, 69)
+#alldata[myrows,241]<-myvals
+
+# Values for digit naming
+myvals<-c(89,72,82,78,101,107,90,81,99,73,69,91,83,90,131,109,74,84,72,77,93,94,69,75,81,95,77)
+#alldata[myrows,243]<-myvals
+# myvars<-c(1,2,240:243)
+# checkdata<-alldata[,myvars]
+# write.table(checkdata, "check_phab.txt", sep=",",row.names=FALSE)
+```
+
+Now we can read in the data and see whether it looks orderly, or whether older children appear to have scores overestimated.
+
+```{r check_phab}
+phab.dat<-read.table("~/Dropbox/ERCadvanced/project SCT analysis/Extrapolated_norms/check_phab.txt",header=T, sep=",")
+w<-which(phab.dat[,3]>900)
+phab.dat[w,3]<-NA
+w<-which(phab.dat[,5]>900)
+phab.dat[w,5]<-NA
+
+
+# Plot the data with new scaled scores
+plot(phab_pics_raw ~ age_at_test, data=phab.dat, type='n',
+     ylim=c(40,240),
+     xlab="Age (months)", ylab="Raw score",
+     main='PhAB Pictures')     
+text(phab.dat$age_at_test,phab.dat$phab_pics_raw,
+     label=phab.dat$phab_pic_ss,cex=.6)
+
+lines(myage,myscore85p,col="red")
+lines(myage,myscore115p,col="red")
+lines(myage,myscore100p,col="black")
+lines(myage,myscore70p,col="green")
+lines(myage,myscore130p,col="green")
+
+abline(v=180, lty=3)
+
+plot(phab_digits_raw ~ age_at_test, data=phab.dat, type='n',
+     ylim=c(20,240),
+     xlab="Age (months)", ylab="Raw score",
+     main='PhAB Digits')     
+text(phab.dat$age_at_test,phab.dat$phab_digits_raw,
+     label=phab.dat$phab_digit_ss,cex=.6)
+
+lines(myage,myscore85,col="red")
+lines(myage,myscore115,col="red")
+lines(myage,myscore100,col="black")
+lines(myage,myscore70,col="green")
+lines(myage,myscore130,col="green")
+
+abline(v=180, lty=3)
+```
+
