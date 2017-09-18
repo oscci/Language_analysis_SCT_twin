@@ -1,7 +1,7 @@
 ---
-title: "Language test scores"
+title: "Language and reading test scores"
 author: "Dorothy Bishop"
-date: "16/09/2017"
+date: "18/09/2017"
 output: html_document
 ---
 
@@ -11,11 +11,11 @@ require(car)
 ```
 
 ## Language, literacy and neurocognitive assessments
-We aim to combine twin data from this study with that from a previous study (Bishop, D. V. M., McDonald, D., Bird, S., & Hayiou-Thomas, M. E. 2009. Children who read accurately despite language impairment: Who are they and how do they do it? Child Development, 80, 593-605) and so the test battery overlaps substantially with the one used previously. 
+We aim to combine twin data from this study with that from a previous study (Bishop et al, 2009) and so the test battery overlaps substantially with the one used previously. 
 
 The battery had been selected with the goal of assessing expressive and receptive language, reading and nonverbal ability in a single test session lasting no longer than two hours. Tests were selected as being suitable for the age range under study with established norms, reliability and validity. 
 
-As noted below, although all tests had norms in the age range 6 to 12 years (corresponding to the twin sample), some tests lacked norms for older and/or younger children, some of whom were included in the sample with sex chromosome trisomies. We document below how we extrapolated norms for some tests.
+As noted below, although all tests had norms in the age range 6;0 to 12;11 years (corresponding to the twin sample), some tests lacked norms for older and/or younger children, some of whom were included in the sample with sex chromosome trisomies. We document below how we extrapolated norms for some tests.
 
 (<span style="color:red">need to check manuals for reliability of all subtests</span>).
 
@@ -56,34 +56,79 @@ In contrast to the other NEPSY subtests, the manual does not provide conversion 
 
 5. <b>Vocabulary</b> subtest from Wechsler Abbreviated Scale of Intelligence (WASI) (Wechsler, 1999)
 
+WASI is standardized on a large US sample representative of the English-speaking population over the age range 6 to 89 years. 
+
+Vocabulary is a 42-item task. Items 1-4, which are only given if there are errors on items 5 and 6, involve naming pictured items. Items 5 to 42 involve defining spoken words, e.g. 'What does police mean?' Further explanation can be requested by a neutral enquiry (e.g. 'Tell me a bit more about it') if a response is too vague or unclear to be readily scored. 
+
+Responses are recorded verbatim and scored according to predefined criteria, with 2 points awarded for a good synonym, a major use, one or more definitive or primary features,  a general category to which the word belongs, a correct figurative use, several less definitive but correct descriptive features, or (for verbs) a definitive example of action or causal relationship. One point responses are generally correct but show some poverty of content. A zero point response is obviously wrong, vague, or a stock usage with no demonstration of understanding. 
+
+A basal and ceiling are established on the basis of how accurately items are responded to, and in addition, testing is discontinued after 30 items (aged 6-8 years), 34 items (aged 9-11 years) or 38 items (12-16 years). The total score is the total from administered items, plus full points for non-administered items below the basal. Raw scores are converted to T-scores with mean 50 and SD 10.
+
+Internal consistency reliability estimates for the normative data were obtained with the standardization sample for each age band and were in excess of .85 for all ages.
 
 6. <b>Block Design</b> subtest from WASI
 
-7. <b>Matrices</b> subtest from WASI
+In this subtest, the child uses blocks to replicate two-color designs that are either demonstrated with blocks by the examiner, or shown pictorially. There is a specified time limit for each item, and bonus points are awarded for fast, accurate performance.
 
-8. <b> Picture Naming Test</b> from Phonological Assessment Battery (PhAB) (Frederickson, Frith, & Reason, 1997)
+A basal and ceiling are established, depending on the child's performance, with administration ceasing after three consecutive scores of zero. The total score is the total from administered items, plus full points for non-administered items below the basal. Raw scores are converted to T-scores with mean 50 and SD 10.
 
-9. <b>Digit Naming Test</b> from PhAB
+Internal consistency reliability estimates for the normative data were obtained with the standardization sample for each age band and were in excess of .84 for all ages.
 
-10. <b>Sight Word Efficiency</b> subtest from Test of Word Reading Efficiency (TOWRE) (Torgesen, Wagner, & Rashotte, 1999)
+7. <b>Matrix Reasoning</b> subtest from WASI
 
-11. <b>Phonetic Decoding Efficiency</b> subtest from TOWRE
+This subtest has items that test four types of nonverbal reasoning: pattern completion, classification, analogy, and serial rasoning. The child is presented with a matrix from which a section is missing and selects from five options the one that completes the pattern.
 
-12. <b>Neale Analysis of Reading Ability</b> - 2nd British edition (NARA-II) (Neale, 1999)
+A basal and ceiling are established, depending on the child's performance, with administration ceasing after four scores of zero in five consecutive items.The total score is the total from administered items, plus full points for non-administered items below the basal. Raw scores are converted to T-scores with mean 50 and SD 10.
+
+Internal consistency reliability estimates for the normative data were obtained with the standardization sample for each age band and were in excess of .89 for all ages.
+
+8. <b> Naming Speed Test</b> from Phonological Assessment Battery (PhAB) (Frederickson, Frith, & Reason, 1997)
+
+The Naming Speed Test is normed for children in England and Wales aged from 6;0 to 14;11 and consists of two subtests: picture naming and digit naming. Each test has two cards containing a random sequence of common line drawings or digits. The task is to name the items as quickly as possible. The score for each task is the total time taken for the two cards, which can be converted to age-scaled scores with mean 100 and SD 15.
+
+Reliability information is not available for these tests because, as timed tests, internal consistency was not computable. 
+
+9. <b>Sight Word Efficiency</b> subtest from Test of Word Reading Efficiency (TOWRE) (Torgesen, Wagner, & Rashotte, 1999)
+
+The TOWRE Sight Word Efficiency subtest assess the number of real printed words that can be read aloud within 45 minutes. The examiner first gives a practice list and asks the child to read the words aloud as fast as they can. Then the test list is presented, with words in several columns. The child is encouraged to read as many as possible, going down each column in turn. A stopwatch is used to time performance, and the child is stopped when 45 seconds have elapsed. The score is the total number of words correctly read. 
+
+The TOWRE was normed on 1,500 individuals aged from 6 to 24 years in a wide geographical range of the USA. Tables are provided to convert raw scores (total words correct) into age-scaled scores with mean of 100 and SD 15.
+
+10. <b>Phonetic Decoding Efficiency</b> subtest from TOWRE
+
+This subtest is parallel to the Sight Word Efficiency subtest, but uses pronounceable nonsense words. A list of acceptable pronunciations is provided for scoring. 
+
+Test-retest reliability for both subtests of TOWRE is reported in the manual as .9 and over for the age range 6 to 9 years, and .84 and above for 10 to 18 years.
+
+11. <b>Neale Analysis of Reading Ability</b> - 2nd British edition (NARA-II) (Neale, 1999)
 The child reads aloud short passages of increasing difficulty and answers questions about the test. There is a basal and ceiling. The NARA-2 gives three measures: 
 * Reading Accuracy - based on number of errors in reading each passage
 * Reading Comprehension - based on number of questions correctly answered
 * Reading Rate - based on speed of reading
 
-13. <b>The Children's Communication Checklist-2 (CCC-2)</b>
+12. <b>The Children's Communication Checklist-2 (CCC-2)</b>
 
-14. <b>The Social Responsiveness Scale (SRS)</b> 
+13. <b>The Social Responsiveness Scale (SRS)</b> 
 
-15. <b>Development and Well-Being Assessment (DAWBA)</b>
+14. <b>Development and Well-Being Assessment (DAWBA)</b>
 
-16. <b>Hand preference questionnaire</b> (Groen et al, 2012).
+15. <b>Hand preference questionnaire</b> (Groen et al, 2012).
 
-17. <b>Quantitative test of hand preference</b>
+16. <b>Quantitative test of hand preference</b>
+
+# References
+Bishop, D. V. M., McDonald, D., Bird, S., & Hayiou-Thomas, M. E. (2009). Children who read accurately despite language impairment: Who are they and how do they do it? Child Development, 80, 593-605. 
+
+Frederickson, N., Frith, U., & Reason, R. (1997). Phonological assessment battery (PhAB). Windsor: NFER-Nelson.
+
+Korkman, M., Kirk, U., & Kemp, S. I. (1998). NEPSY: A developmental neuropsychological assessment. San Antonio: Psychological Corporation.
+
+Torgesen, J. K., Wagner, R., & Rashotte, C. (1999). Test of Word Reading Efficiency (TOWRE). New York: Psychological Corporation.
+
+Wechsler, D. (1999). Wechsler Abbreviated Scale of Intelligence. San Antonio: Psychological Corporation.
+
+Woodcock, R. W., McGrew, K. S., & Mather, N. (2007). Woodcock-Johnson III Tests of Cognitive Abilities. Rolling Meadows, IL: Riverside Publishing.
+
 
 
 ## Extrapolation of norms
@@ -332,7 +377,7 @@ myscorepos<-orodata[1,]
 myscoremean<-orodata[2,]
 myscorelow<-orodata[4,]
 
-plot(myage,myscoremean,type="l",col="black",ylim=c(0,70),main='Oromotor seqs', xlab='Raw score',ylab='Age (months)',sub='Black = mean; Blue = +/- .67 SD, Green = below 10th centile' )
+plot(myage,myscoremean,type="l",col="black",ylim=c(0,70),main='Oromotor seqs', ylab='Raw score',xlab='Age (months)',sub='Black = mean; Blue = +/- .67 SD, Green = below 10th centile' )
 lines(myage,myscoreneg,col="blue")
 lines(myage,myscorepos,col="blue")
 lines(myage,myscorelow,col="green")
@@ -633,7 +678,7 @@ myscore70<-nara.comp[1,1:14]
 myscore85<-nara.comp[2,1:14]
 myscore115<-nara.comp[4,1:14]
 myscore130<-nara.comp[5,1:14]
-plot(nara_comp ~ age_at_test, data=nara.dat,type='p',cex=.3,
+plot(nara_comp ~ age_at_test, data=nara.dat,type='n',cex=.3,
      ylim=c(0,50),
      xlab="Age (months)", ylab="Raw score",
      main='NARA comp')   
@@ -653,7 +698,7 @@ myscore70<-nara.rate[1,1:14]
 myscore85<-nara.rate[2,1:14]
 myscore115<-nara.rate[4,1:14]
 myscore130<-nara.rate[5,1:14]
-plot(nara_rate ~ age_at_test, data=nara.dat,type='p',cex=.3,
+plot(nara_rate ~ age_at_test, data=nara.dat,type='n',cex=.3,
      ylim=c(0,150),
      xlab="Age (months)", ylab="Raw score",
      main='NARA rate')     
