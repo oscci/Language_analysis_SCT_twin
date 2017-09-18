@@ -597,4 +597,73 @@ myrate<-c(69, 91, 70, 89, 91, 100, 999, 85, 103, 85, 84, 72, 106, 69, 69, 104, 7
 #nara.update<-cbind(alldata[myrow,1],myacc,mycomp,myrate)
 #colnames(nara.update)<-c("record_id", "nara_acc_ss" , "nara_comp_ss","nara_rate_ss")
 #write.table(nara.update, "nara_update_for_redcap.txt", sep=",",row.names=FALSE) 
+
+```
+Replot with the updated values shown
+
+```{r check_NARAss}
+nara.dat<-read.table("~/Dropbox/ERCadvanced/project SCT analysis/Extrapolated_norms/check_nara.txt",header=T, sep=",")
+#This file was created using the myrow, myacc, mycomp, myrate as above
+
+#NARA-accuracy
+nara.acc<-mydata[35:39,2:15]
+myage<-seq(from=72,to=150,by=6)
+myscore100<-nara.acc[3,1:14]
+myscore70<-nara.acc[1,1:14]
+myscore85<-nara.acc[2,1:14]
+myscore115<-nara.acc[4,1:14]
+myscore130<-nara.acc[5,1:14]
+plot(nara_acc ~ age_at_test, data=nara.dat,type='n',
+     ylim=c(0,100),
+     xlab="Age (months)", ylab="Raw score",
+     main='NARA accuracy')     
+text(nara.dat$age_at_test,nara.dat$nara_acc,
+     label=nara.dat$nara_acc_ss,cex=.6)
+lines(myage,myscore100,col="black")
+lines(myage,myscore85,col="red")
+lines(myage,myscore70,col="green")
+lines(myage,myscore115,col="red")
+lines(myage,myscore130,col="green")
+
+#NARA-comp
+nara.comp<-mydata[42:46,2:15]
+myage<-seq(from=72,to=150,by=6)
+myscore100<-nara.comp[3,1:14]
+myscore70<-nara.comp[1,1:14]
+myscore85<-nara.comp[2,1:14]
+myscore115<-nara.comp[4,1:14]
+myscore130<-nara.comp[5,1:14]
+plot(nara_comp ~ age_at_test, data=nara.dat,type='p',cex=.3,
+     ylim=c(0,50),
+     xlab="Age (months)", ylab="Raw score",
+     main='NARA comp')   
+text(nara.dat$age_at_test,nara.dat$nara_comp,
+     label=nara.dat$nara_comp_ss,cex=.6)
+lines(myage,myscore100,col="black")
+lines(myage,myscore85,col="red")
+lines(myage,myscore70,col="green")
+lines(myage,myscore115,col="red")
+lines(myage,myscore130,col="green")
+
+#NARA-rate
+nara.rate<-mydata[49:53,2:15]
+myage<-seq(from=72,to=150,by=6)
+myscore100<-nara.rate[3,1:14]
+myscore70<-nara.rate[1,1:14]
+myscore85<-nara.rate[2,1:14]
+myscore115<-nara.rate[4,1:14]
+myscore130<-nara.rate[5,1:14]
+plot(nara_rate ~ age_at_test, data=nara.dat,type='p',cex=.3,
+     ylim=c(0,150),
+     xlab="Age (months)", ylab="Raw score",
+     main='NARA rate')     
+text(nara.dat$age_at_test,nara.dat$nara_rate,
+     label=nara.dat$nara_rate_ss,cex=.6)
+lines(myage,myscore100,col="black")
+lines(myage,myscore85,col="red")
+lines(myage,myscore70,col="green")
+lines(myage,myscore115,col="red")
+lines(myage,myscore130,col="green")
+
+
 ```
