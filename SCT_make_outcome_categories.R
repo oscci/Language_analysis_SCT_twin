@@ -6,7 +6,7 @@
 # Need to rerun the lang and dyslexia coding with full data before finalising
 # This has been done and file updated to 1109 version on 26 Sept
 
-# Goal is to use all available data to create 5 point scale
+# Initial goal was to use all available data to create 5 point scale
 # 0 = no impairment
 # 1 = history of impairment but no current problems (usually speech)
 # 2 = current problem in one area (dyslexia/DLD/ADHD) as evidenced by parent report and/or language test scores with PIQ>69
@@ -14,6 +14,7 @@
 # 4 = ASD plus other problems, e.g. ADHD, major behavioural problems OR ID (IQ<70) with other problems
 # 5 = global impairment: includes those unable to attempt test battery, requiring special schooling with lack of independence or severely problematic behaviour
 
+# But first just checking approach of adding up risk scores - see below
 
 library(tidyverse)
 readdir<-"/Users/dorothybishop/Dropbox/ERCAdvanced/Project SCT analysis/data from redcap/"
@@ -101,25 +102,25 @@ write.table(ww, writebit, sep=",",row.names=TRUE)
 #1, mainstream no help; 2, mainstream with help; 3, special class/unit; 4, special school; 5, home schooled; 8, other; 9, d
 
 alldat$global_neurodev_rating<-0 #Initialise to zero
+w<-which(is.na(alldat$srs_t_score)) #Recode NA to 999 for SRS
+alldat$srs_t_score[w]<-999
 
 temp<-alldat$global_neurodev_rating
 w<-unique(which(alldat$slt==1),which(alldat$slt==8)) #Cases with preschool SLT or assessed by SLT
 alldat$global_neurodev_rating[w]<-alldat$global_neurodev_rating[w]+1
 
 #Now code so can add one point for help in mainstream or ongoing SLT or in language unit
-w1<-which(alldat$schooling==2) #help in mainstream
-w2<-which(alldat$slt==3) #ongoing slt
-w3<-which(alldat$slt==2) #lang unit etc
-w<-unique(w1,w2,w3) #any of these three suffices for adding one point
-alldat$global_neurodev_rating[w]<-alldat$global_neurodev_rating[w]+1
+w1<-c(which(alldat$schooling==2),which(alldat$schooling==3)) #help in mainstream/lang unit
+
+alldat$global_neurodev_rating[w1]<-alldat$global_neurodev_rating[w1]+1
 
 #add 2 points if attending special school
 w<-which(alldat$schooling==4)
 alldat$global_neurodev_rating[w]<-alldat$global_neurodev_rating[w]+1
 
 #add 1 point if PIQ < 70 or not completed
-w<-which(alldat$PIQ<70)
-w1<-which(alldat$PIQ>996)
+w<-which(alldat$piq<70)
+w1<-which(alldat$piq>996)
 allw<-c(w,w1)
 alldat$global_neurodev_rating[allw]<-alldat$global_neurodev_rating[allw]+1
 
@@ -129,12 +130,14 @@ for (i in 1:nrows){
   
   # add 1 to code if meets language test criteria for dyslexia OR (if no data) has diagnosis of this 
   # reported on parent interview
+  wd<-NA
   temp<-alldat$dyslexia[i] #coding according to test battery, 1 if dyslexic
   if(temp==9){
-    w1<-unlist(gregexpr(pattern ='6',toString(alldat$neurodev_diag[i]))) #dyslexia code is 6
+    wd<-unlist(gregexpr(pattern ='6',toString(alldat$neurodev_diag[i]))) #dyslexia code is 6
+    #wd is one if 6 is included in neurodev_diag
   }
-  if(temp==1) {w1<- 1}
-  if (w1==1){alldat$global_neurodev_rating[i]<-alldat$global_neurodev_rating[i]+1}
+  if(length(wd)<1){temp=0}
+  if (temp>0){alldat$global_neurodev_rating[i]<-alldat$global_neurodev_rating[i]+1}
 
 #Add 1 to code if evidence of ADHD on parental interview or DAWBA
   w2<-unlist(gregexpr(pattern ='1',toString(alldat$neurodev_diag[i]))) #ADHD code is 1
@@ -150,7 +153,9 @@ temp<-alldat$lang_disorder[i] #coding according to test battery, 2 if with poor 
 w1<-temp
 if(temp==9){ #no data on language tests so use parent interview
   w1<-unlist(gregexpr(pattern ='8',toString(alldat$neurodev_diag[i]))) #DLD code is 8
-}
+  if(alldat$slt[i]==3){w1<-1} #regardless of diagnosis, ongoing SLT counts as DLD
+  if(alldat$lang_concerns[i]==3){w1<-1}#also serious language concerns count as DLD
+} 
 if (w1>0){alldat$global_neurodev_rating[i]<-alldat$global_neurodev_rating[i]+w1}
 #NB more severe language problems with poor comprehension get addition of 2 points
 
@@ -158,17 +163,40 @@ if (w1>0){alldat$global_neurodev_rating[i]<-alldat$global_neurodev_rating[i]+w1}
 
   w1<-unlist(gregexpr(pattern ='4',toString(alldat$neurodev_diag[i]))) #behav problems code is 4
   w2<-alldat$conduct_dsm_r1[i]
+if (is.na(w2)){w2<-0}
   if (max(w1,w2)>0){alldat$global_neurodev_rating[i]<-alldat$global_neurodev_rating[i]+1}
   
 # add 2 to code if ASD on interview or DAWBA or SRS is 90 or more
 
 w1<-unlist(gregexpr(pattern ='3',toString(alldat$neurodev_diag[i]))) #ASD code is 3
-w2<-max(alldat$asd_dsm_r1[i],autism_icd_r1[i])
+w2<-max(alldat$asd_dsm_r1[i],alldat$autism_icd_r1[i])
+if(is.na(w2)){w2<-0}
 w3<-0
-if(alldat$srs_t_score>89) {w3<-1} #SRS t score 90
+
+if(alldat$srs_t_score[i]>89) {w3<-1} #SRS t score 90
+
+     if(alldat$srs_t_score[i]>900){w3<-0} 
 if (max(w1,w2,w3)>0){alldat$global_neurodev_rating[i]<-alldat$global_neurodev_rating[i]+2}
 
 }
 
+#Now write to spreadsheet to check if it all looks OK
+shortdat<-select(alldat, record_id, age_at_test,slt,lang_concerns,schooling,piq,neurodev_diag,lang_disorder,dyslexia,
+                 hyperkinetic_icd_r1,adhd_comb_dsm_r1,adhd_hyp_dsm_r1,adhd_inatt_dsm_r1,
+                 conduct_dsm_r1,asd_dsm_r1,autism_icd_r1,srs_t_score,global_neurodev_rating)
+writebit<-paste0(writedir,"global_coded_data.csv")
+write.table(shortdat, writebit, sep=",",row.names=TRUE) 
 
 
+#png(file="mygraphic2.png",width=400,height=350)
+pirateplot(formula = alldat$global_neurodev_rating~ Trisomy + Diagnosis,
+           point.o = .5,
+           bar.o=.0,
+           inf.o=.2,
+           bean.o=.5,
+           jitter=.2,
+           data = mydata,
+           ylab='Global rating',
+           ylim=c(0,10),
+           main="Global rating")
+#dev.off()
