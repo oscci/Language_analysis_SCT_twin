@@ -17,11 +17,12 @@
 # But first just checking approach of adding up risk scores - see below
 
 library(tidyverse)
+library(yarrr)
 readdir<-"/Users/dorothybishop/Dropbox/ERCAdvanced/Project SCT analysis/data from redcap/"
 writedir<-"/Users/dorothybishop/Dropbox/ERCAdvanced/Project SCT analysis/SCT_ASD_analysis/Project_files/Data/"
 
 #load redcap data 
-alldat<-read.csv(paste0(readdir,'SCTData_DATA_2017-09-26_1335.csv'))
+alldat<-read.csv(paste0(readdir,'SCTData_DATA_2017-09-30_1106.csv'))
 
 nrows<-nrow(alldat)
 
@@ -59,15 +60,29 @@ rawdat<-select(alldat,record_id,age_at_test,wasi_block_design_total_raw,
                     phab_pics_raw,phab_digits_raw,
                     wdck_jhsn_ss,comments,dawba_comments_r1)
 
+alldat$partial_testing<-as.numeric(alldat$partial_testing) #unfactor this variable
 for (i in 1:nrows){
   w<-which(rawdat[i,3:14]<997)
-  rawdat$testdone[i]<-length(w)
+  alldat$partial_testing[i]<-100
+  if (length(w)<12) {alldat$partial_testing[i]<-200}
+  if (length(w)==0) {alldat$partial_testing[i]<-900}
+  
+  
+  if(is.na(alldat$srs_t_score[i])){alldat$srs_t_score[i]<-999}
+  t2<-alldat$srs_t_score[i]
+  
+  if (t2<900){alldat$partial_testing[i]<-alldat$partial_testing[i]+10}
+  #has SRS data so 10s column of partial testing has a 1
+  t3<-1
+  if(is.na(alldat$asd_dsm_r1[i])){t3<-0}
+  alldat$partial_testing[i]<-alldat$partial_testing[i]+t3
+  #add one to last digit of partial testing if DAWBA has been done
   
 }
-www<-select(rawdat,record_id,testdone,comments,dawba_comments_r1)
-ww<-filter(www,testdone<12)
-writebit<-paste0(writedir,"missingdata.csv")
-write.table(ww, writebit, sep=",",row.names=TRUE) 
+
+www<-select(alldat,record_id,partial_testing,srs_t_score)
+writebit<-paste0(writedir,"partialdata_codes.csv")
+write.table(www, writebit, sep=",",row.names=FALSE) 
 #-------------------------------------------------------------------------
 # Create global impairment measure
 #-------------------------------------------------------------------------
@@ -76,11 +91,11 @@ write.table(ww, writebit, sep=",",row.names=TRUE)
 # History of speech problems = 1
 # Current help in mainstream school (suport or special class or SLT) =1
 # Special school = 2
-# Dyslexia (testing, unless no data , in which case report) = 1
-# DLD (testing, unless no data , in which case report) = 1
+# Dyslexia (testing, unless no data , in which case report from parent interview) = 1
+# DLD (testing, unless no data , in which case report from parent interview) = 1
 # ADHD (report or DAWBA) = 1
 # behaviour problems (DAWBA or clear description on interview) = 1
-# Autistic features: report from interview, SRS =90,  DAWBA = 2
+# Autistic features: report from interview of definite diagnosis, SRS =90,  DAWBA = 2
 # low IQ (PIQ < 70 or refusal/inability to do battery - with exception of reading tests) = 1
 
 # NB coding for slt is:
@@ -121,7 +136,8 @@ alldat$global_neurodev_rating[w]<-alldat$global_neurodev_rating[w]+1
 #add 1 point if PIQ < 70 or not completed
 w<-which(alldat$piq<70)
 w1<-which(alldat$piq>996)
-allw<-c(w,w1)
+w2<-which(alldat$partial_testing>199) #failed to complete test battery (not because of age)
+allw<-unique(w,w1,w2)
 alldat$global_neurodev_rating[allw]<-alldat$global_neurodev_rating[allw]+1
 
 ## Next bits done in a loop because criteria not captured in a single code
@@ -146,11 +162,12 @@ for (i in 1:nrows){
   }
 if (w2>0){alldat$global_neurodev_rating[i]<-alldat$global_neurodev_rating[i]+1}
   
-# add 1 or 2 to code if meets language test criteria for lang_disorder OR (if no data) has diagnosis of this 
+# add 1 to code if meets language test criteria for lang_disorder OR (if no data) has diagnosis of this 
 # reported on parent interview
 
 temp<-alldat$lang_disorder[i] #coding according to test battery, 2 if with poor comp, 1 otherwise
 w1<-temp
+if(w1==2){w1<-1} #just one point added regardless of whether lang_dis code is 1 or 2
 if(temp==9){ #no data on language tests so use parent interview
   w1<-unlist(gregexpr(pattern ='8',toString(alldat$neurodev_diag[i]))) #DLD code is 8
   if(alldat$slt[i]==3){w1<-1} #regardless of diagnosis, ongoing SLT counts as DLD
@@ -177,7 +194,7 @@ if(alldat$srs_t_score[i]>89) {w3<-1} #SRS t score 90
 
      if(alldat$srs_t_score[i]>900){w3<-0} 
 if (max(w1,w2,w3)>0){alldat$global_neurodev_rating[i]<-alldat$global_neurodev_rating[i]+2}
-
+alldat$global_jittered[i]<-alldat$global_neurodev_rating[i]+.5*runif(1)-.25
 }
 
 #Now write to spreadsheet to check if it all looks OK
@@ -187,15 +204,22 @@ shortdat<-select(alldat, record_id, age_at_test,slt,lang_concerns,schooling,piq,
 writebit<-paste0(writedir,"global_coded_data.csv")
 write.table(shortdat, writebit, sep=",",row.names=TRUE) 
 
+#creating copies of renamed variables to facilitate plotting
+alldat$Trisomy<-as.factor(alldat$trisomy)
+levels(alldat$Trisomy)<-c('XXX','XXY','XYY','other')
+alldat$Diagnosis<-as.factor(alldat$pre_postnatal_diag)
+levels(alldat$Diagnosis)<-c('Prenatal','Postnatal')
+alldat<-filter(alldat,alldat$trisomy<9) #remove isochromosome case
+
 
 #png(file="mygraphic2.png",width=400,height=350)
-pirateplot(formula = alldat$global_neurodev_rating~ Trisomy + Diagnosis,
+pirateplot(formula = alldat$global_jittered~ Trisomy + Diagnosis,
            point.o = .5,
            bar.o=.0,
            inf.o=.2,
            bean.o=.5,
-           jitter=.2,
-           data = mydata,
+           jitter=.18,
+           data = alldat,
            ylab='Global rating',
            ylim=c(0,10),
            main="Global rating")
