@@ -1,7 +1,7 @@
 #http://rich-iannone.github.io/DiagrammeR/graphviz_and_mermaid.html
 
 # Based on version done for twins by Alex Wilson
-#
+# 1st nov 2017 - now with plot of SRS by group by diagnosis
 
 #install.packages('DiagrammeR')
 library(DiagrammeR)
@@ -31,7 +31,7 @@ if(os1=="windows"){
 #Sorry had to add this bit as the link didn't work for me. i.e. manual down load and redirect link.
 #dir.PT<-"c:/Users/pthompson/Desktop/"
 
-main.data <- read.csv(paste0(dir,"SCTData_DATA_2017-10-30_0855.csv"))
+main.data <- read.csv(paste0(dir,"SCTData_DATA_2017-11-01_1815.csv"))
 
 names(main.data)[1]<-"record_id"
 
@@ -61,15 +61,7 @@ for (i in 1:1){ #change to 2 to see rates by reason for testing
   label1<-'Prenatal'
   label2<-'Postnatal'
   label3<-'When SCT identified'
-  if (i==2){
-    ascbias<-c(which(main.data$why_tested==2),which(main.data$why_tested==3))
-    postnatals<-main.data[ascbias,] #these are no longer pre-post but divided
-    #according to whether tested because of behav/neuro concerns
-    prenatals<-main.data[-ascbias,] #tested bcs other med concerns
-    label1<-'Medical'
-    label2<-'Neurodev.'
-    label3<-'Reason for testing'
-  }
+
   n.A<-dim(postnatals)[1]
   n.B<-dim(prenatals)[1]
   
@@ -97,6 +89,13 @@ for (i in 1:1){ #change to 2 to see rates by reason for testing
   n.N=length(which(xyy2$dawba_diagnoses_rater_1_complete>0))
   
   
+  finalascbiasXXX<-nrow(filter(xxx2,dawba_diagnoses_rater_1_complete>0,why_tested==3|why_tested==2))
+  finalascbiasXXY<-nrow(filter(xxy2,dawba_diagnoses_rater_1_complete>0,why_tested==3|why_tested==2))
+  finalascbiasXYY<-nrow(filter(xyy2,dawba_diagnoses_rater_1_complete>0,why_tested==3|why_tested==2))
+
+ #   reason for testing 2 = Behaviour and 3 =Neurodev.
+ 
+  }
   #now create flow chart ; TB denotes top to bottom
   #Need to add labels along the side: top row 'Reason for testing or Time of testing'
   #Then trisomy, then with DAWBA data
@@ -159,9 +158,64 @@ digraph a_nice_graph {
 [15]: paste0('N = ',n.N)
 "))
   
+  #Create categories for plotting
+  #Exclude those without DAWBA and divide the rest (a) by karyotype and (b) by reason for testing
+  #i.e. 6 subgroups
   
-}
+  #Within each subgroup identify whether 1) Social Anxiety on DAWBA, 2) ASD on DAWBA or 3) ASD on parent report
+  #Not mutually exclusive, but 2 trumps 3. So each case needs coding as 10, 2, 3, 12,13. 
+  #Then plot SRS scores - for whole score as well as subscales, for 6 subgroups, with symbols denoting psychiat code
+  
+  my.dawba<-filter(main.data,dawba_diagnoses_rater_1_complete>0)
+  my.dawba<-select(my.dawba,record_id,trisomy,why_tested,asd,srs_t_score,socaw_ss,soccog_ss,
+                   soccomm_ss,socmot_ss,autfeat_ss,asd_dsm_r1,autism_icd_r1,social_anx_dsm_r1,
+                   social_anx_icd_r1,asd_dsm_r2,autism_icd_r2,social_anx_dsm_r2,
+                   social_anx_icd_r2)
+  my.dawba$subgp<-1
+  w<-c(which(my.dawba$why_tested==2),which(my.dawba$why_tested==3))
+  my.dawba$subgp[w]<-2
+  my.dawba$allsubgp<-10*my.dawba$subgp+my.dawba$trisomy
+  my.dawba$allsubgp<-as.factor(my.dawba$allsubgp)
+  levels(my.dawba$allsubgp)<-c('XXX','XXY','XYY','XXX*','XXY*','XYY*') #* denotes asc bias group
+  
+  #recode DAWBA. for the moment code as positive if either rater codes as >0
+my.dawba$socanx<-0 #initialise
+w<-unique(c(which(my.dawba$social_anx_dsm_r1>0),which(my.dawba$social_anx_dsm_r2>0),
+                which(my.dawba$social_anx_icd_r1>0),which(my.dawba$social_anx_icd_r2>0)))
+my.dawba$socanx[w]<-1
+my.dawba$aut<-0 #initialise
+w<-unique(c(which(my.dawba$asd_dsm_r1>0),which(my.dawba$asd_dsm_r2>0),
+            which(my.dawba$asd_icd_r1>0),which(my.dawba$asd_icd_r2>0)))
+my.dawba$aut[w]<-1
+my.dawba$parasd<-my.dawba$asd
+w<-which(my.dawba$parasd>1)
+my.dawba$parasd[w]<-1
+my.dawba$tricode<-0
+w<-which(my.dawba$parasd==1)
+my.dawba$tricode[w]<-3
+w<-which(my.dawba$aut==1)
+my.dawba$tricode[w]<-2
+w<-which(my.dawba$socanx==1)
+my.dawba$tricode[w]<-my.dawba$tricode[w]+10
+my.dawba$tricode<-as.factor(my.dawba$tricode)
+levels(my.dawba$tricode)  <- c('None','ASD','ASD.par','SocAnx','SocAnx.ASD')                                                      
+  
+ table(my.dawba$tricode,my.dawba$allsubgp) 
+ 
 
+ # Try as dot plot
+ p<-ggplot(my.dawba, aes(x=allsubgp, y=srs_t_score, fill=tricode)) +
+   geom_dotplot(binaxis='y', stackdir='center')
+
+ p+scale_fill_manual(values=c("white", "red", "pink","blue","purple"))
+
+for (i in 1:5){
+  p<-ggplot(my.dawba, aes(x=allsubgp, y=my.dawba[,(i+5)], fill=tricode)) +
+    geom_dotplot(binaxis='y', stackdir='center')
+  
+  p1<-p+scale_fill_manual(values=c("white", "red", "pink","blue","purple"))
+  p1+ylab(colnames(my.dawba[i+5]))
+}
 
 
 
