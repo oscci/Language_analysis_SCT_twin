@@ -243,19 +243,42 @@ my.dawba$tricode[myn+1]<-0 #creates NA so won't plot
 mycols<- c("grey66", "red", "hotpink1","blue","purple")
 mysrsnames<-c('T-score','Social Awareness','Social Cognition','Social Communication',
               'Social Motivation','Autistic Features')
-for (i in 5:10){
-
- p<- beeswarm(my.dawba[,i]~allsubgp , data = my.dawba, xlab='Trisomy',ylab=mysrsnames[i-4],
-           horizontal=FALSE,col = 5, pch = 16,pwcol = mycols[as.numeric(tricode)]
+#quartz()
+pdf('beeswarm_srsT.pdf',width=5,height=4)
+beeswarm(my.dawba[,5]~allsubgp , data = my.dawba, xlab='Trisomy',ylab=mysrsnames[1],
+             horizontal=FALSE,ylim=c(35,95),col = 5,cex.axis=.85, pch = 16,
+         pwcol = mycols[as.numeric(tricode)]
         )
 
- p1<-p+abline(h = 60,v=7.9,col='gray')
- p2<-p1+abline(h = 75,v=7.9,col='gray')
+par(xpd=FALSE) #confine to plot area
+abline(a=60,b=0,col='darkgray',lty=2)
+abline(a=75,b=0,col='darkgray',lty=2)
+text(4,65,'Mild')
+text(4,80,'Severe')
+par(xpd=NA) #write outside plot area
+text(2,14,'Low bias')
+text(6,14,'High bias')
+dev.off()
+
+
+#Now do the remaining plots on one pdf
+pdf('beeswarm_subscales.pdf',width=8,height=5)
+par(mfrow=c(2,3))
+for (i in 6:10){
+
+ p<- beeswarm(my.dawba[,i]~allsubgp , data = my.dawba, xlab='Trisomy',ylab=mysrsnames[i-4],
+           horizontal=FALSE,ylim=c(35,95),col = 5,cex.axis=.65, pch = 16,pwcol = mycols[as.numeric(tricode)]
+        )
+ par(xpd=FALSE) #confine to plot area
+ abline(a=60,b=0,col='darkgray',lty=2)
+ abline(a=75,b=0,col='darkgray',lty=2)
  text(4,65,'Mild')
  text(4,80,'Severe')
- #Need to add label outside plotting area; can do with par(xpd=NA)
- #Default is par(xpd=FALSE)
- par(xpd=NA)
- text(2,18,'Low bias')
- text(6,18,'High bias')
+ par(xpd=NA) #write outside plot area
+ text(2,14,'Low bias')
+ text(6,14,'High bias')
+
 }
+dev.off()
+
+#Need to add a legend for the colour codes
