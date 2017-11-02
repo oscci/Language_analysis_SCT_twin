@@ -203,19 +203,59 @@ levels(my.dawba$tricode)  <- c('None','ASD','ASD.par','SocAnx','SocAnx.ASD')
  table(my.dawba$tricode,my.dawba$allsubgp) 
  
 
- # Try as dot plot
- p<-ggplot(my.dawba, aes(x=allsubgp, y=srs_t_score, fill=tricode)) +
-   geom_dotplot(binaxis='y', stackdir='center')
+ # Initial try as dotplot but commented out as beeswarm is better
+#  p<-ggplot(my.dawba, aes(x=allsubgp, y=srs_t_score, fill=tricode)) +
+#    geom_dotplot(binaxis='y', stackdir='center')
+# 
+#  p+scale_fill_manual(values=c("white", "red", "pink","blue","purple"))
+# 
+# for (i in 1:5){
+#   p<-ggplot(my.dawba, aes(x=allsubgp, y=my.dawba[,(i+5)], fill=tricode)) +
+#     geom_dotplot(binaxis='y', stackdir='center')
+#   
+#   p1<-p+scale_fill_manual(values=c("white", "red", "pink","blue","purple"))
+#   p1+ylab(colnames(my.dawba[i+5]))
+# }
 
- p+scale_fill_manual(values=c("white", "red", "pink","blue","purple"))
+ #--------------------------------------------------------------------------
+ #Try a beeswarm plot 
+ #--------------------------------------------------------------------------
+ library(beeswarm) #particular plot type
+ #first need to jitter those with SRS of 90 - too many to plot
+ #add a random number to those with scores of 90
+ for (i in 5:10){
+ w<-which(my.dawba[,i]>89)
+ myr<-runif(w,0,4)
+ my.dawba[w,i]<-90+myr
+ }
+ #--------------------------------------------------------------------------
+#We want a gap between the two blocks of groups.
+ #Try doing this by creating a datapoint from a fake group
+ myn<-nrow(my.dawba)
+ dummyrow<-my.dawba[myn,]
+my.dawba<-rbind(my.dawba,dummyrow)
+my.dawba$record_id[myn+1]<-'dummy'
+my.dawba$allsubgp<-as.numeric(my.dawba$allsubgp)
+my.dawba$allsubgp[myn+1]<-3.5
+my.dawba$allsubgp<-as.factor(my.dawba$allsubgp)
+levels(my.dawba$allsubgp)<-c('XXX','XXY','XYY',' ','XXX*','XXY*','XYY*') #* denotes asc bias group
+my.dawba$tricode[myn+1]<-0 #creates NA so won't plot
+mycols<- c("grey66", "red", "hotpink1","blue","purple")
+mysrsnames<-c('T-score','Social Awareness','Social Cognition','Social Communication',
+              'Social Motivation','Autistic Features')
+for (i in 5:10){
 
-for (i in 1:5){
-  p<-ggplot(my.dawba, aes(x=allsubgp, y=my.dawba[,(i+5)], fill=tricode)) +
-    geom_dotplot(binaxis='y', stackdir='center')
-  
-  p1<-p+scale_fill_manual(values=c("white", "red", "pink","blue","purple"))
-  p1+ylab(colnames(my.dawba[i+5]))
+ p<- beeswarm(my.dawba[,i]~allsubgp , data = my.dawba, xlab='Trisomy',ylab=mysrsnames[i-4],
+           horizontal=FALSE,col = 5, pch = 16,pwcol = mycols[as.numeric(tricode)]
+        )
+
+ p1<-p+abline(h = 60,v=7.9,col='gray')
+ p2<-p1+abline(h = 75,v=7.9,col='gray')
+ text(4,65,'Mild')
+ text(4,80,'Severe')
+ #Need to add label outside plotting area; can do with par(xpd=NA)
+ #Default is par(xpd=FALSE)
+ par(xpd=NA)
+ text(2,18,'Low bias')
+ text(6,18,'High bias')
 }
-
-
-
