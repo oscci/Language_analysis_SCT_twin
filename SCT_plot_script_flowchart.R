@@ -32,7 +32,8 @@ if(os1=="windows"){
 #dir.PT<-"c:/Users/pthompson/Desktop/"
 
 main.data <- read.csv(paste0(dir,"SCTData_DATA_2017-11-01_1815.csv"))
-
+w<-which(main.data$trisomy>8) #isochromosome case to be removed
+main.data<-main.data[-w,] #remove one record
 names(main.data)[1]<-"record_id"
 
 #Referral source
@@ -65,36 +66,39 @@ for (i in 1:1){ #change to 2 to see rates by reason for testing
   n.A<-dim(postnatals)[1]
   n.B<-dim(prenatals)[1]
   
-  #subset by karyotype
-  xxx2<-subset(postnatals,trisomy==1)
-  xxy2<-subset(postnatals,trisomy==2)
-  xyy2<-subset(postnatals,trisomy==3)
-  xxx1<-subset(prenatals,trisomy==1)
-  xxy1<-subset(prenatals,trisomy==2)
-  xyy1<-subset(prenatals,trisomy==3)
+    #   reason for testing 2 = Behaviour and 3 =Neurodev.
+    biasgrp<-filter(main.data,why_tested==3|why_tested==2)
+  nobiasgrp<-filter(main.data,why_tested<2|why_tested>3)
   
-  n.C<-dim(xxx1)[1]
-  n.D<-dim(xxy1)[1]
-  n.E<-dim(xyy1)[1]
-  n.F<-dim(xxx2)[1]
-  n.G<-dim(xxy2)[1]
-  n.H<-dim(xyy2)[1]
+  #subset by karyotype
+  xxx1<-subset(nobiasgrp,trisomy==1)
+  xxy1<-subset(nobiasgrp,trisomy==2)
+  xyy1<-subset(nobiasgrp,trisomy==3)
+  xxx2<-subset(biasgrp,trisomy==1)
+  xxy2<-subset(biasgrp,trisomy==2)
+  xyy2<-subset(biasgrp,trisomy==3)
+
+  
+  n.C <-nrow(nobiasgrp)
+  n.D <-nrow(biasgrp) 
+  
+  
+  n.E<-nrow(xxx1)
+  n.F<-nrow(xxy1)
+  n.G<-nrow(xyy1)
+  n.H<-nrow(xxx2)
+  n.I<-nrow(xxy2)
+  n.J<-nrow(xyy2)
   
   #now check DAWBA
-  n.I=length(which(xxx1$dawba_diagnoses_rater_1_complete>0))
-  n.J=length(which(xxy1$dawba_diagnoses_rater_1_complete>0))
-  n.K=length(which(xyy1$dawba_diagnoses_rater_1_complete>0))
-  n.L=length(which(xxx2$dawba_diagnoses_rater_1_complete>0))
-  n.M=length(which(xxy2$dawba_diagnoses_rater_1_complete>0))
-  n.N=length(which(xyy2$dawba_diagnoses_rater_1_complete>0))
+  n.K=length(which(xxx1$dawba_diagnoses_rater_1_complete>0))
+  n.L=length(which(xxy1$dawba_diagnoses_rater_1_complete>0))
+  n.M=length(which(xyy1$dawba_diagnoses_rater_1_complete>0))
+  n.N=length(which(xxx2$dawba_diagnoses_rater_1_complete>0))
+  n.O=length(which(xxy2$dawba_diagnoses_rater_1_complete>0))
+  n.P=length(which(xyy2$dawba_diagnoses_rater_1_complete>0))
   
-  
-  finalascbiasXXX<-nrow(filter(xxx2,dawba_diagnoses_rater_1_complete>0,why_tested==3|why_tested==2))
-  finalascbiasXXY<-nrow(filter(xxy2,dawba_diagnoses_rater_1_complete>0,why_tested==3|why_tested==2))
-  finalascbiasXYY<-nrow(filter(xyy2,dawba_diagnoses_rater_1_complete>0,why_tested==3|why_tested==2))
 
- #   reason for testing 2 = Behaviour and 3 =Neurodev.
- 
   }
   #now create flow chart ; TB denotes top to bottom
   #Need to add labels along the side: top row 'Reason for testing or Time of testing'
@@ -106,11 +110,12 @@ digraph a_nice_graph {
         # node definitions with substituted label text
         node [shape = plaintext, fontname = Helvetica]
         X[label='@@1']
-        Y[label= 'Trisomy']
-        Z[label = 'With DAWBA']
+        Y[label= 'Bias']
+        Z[label= 'Trisomy']
+        ZZ[label = 'With DAWBA']
         
         node [shape=square]
-        A[label='@@2',fillcolor=lightBlue]
+        A[label='@@2']
         B[label='@@3']
         
         C[label='@@4']
@@ -125,37 +130,42 @@ digraph a_nice_graph {
         L[label='@@13']
         M[label='@@14']
         N[label='@@15']
-        
+        O[label='@@16']
+        P[label='@@17']
         # edge definitions with the node IDs
-        A -> {C D E}
-        B -> {F G H}
-        C -> I
-        D -> J
+        A -> C
+        B -> {C D}
+        C -> {E F G}
+        D -> {H I J}
         E -> K
         F -> L
         G -> M
         H -> N
-        
-        
+        I-> O
+        J -> P
+    
         X -> Y [alpha=0,color='white']
         Y -> Z [alpha=0,color='white']
+       Z -> ZZ [alpha=0,color='white']
 }
 
 [1]: paste0(label3, ':\\n ',' Recruited from')
 [2]: paste0(label1,':\\n', 'NHS: N = ',y1,':\\n', 'Other: N = ',y2)
 [3]: paste0(label2,':\\n', 'NHS: N = ',z1,':\\n' ,'Other: N = ',z2)
-[4]: paste0('XXX',':\\n', 'N = ',n.C)
-[5]: paste0('XXY',' :\\n', 'N = ',n.D)
-[6]: paste0('XYY',' :\\n', 'N = ',n.E)
-[7]: paste0('XXX',' :\\n', 'N = ',n.F)
-[8]: paste0('XXY',' :\\n', 'N = ',n.G)
-[9]: paste0('XYY',' :\\n', 'N = ',n.H)
-[10]: paste0('N = ',n.I)
-[11]: paste0('N = ',n.J)
+[4]: paste0('Low',':\\n', 'N = ',n.C)
+[5]: paste0('High',':\\n', 'N = ',n.D)
+[6]: paste0('XXX',':\\n', 'N = ',n.E)
+[7]: paste0('XXY',':\\n', 'N = ',n.F)
+[8]: paste0('XYY',':\\n', 'N = ',n.G)
+[9]: paste0('XXX',':\\n', 'N = ',n.H)
+[10]: paste0('XXY',':\\n', 'N = ',n.I)
+[11]: paste0('XYY',':\\n', 'N = ',n.J)
 [12]: paste0('N = ',n.K)
 [13]: paste0('N = ',n.L)
 [14]: paste0('N = ',n.M)
 [15]: paste0('N = ',n.N)
+[16]: paste0('N = ',n.O)
+[17]: paste0('N = ',n.P)
 "))
   
   #Create categories for plotting
@@ -247,9 +257,7 @@ mysrsnames<-c('T-score','Social Awareness','Social Cognition','Social Communicat
 pdf('beeswarm_srsT.pdf',width=5,height=4)
 beeswarm(my.dawba[,5]~allsubgp , data = my.dawba, xlab='Trisomy',ylab=mysrsnames[1],
              horizontal=FALSE,ylim=c(35,95),col = 5,cex.axis=.85, pch = 16,
-         pwcol = mycols[as.numeric(tricode)]
-        )
-
+         pwcol = mycols[as.numeric(tricode)])
 par(xpd=FALSE) #confine to plot area
 abline(a=60,b=0,col='darkgray',lty=2)
 abline(a=75,b=0,col='darkgray',lty=2)
@@ -258,6 +266,8 @@ text(4,80,'Severe')
 par(xpd=NA) #write outside plot area
 text(2,14,'Low bias')
 text(6,14,'High bias')
+#legend("top", legend = c("None","ASD","ASD report","Soc Anx","Both"),
+# title='Soc Anx/ASD Diagnosis')
 dev.off()
 
 
