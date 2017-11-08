@@ -72,12 +72,45 @@ levels(lowbias.long$trisomy)<-c('XXX','XXY','XYY')
 w<-which(lowbias.long$score>90) #remove jitter that was added for beeswarm
 lowbias.long$score[w]<-90
 
+#---------------------------------------------------------------------
+# Test for impact of trisomy on the 5 SRS subscales
+#---------------------------------------------------------------------
+
 library(lme4)
+library(lmerTest) #Adding this extra package provides p-values (if you want them) for your fixed effects.
 
-fit1a <- lmer(score ~ trisomy + subscale + trisomy*subscale + (1 | record_id),  
+
+myfit <- lmer(score ~ trisomy + subscale + trisomy*subscale + (1 | record_id),  
               data = lowbias.long)
-#model 1 output
-summary(fit1a)
 
+summary(myfit)
 
+plot(myfit) # residuals check - look ok 
+qqnorm(residuals(myfit)) #check residuals - look fine.
 
+#Test of unequal variance in trisomy groups.
+
+library(car)
+leveneTest(residuals(myfit) ~ lowbias.long$trisomy) # not significant so equality of variance in trisomy groups.
+
+#Look at summary stats for score data by trisomy group
+require(psych)
+socaw<-describeBy(lowbias$socaw_ss,lowbias$trisomy) # some summary statistics to confirm.
+soccog<-describeBy(lowbias$soccog_ss,lowbias$trisomy)
+soccomm<-describeBy(lowbias$soccomm_ss,lowbias$trisomy)
+socmot<-describeBy(lowbias$socmot_ss,lowbias$trisomy)
+autfeat<-describeBy(lowbias$autfeat_ss,lowbias$trisomy)
+
+mysrs.summary<-data.frame(matrix(rep(NA,33),nrow=3))
+rownames(mysrs.summary)<-c('XXX','XXY','XYY')
+colnames(mysrs.summary)<-c('N','Soc Aware','(SD)','Soc Cog','(SD)','Soc Comm','(SD)','Soc Motiv','(SD)','Aut feat','(SD)')
+#write.csv(lowbias.long, "lowbias.long.csv",row.names=FALSE) 
+for (i in 1:3){
+ mysrs.summary[i,]<-c(unlist(socaw[i])[2],unlist(socaw[i])[3],unlist(socaw[i])[4],
+                      unlist(soccog[i])[3],unlist(soccog[i])[4],
+                      unlist(soccomm[i])[3],unlist(soccomm[i])[4],
+                      unlist(socmot[i])[3],unlist(socmot[i])[4],
+                      unlist(autfeat[i])[3],unlist(autfeat[i])[4])
+  
+}
+mysrs.summary<-round(mysrs.summary,2)
