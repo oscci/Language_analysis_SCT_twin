@@ -1,6 +1,6 @@
 #SCT_for_beeswarm by DVM Bishop
 #section of code that only runs when accessed from Rmd after dawba_select_data.R
-#(bcs needs my.dawba in memory)
+#(bcs needs my.dawba in memory - but this created problems so now write my.dawba to file and re-read
 
 #Also be aware that repeatedly running later sections may mess up the plots
 #because of addition of dummy row - need to start over 
@@ -10,6 +10,10 @@
 #Try a beeswarm plot 
 #--------------------------------------------------------------------------
 library(beeswarm) #particular plot type
+file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_Files/data/"
+myfile<-paste0(file.loc,'my_dawba_short.csv')
+my.dawba<-read.csv(myfile)
+
 #first need to jitter those with SRS of 90 - too many to plot
 #add a random number to those with scores of 90
 for (i in 5:10){
