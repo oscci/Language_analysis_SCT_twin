@@ -8,6 +8,13 @@ author:
     corresponding : yes    # Define only one corresponding author
     address       : "Department of Experimental Psychology, South Parks Road, Oxford, UK, OX1 3UD"
     email         : "alexander.wilson@psy.ox.ac.uk"
+      - name          : "Judith King"
+    affiliation   : "1,2"
+
+affiliation:
+  - id            : "1"
+    institution   : "Oxford University"
+
   - name          : "Dorothy V. M. Bishop"
     affiliation   : "1,2"
 
@@ -48,6 +55,7 @@ library(tidyverse)
  library(pander)
   library(gridExtra)
   library(grid)
+
 get_os <- function(){
   sysinf <- Sys.info()
   if (!is.null(sysinf)){
@@ -68,19 +76,31 @@ get_os <- function(){
 ```{r, echo=FALSE} 
 # Seed for random number generation
 set.seed(42)
+```
+
+```{r,echo=FALSE}
 # Read in main data file
 dir<-"/Users/dorothybishop/Dropbox/ERCadvanced/project SCT analysis/SCT_ASD_analysis/Project_files/Data/"
-mydata<-read.csv(paste0(dir,"SCTData_DATA_2017-10-30_0855.csv"))
+mydata <- read.csv(paste0(dir,"SCTData_DATA_2017-11-01_1815.csv"))
 mydata<-filter(mydata,trisomy<9) #remove case of isochromosome
 #deal with missing data
 for (mycol in 242:318){
   mymiss=which(mydata[,mycol]>900)
   mydata[mymiss,mycol]=NA
-} 
+}
 ```
+
+```{r include=FALSE}
+source('dawba_select_data.R')
+nxxx<-length(which(my.dawba$trisomy==1))
+nxxy<-length(which(my.dawba$trisomy==2))
+nxyy<-length(which(my.dawba$trisomy==3))
+```
+
+
 #Abstract
 
-**Background**: Early studies of children with sex chromosome trisomies documented an association with language disorder, but more recent research has suggested an elevated risk for autism spectrum disorder (ASD), especially in males with Klinefelter syndrome (47,XXY) and 47,XYY karyotypes. However, there is also evidence that an additional X chromosome is associated with high levels of social anxiety, raising the question of how far this may be misinterpreted as ASD. **Aims**: (1) To compare rates of social impairments in children with an extra X chromosome, i.e. girls with trisomy X (47,XXX karyotype) and boys with Klinefelter syndrome, versus those with an additional Y chromosome (boys with XYY syndrome); (2) To consider how far social impairments in all three groups were linked to ASD. **Methods**: We compared three sources of information: existing diagnoses, diagnoses from an online psychiatric assessment (DAWBA) and autism-sensitive questionnaires completed by parents in children with 47,XXX (N = xx), 47,XXY (N = xx) and 47,XYY (N = xx) karyotypes to consider how prevalent social impairments were in the three trisomy types, and how far they could be attributed to ASD. **Results**:  **Discussion and Conclusions**:
+**Background**: Early studies of children with sex chromosome trisomies documented an association with language disorder, but more recent research has suggested an elevated risk for autism spectrum disorder (ASD), especially in males with 47,XXY (Klinefelter syndrome) and 47,XYY karyotypes. However, there is also evidence that an additional X chromosome is associated with high levels of social anxiety, raising the question of how far this is distinct from ASD. **Aims**: (1) To compare rates of social impairments in children with an extra X chromosome, i.e. girls with trisomy X (47,XXX karyotype) and boys with Klinefelter syndrome, versus those with an additional Y chromosome (boys with XYY syndrome); (2) To consider how far social impairments in all three groups were linked to ASD. **Methods**: We compared three sources of information: existing diagnoses, diagnoses from an online psychiatric assessment (DAWBA) and an autism-sensitive questionnaire, the Social Responsiveness Scale, completed by parents in children with 47,XXX (N = `r nxxx`), 47,XXY (N = `r nxxy`) and 47,XYY (N = `r nxyy`) karyotypes to consider how prevalent social impairments were in the three trisomy types, and how far they could be attributed to ASD. **Results**: Rates of ASD  **Discussion and Conclusions**:
  
 
 # Introduction
@@ -113,32 +133,20 @@ The goal of the current study was to compare profiles of social impairment in ch
 We report how we determined our sample size, all data exclusions, all manipulations, and all measures in the study. <!-- 21-word solution (Simmons, Nelson & Simonsohn, 2012; retrieved from http://ssrn.com/abstract=2160588) -->
 
 ## Participants
-Participants included 43 girls with trisomy X, 45 boys with Klinefelter syndrome, and 52 boys with XYY. As shown in Figure 1, 68 cases were recruited from National Health Service Clinical Genetics centres, and the remainder from two support groups: Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association, or from self-referral via social media. A criterion for inclusion was that the child was aware of their trisomy status. As in our previous study (Bishop et al., 2011), in the analysis we distinguish between cases where the trisomy was discovered on prenatal screening, and those identified later in childhood. We also asked parents specifically about the reason for genetic testing, and distinguished a subset of children where this was part of an assessment of either behavioural or neurodevelopmental problems. The postnatally identified group included a preponderance of children whose chromosome aneuoploidy only came to light because of behavioural or developmental problems (XXX: N = 12/18, XXY: N = 26/34 and XYY: N = 32/40), and so cannot be used to give an estimate of prevalence of disorders. 
-![<b>Figure 1</b>. Flowchart showing numbers of children with each karyotype in the study, in relation to whether prenatally or postnatally diagnosed, and whether DAWBA was completed.](/Users/dorothybishop//Dropbox/ERCadvanced/project SCT analysis/SCT_ASD_analysis/Project_Files/plots/flowout.png)
+The analysis was conducted on data from 87 children (29 with XXX, 26 with XXY and 32 with XYY) whose parents had completed the Development and Wellbeing Assessment (DAWBA). As shown in Figure 1, these came from a larger sample of 140 children who participated in a study of language and laterality in sex chromosome trisomies. As shown in Figure 1, children were recruited from National Health Service Clinical Genetics centres, from two support groups: Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association, or from self-referral via social media. A criterion for inclusion was that the child was aware of their trisomy status. Figure 1 distinguishes between cases where the trisomy was discovered in childhood during investigations for behavioural or neurodevelopmental problems, as the latter group suffer from ascertainment bias and are likely to a high rate of disorder that is not  representative of that karyotype. These are referred to as the 'High Bias' subgroup. An unexpected feature of the sample was that the majority of girls with trisomy X were in the Low Bias subgroup, whereas the majority of boys with XXY or XYY were in the High Bias subgroup, suggesting that these karyotypes were more likely to be associated with neurodevelopmental problems. 
+![<b>Figure 1</b>. Flowchart showing numbers of children with each karyotype in the study, in relation to whether prenatally or postnatally diagnosed, whether high ascertainment bias, and whether DAWBA was completed.](/Users/dorothybishop//Dropbox/ERCadvanced/project SCT analysis/SCT_ASD_analysis/Project_Files/plots/fig1_flowchart.png)
 
 ## Material\
 
 ### Psychiatric evaluation
 \
 In an initial telephone interview, parents were asked about the child's medical and educational history, including a question about whether anyone had diagnosed the child with a neurodevelopmental disorder such as ASD, developmental language disorder (DLD) or specific language impairment (SLI), dyslexia or dyspraxia. 
-In addition, one or both parents were asked to complete the online Development and Wellbeing Assessment (DAWBA) in their own time. 86 families complied with this request. The DAWBA gives information on likelihood of the child meeting criteria for a range of psychiatric diagnoses, but the final diagnosis is made by a trained rater who assimilates all the information and evaluates it against both ICD and DSM criteria. For this project, all interviews were coded by the first author, and a further xx interviews were coded by a second independent rater to check on diagnostic agreement. The raters doing the coding was blind to the trisomy status of the child, *although in some cases the parent mentioned this?*.
+In addition, one or both parents were asked to complete the online Development and Wellbeing Assessment (DAWBA) in their own time. 86 families complied with this request. The DAWBA gives information on likelihood of the child meeting criteria for a range of psychiatric diagnoses, but the final diagnosis is made by a trained rater who assimilates all the information and evaluates it against both ICD and DSM criteria. For this project, all interviews were coded by the first author, and a further 30 interviews were coded by a second independent rater to check on diagnostic agreement. The raters doing the coding was blind to the trisomy status of the child, *although in some cases the parent mentioned this?*.
 
 ### Language, literacy and cognitive assessments
 \
 
-All children were seen for a neurocognitive assessment, using the test battery shown in Table 1. Hearing was screened using a xxx audiometer, with the screen being passed if reliable responses were elicited at 30 dB or less to pure tone frequencies of 500 Hz, 1000 Hz, 2000 Hz and 4000 Hz in the better ear. In addition, handedness and language laterality were assessed, the latter involving a child-friendly functional transcranial Doppler ultrasound paradigm (Groen et al, 2012). Results from laterality assessments will be described in another publication.
-
-```{r, echo=FALSE} 
-#echo statement is essential for kable to work
-### Table 1 
-#Originally had the Table 1 header outside this chunk, but for reasons totally mysterious to me, kable adds 'table 1' to the caption - I'd like to get rid of this.
-options(knitr.kable.NA = '')
-file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_Files/writeup/"
-filename<-c("SCT_Table1_for_kable.csv") 
-tab1data<-data.frame(read_csv(paste0(file.loc,filename)))
-kable(tab1data,caption='Assessment battery')
-```
-
+All children were seen for a detailed neurocognitive assessment and language assessment lasting around 1.5 to 2 hours. In addition, handedness and language laterality were assessed, the latter involving a child-friendly functional transcranial Doppler ultrasound paradigm (Groen et al, 2012). Results from these assessments will be described elsewhere.
 
 ## Parental questionnaires
 
@@ -152,50 +160,18 @@ Ethical approval was obtained for the study in 2011 from the Berkshire NHS Resea
 
 ## Data analysis  
 Study data were analysed using R software (R Core Team, 2016), with the main database managed using REDCap electronic data capture tools hosted at the University of Oxford (Harris et al., 2009). 
-Table 2 shows the full set of independent and dependent variables considered in the analysis. All analyses were run separately for the prenatally identified and postnatally identified cases.
-```{r, echo=FALSE} 
-### Table 2
-# options(knitr.kable.NA = '')
-# file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_Files/writeup/"
-# filename<-c("SCT_Table2_for_kable.csv") 
-# tab2data<-data.frame(read_csv(paste0(file.loc,filename)))
-# kable(tab2data,caption='Independent and Dependent Variables')
-```
+The principal question was whether the rates of social anxiety and autism spectrum disorder differed between the three karyotypes. Because these rates are likely to be influenced by ascertainment bias, the data were analysed separately for the Low Bias and High Bias subgroups. Four measures were available for assessment of ASD symptoms: parental report of ASD diagnosis at the initial interview, the Social Responsiveness Scale (SRS), the Children's Communication Checklist-2 (CCC-2), and the Development and Wellbeing Assessment (DAWBA). 
 
 
 # Results
-Figure 2 shows the T-scores on the total SRS for individual children grouped by trisomy type and whether diagnosis was prenatal or postnatal. A high score on the SRS corresponds to impairment. The recommended cutoff for suspected ASD is 60, though in some studies covered in the introduction, a more stringent cutoff of 75 was used.It is apparent just from inspection that, relative to published norms, there is a high rate of impairment on the SRS in children with sex chromosome trisomies, but that this is considerably more striking for those diagnosed postnatally. A regression analysis predicting SRS T-score from Trisomy, Diagnosis (prenatal vs postnatal) and age confirmed that the only factor accounting for variance in the T-score was time of diagnosis.
 
 
 
-```{r, echo=FALSE} 
-mydata$trisomy <- factor(mydata$trisomy,
-                         levels = c(1,2,3),
-                         labels = c("XXX", "XXY", "XYY")) 
-mydata$asd<-factor(mydata$asd,
-                         levels=c(0,1,2),
-                         labels=c("None","Suspected","Diagnosed"))
-mydata$pre_postnatal_diag<-factor(mydata$pre_postnatal_diag,
-                   levels=c(0,1),
-                   labels=c("Prenatal","Postnatal"))
-
-colnames(mydata)[5]='Diagnosis'
-colnames(mydata)[4]='Trisomy'
-colnames(mydata)[2]<-'Age'
-colnames(mydata)[253]<-'SRS'
-lmmdata<-select(mydata,Age,Trisomy,Diagnosis,SRS)
-
-summary(lm(SRS ~ Trisomy+Diagnosis+Age, data = mydata))
-
+```{r include=FALSE}
+source('SCT_for_beeswarm.R')
 ```
 
-```{r, message=FALSE,results = "asis"}
- 
 
-os1=get_os()
-ifelse(os1=="windows",source(paste0("c:/Users/",Sys.info()["login"],"/Dropbox/Project SCT analysis/SCT_ASD_analysis/Project_files/Analysis/analysis_script.R")),source("~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_files/Analysis/SCT_SRS_pirateplot.R"))
- 
-```
 The next question considered was whether the profile of scores on the SRS subscales differed across trisomies. Mean and SD for each SRS subscale are shown in table x.
 ```{r, echo=FALSE} 
 #echo statement is essential for kable to work
@@ -211,6 +187,7 @@ An alternative approach to subdividing the SRS items is to distinguish in terms 
 
 Analysis of diagnoses and DAWBA in relation to (a) trisomies and (b) SRS
 # Discussion
+Limitations: Rates of social anxiety could be underestimated in this study because participation required the child to assent to an assessment. It is likely that children with significant levels of social anxiety will have declined to take part.
 
 \newpage
 # Acknowledgements
