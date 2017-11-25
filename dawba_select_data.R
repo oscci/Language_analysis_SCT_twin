@@ -3,6 +3,8 @@
 #based on SCT_plot_script_flowchart.R
 
 library(tidyverse)
+library(Hmisc)
+library(doBy)
 #Create categories for plotting
 #Exclude those without DAWBA and divide the rest (a) by karyotype and (b) by reason for testing
 #i.e. 6 subgroups
@@ -14,10 +16,13 @@ library(tidyverse)
 
 
 my.dawba1<-filter(mydata,dawba_diagnoses_rater_1_complete>0)
+
 my.dawba<-dplyr::select(my.dawba1,record_id,trisomy,why_tested,asd,srs_t_score,socaw_ss,soccog_ss,
                  soccomm_ss,socmot_ss,autfeat_ss,asd_dsm_r1,autism_icd_r1,social_anx_dsm_r1,
                  social_anx_icd_r1,asd_dsm_r2,autism_icd_r2,social_anx_dsm_r2,
-                 social_anx_icd_r2)
+                 social_anx_icd_r2,emotional,conduct,hyperactivity,peer,prosocial)
+#last 5 are SDQ scales, added Nov 2017
+
 my.dawba$subgp<-1
 w<-c(which(my.dawba$why_tested==2),which(my.dawba$why_tested==3))
 my.dawba$subgp[w]<-2
@@ -61,7 +66,9 @@ lowbias.long$subscale<-NA
 lowbias.long$score<-NA
 myrow<-nrow(lowbias)
 thisrow=0
-for (i in 6:10){
+starti<-which(colnames(lowbias)=='socaw_ss')
+endi<-starti+4
+for (i in starti:endi){
  lowbias.long[(thisrow+1):(thisrow+myrow),3:4]<-cbind(i-5,lowbias[,i])
  lowbias.long[(thisrow+1):(thisrow+myrow),1:2]<-lowbias.long[1:51,1:2]
  thisrow<-thisrow+myrow
@@ -114,3 +121,44 @@ for (i in 1:3){
   
 }
 mysrs.summary<-round(mysrs.summary,2)
+file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_Files/data/"
+write.csv(mysrs.summary, file = paste0(file.loc,"nicetab_srs.csv"))
+
+write.csv(my.dawba,file=paste0(file.loc,'my_dawba_short.csv'))
+#########################################################################
+#Look at CGAS
+#First check rater agreement
+myr<-rcorr(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
+my.dawba$CGAS<-as.integer(my.dawba1$cgas_r1/10)
+#my.dawba$cgas<-mean(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
+
+library(ggridges) #for joyplot
+
+cgast<-table(my.dawba$CGAS,my.dawba$allsubgp)
+mysum<-summaryBy(CGAS ~ allsubgp, data=my.dawba,
+                 FUN = function(x) { c(m = mean(x))})
+mymean<-rep(NA,6)
+for (i in 1:6){
+  mymean[i]<-paste0('Mean = ',round(mysum[i,2],1))
+}     
+
+pngname1<-'joyplot_cgas.png'
+png(pngname1,width=300,height=400)
+
+ggplot(my.dawba, aes(x = CGAS, y = allsubgp,fill=allsubgp)) + 
+  geom_density_ridges(rel_min_height = 0.01)+
+  ylab('Low Bias             High Bias           ')+
+   theme(axis.text.y= element_text( color="black", size=18))+
+  theme(axis.text.x= element_text( color="black", size=14))+
+  theme(axis.title= element_text( color="black", size=18))+
+scale_x_continuous(breaks=seq(2,10,2))+
+scale_fill_cyclical(values = c("deeppink","darkorchid1", "deepskyblue"))+
+       annotate("text", x=10,y = seq(1.1,6.1,1), label =mymean, size=6)
+
+dev.off()
+file.show(pngname1) 
+
+
+
+
+
