@@ -31,6 +31,41 @@ my.dawba$allsubgp<-10*my.dawba$subgp+my.dawba$trisomy #create 2factor code
 my.dawba$allsubgp<-as.factor(my.dawba$allsubgp)
 levels(my.dawba$allsubgp)<-c('XXX','XXY','XYY','XXX*','XXY*','XYY*') #* denotes asc bias group
 
+#########################################################################
+#Look at CGAS
+#########################################################################
+#First check rater agreement
+myr<-rcorr(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
+my.dawba$CGAS<-as.integer(my.dawba1$cgas_r1/10)
+#my.dawba$cgas<-mean(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
+
+library(ggridges) #for joyplot
+
+cgast<-table(my.dawba$CGAS,my.dawba$allsubgp)
+mysum<-summaryBy(CGAS ~ allsubgp, data=my.dawba,
+                 FUN = function(x) { c(m = mean(x))})
+mymean<-rep(NA,6)
+for (i in 1:6){
+  mymean[i]<-paste0('Mean = ',round(mysum[i,2],1))
+}     
+
+pngname1<-'joyplot_cgas.png'
+png(pngname1,width=300,height=400)
+
+ggplot(my.dawba, aes(x = CGAS, y = allsubgp,fill=allsubgp)) + 
+  geom_density_ridges(rel_min_height = 0.01)+
+  ylab('Low Bias             High Bias           ')+
+  theme(axis.text.y= element_text( color="black", size=18))+
+  theme(axis.text.x= element_text( color="black", size=14))+
+  theme(axis.title= element_text( color="black", size=18))+
+  scale_x_continuous(breaks=seq(2,10,2))+
+  scale_fill_cyclical(values = c("deeppink","darkorchid1", "deepskyblue"))+
+  annotate("text", x=10,y = seq(1.1,6.1,1), label =mymean, size=6)
+
+dev.off()
+#file.show(pngname1) 
+#########################################################################
+
 #recode DAWBA. for the moment code as positive if either rater codes as >0
 my.dawba$socanx<-0 #initialise
 w<-unique(c(which(my.dawba$social_anx_dsm_r1>0),which(my.dawba$social_anx_dsm_r2>0),
@@ -171,39 +206,7 @@ file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_F
 write.csv(mysdq.summary, file = paste0(file.loc,"nicetab_sdq.csv"))
 
 
-#########################################################################
-#Look at CGAS
-#########################################################################
-#First check rater agreement
-myr<-rcorr(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
-my.dawba$CGAS<-as.integer(my.dawba1$cgas_r1/10)
-#my.dawba$cgas<-mean(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
 
-library(ggridges) #for joyplot
-
-cgast<-table(my.dawba$CGAS,my.dawba$allsubgp)
-mysum<-summaryBy(CGAS ~ allsubgp, data=my.dawba,
-                 FUN = function(x) { c(m = mean(x))})
-mymean<-rep(NA,6)
-for (i in 1:6){
-  mymean[i]<-paste0('Mean = ',round(mysum[i,2],1))
-}     
-
-pngname1<-'joyplot_cgas.png'
-png(pngname1,width=300,height=400)
-
-ggplot(my.dawba, aes(x = CGAS, y = allsubgp,fill=allsubgp)) + 
-  geom_density_ridges(rel_min_height = 0.01)+
-  ylab('Low Bias             High Bias           ')+
-   theme(axis.text.y= element_text( color="black", size=18))+
-  theme(axis.text.x= element_text( color="black", size=14))+
-  theme(axis.title= element_text( color="black", size=18))+
-scale_x_continuous(breaks=seq(2,10,2))+
-scale_fill_cyclical(values = c("deeppink","darkorchid1", "deepskyblue"))+
-       annotate("text", x=10,y = seq(1.1,6.1,1), label =mymean, size=6)
-
-dev.off()
-file.show(pngname1) 
 socialanx<-describeBy(lowbias$socanx_concerns,lowbias$trisomy)
 
 #social anxiety symptoms
@@ -216,7 +219,15 @@ w<-which(lowbias$sepanx_concern==1)
 lowbias$sep_or_soc[w]<-1
 sepsoctable<-table(lowbias$sep_or_soc,lowbias$trisomy)
 
-
+#social anxiety symptoms whole sample
+table(my.dawba1$socanx_concerns,my.dawba1$trisomy)
+table(my.dawba1$sepanx_concern,my.dawba1$trisomy)
+table(my.dawba1$soc_vs_sep,my.dawba1$trisomy)
+table(my.dawba1$socfear_level,my.dawba1$trisomy)
+my.dawba1$sep_or_soc<-my.dawba1$socanx_concerns
+w<-which(my.dawba1$sepanx_concern==1)
+my.dawba1$sep_or_soc[w]<-1
+sepsoctable<-table(my.dawba1$sep_or_soc,my.dawba1$trisomy)
 
 
 
