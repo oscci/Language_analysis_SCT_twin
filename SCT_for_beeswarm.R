@@ -14,6 +14,11 @@ file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_F
 myfile<-paste0(file.loc,'my_dawba_short.csv')
 my.dawba<-read.csv(myfile)
 
+#reorder levels of tricode
+my.dawba$tricode = factor(my.dawba$tricode,levels(my.dawba$tricode)[c(3,1,2,6,4,5)])
+#reorder levels of allsubgp
+my.dawba$allsubgp = factor(my.dawba$allsubgp,levels(my.dawba$allsubgp)[c(1,3,5,2,4,6)])
+
 #first need to jitter those with SRS of 90 - too many to plot
 #add a random number to those with scores of 90
 for (i in 5:10){
@@ -33,55 +38,54 @@ my.dawba$allsubgp<-as.numeric(my.dawba$allsubgp)
 my.dawba$allsubgp[myn+1]<-3.5
 my.dawba$allsubgp<-as.factor(my.dawba$allsubgp)
 levels(my.dawba$allsubgp)<-c('XXX','XXY','XYY',' ','XXX*','XXY*','XYY*') #* denotes asc bias group
-my.dawba$tricode[myn+1]<-NA #NA so won't plot
-mycols<- c("grey66", "red", "hotpink1","blue","purple")
+my.dawba$tricode[myn+1]<-1 #NA so won't plot
+mycols<- c("grey66", "red", "hotpink1","purple","dodgerblue","blue")
 mysrsnames<-c('T-score','Social Awareness','Social Cognition','Social Communication',
               'Social Motivation','Autistic Features')
 #quartz()
 dir<-"/Users/dorothybishop/Dropbox/ERCadvanced/project SCT analysis/SCT_ASD_analysis/Project_files/Plots/"
-pdfname1<-paste0(dir,'beeswarm_srsT.pdf')
-pdf(pdfname1,width=10,height=4)
+png_bees<-paste0(dir,'beeswarm_srsT.png')
+png(png_bees,width=1200,height=500)
 par(mfrow=c(1,2)) #one row and 2 columns
 par(mar=c(5.1,4.1,4.1,0.1))
-mycols<- c("grey66", "red", "hotpink1","blue","purple")
 mysrsnames<-c('T-score','Social Awareness','Social Cognition','Social Communication',
               'Social Motivation','Autistic Features')
 
-beeswarm(my.dawba[,5]~allsubgp , data = my.dawba, xlab='Trisomy',ylab=mysrsnames[1],
-         horizontal=FALSE,ylim=c(35,95),col = 5,cex.axis=.85, pch = 16,
+beeswarm(srs_t_score~allsubgp , data = my.dawba, xlab='Trisomy',ylab=mysrsnames[1],
+         horizontal=FALSE,ylim=c(35,95),col = 5, pch = 16,cex=1.7,cex.axis=1.5,cex.lab=1.5,
          pwcol = mycols[as.numeric(tricode)])
 par(xpd=FALSE) #confine to plot area
 abline(a=60,b=0,col='darkgray',lty=2)
 abline(a=75,b=0,col='darkgray',lty=2)
-text(4,65,'Mild')
-text(4,80,'Severe')
+text(4,65,'Mild',cex=1.5)
+text(4,80,'Severe',cex=1.5)
 par(xpd=NA) #write outside plot area
-text(2,14,'Low bias')
-text(6,14,'High bias')
+text(2,14,'Low bias',cex=1.5)
+text(6,14,'High bias',cex=1.5)
 
 #legend as separate plot in panel 2
-mylegendcols<- c("grey66","hotpink1","purple", "red", "blue") #different order
+mylegendcols<- c("grey66","dodgerblue","blue","hotpink1","red", "purple") #different order
 
 mysrsnames<-c('T-score','Social Awareness','Social Cognition','Social Communication',
               'Social Motivation','Autistic Features')
 plot(x=NULL, y=NULL , type = "n", axes = F, xlab = "", ylab = "", xlim=c(0,20), ylim=c(0,250)) #set up the plot?
-mylabels <- c("None","ASD (parent report)","ASD + Social Anxiety","ASD","Social Anxiety")
+mylabels <- c("None","Social Anxiety (concerns)","Social Phobia","ASD (parent report)","ASD","ASD + Social Phobia")
 #draw rectangles with labels
-for (i in 1:5){
+for (i in 1:6){
   x1<-1;x2<-3;y1<-(i-1)*41;y2<-y1+31;
-  rect(x1,y1,x2,y2, col = mylegendcols[i], border = "transparent") 
-  text(x2+1,y1+15,mylabels[i],pos=4)
+  rect(x1,y1,x2,y2, col = mylegendcols[(7-i)], border = "transparent") 
+  text(x2+1,y1+15,mylabels[(7-i)],pos=4,cex=1.2)
 }
-text(0,y2+18,'Diagnosis',pos=4,offset=0,font=2)
+text(0,y2+18,'Diagnosis',pos=4,offset=0,font=2,cex=1.2)
 dev.off()
-
+file.show(png_bees)
 
 #Now do the remaining plots on one pdf
 
 pdfname<-paste0(dir,'beeswarm_subscales.pdf')
 pdf(pdfname,width=6,height=8)
 par(mfrow=c(3,2))
-for (i in 6:10){
+for (i in 7:11){
  
   p<- beeswarm(my.dawba[,i]~allsubgp , data = my.dawba, xlab='Trisomy',
                horizontal=FALSE,ylim=c(35,95),col = 5,cex.axis=.75, pch = 16,
@@ -99,7 +103,7 @@ for (i in 6:10){
   #Need to add a legend for the colour codes - options with beeswarm are rubbish
 
   plot(x=NULL, y=NULL , type = "n", axes = F, xlab = "", ylab = "", xlim=c(0,20), ylim=c(0,250)) #set up the plot?
-  mylabels <- c("None","ASD (parent report)","ASD + Social Anxiety","ASD","Social Anxiety")
+  mylabels <- c("None","ASD (parent report)","ASD + Social Phobia","ASD","Social Anxiety (concerns)","Social Phobia")
   #draw rectangles with labels
   for (i in 1:5){
     x1<-1;x2<-3;y1<-(i-1)*41;y2<-y1+31;
@@ -110,7 +114,7 @@ for (i in 6:10){
   
 
 dev.off()
-
+file.show(pdfname) 
 
 
 #Now compute percentages with socanx or asd by subgroup
