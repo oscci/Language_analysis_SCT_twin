@@ -20,8 +20,9 @@ my.dawba1<-filter(mydata,dawba_diagnoses_rater_1_complete>0)
 my.dawba<-dplyr::select(my.dawba1,record_id,trisomy,why_tested,asd,srs_t_score,socaw_ss,soccog_ss,
                  soccomm_ss,socmot_ss,autfeat_ss,asd_dsm_r1,autism_icd_r1,social_anx_dsm_r1,
                  social_anx_icd_r1,asd_dsm_r2,autism_icd_r2,social_anx_dsm_r2,
-                 social_anx_icd_r2,emotional,conduct,hyperactivity,peer,prosocial)
-#last 5 are SDQ scales, added Nov 2017
+                 social_anx_icd_r2,emotional,conduct,hyperactivity,peer,prosocial,
+                 sepanx_concern,socanx_concerns,soc_vs_sep,socfear_level)
+#last 5 are SDQ scales, added Nov 2017; also social anxiety and sep anxiety added
 
 my.dawba$subgp<-1
 w<-c(which(my.dawba$why_tested==2),which(my.dawba$why_tested==3))
@@ -62,8 +63,10 @@ tab.socanx<-rbind(colSums(tab.lobias[1:3,]),colSums(tab.lobias[4:5,]))
 lowbias<-filter(my.dawba,allsubgp=='XXX'|allsubgp=='XXY'|allsubgp=='XYY')
 table(lowbias$trisomy)
 lowbias.long<-dplyr::select(lowbias,record_id,trisomy)
-lowbias.long$subscale<-NA
-lowbias.long$score<-NA
+lowbias.long$SRS.subscale<-NA
+lowbias.long$SRS.score<-NA
+lowbias.long$SDQ.subscale<-NA
+lowbias.long$SDQ.score<-NA
 myrow<-nrow(lowbias)
 thisrow=0
 starti<-which(colnames(lowbias)=='socaw_ss')
@@ -73,11 +76,21 @@ for (i in starti:endi){
  lowbias.long[(thisrow+1):(thisrow+myrow),1:2]<-lowbias.long[1:51,1:2]
  thisrow<-thisrow+myrow
 }
+#add 2 cols for SDQ
+starti<-which(colnames(lowbias)=='emotional')
+endi<-starti+4
+offset<-starti-1
+thisrow=0
+for (i in starti:endi){
+  lowbias.long[(thisrow+1):(thisrow+myrow),5:6]<-cbind(i-offset,lowbias[,i])
+  thisrow<-thisrow+myrow
+}
+
 lowbias.long$trisomy<-as.factor(lowbias.long$trisomy)
 levels(lowbias.long$trisomy)<-c('XXX','XXY','XYY')
 
-w<-which(lowbias.long$score>90) #remove jitter that was added for beeswarm
-lowbias.long$score[w]<-90
+w<-which(lowbias.long$SRS.score>90) #remove jitter that was added for beeswarm
+lowbias.long$SRS.score[w]<-90
 
 #---------------------------------------------------------------------
 # Test for impact of trisomy on the 5 SRS subscales
@@ -85,20 +98,15 @@ lowbias.long$score[w]<-90
 
 library(lme4)
 library(lmerTest) #Adding this extra package provides p-values (if you want them) for your fixed effects.
-
-
-myfit <- lmer(score ~ trisomy + subscale + trisomy*subscale + (1 | record_id),  
+myfit <- lmer(SRS.score ~ trisomy + SRS.subscale + trisomy*SRS.subscale + (1 | record_id),  
               data = lowbias.long)
-
 summary(myfit)
-
 plot(myfit) # residuals check - look ok 
 qqnorm(residuals(myfit)) #check residuals - look fine.
-
 #Test of unequal variance in trisomy groups.
-
 library(car)
 leveneTest(residuals(myfit) ~ lowbias.long$trisomy) # not significant so equality of variance in trisomy groups.
+
 
 #Look at summary stats for score data by trisomy group
 require(psych)
@@ -125,8 +133,47 @@ file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_F
 write.csv(mysrs.summary, file = paste0(file.loc,"nicetab_srs.csv"))
 
 write.csv(my.dawba,file=paste0(file.loc,'my_dawba_short.csv'))
+
+#---------------------------------------------------------------------
+# Test for impact of trisomy on the 5 SDQ subscales
+#---------------------------------------------------------------------
+myfit2 <- lmer(SDQ.score ~ trisomy + SDQ.subscale + trisomy*SDQ.subscale + (1 | record_id),  
+              data = lowbias.long)
+summary(myfit2)
+plot(myfit2) # residuals check - look ok 
+qqnorm(residuals(myfit2)) #check residuals - look fine.
+#Test of unequal variance in trisomy groups.
+leveneTest(residuals(myfit2) ~ lowbias.long$trisomy) # not significant so equality of variance in trisomy groups.
+
+#---------------------------------------------------------------------
+# Means on the 5 SDQ subscales
+#---------------------------------------------------------------------
+
+emotional<-describeBy(lowbias$emotional,lowbias$trisomy) # some summary statistics to confirm.
+conduct<-describeBy(lowbias$conduct,lowbias$trisomy)
+hyperactive<-describeBy(lowbias$hyperactivity,lowbias$trisomy)
+peer<-describeBy(lowbias$peer,lowbias$trisomy)
+prosocial<-describeBy(lowbias$prosocial,lowbias$trisomy)
+
+mysdq.summary<-data.frame(matrix(rep(NA,33),nrow=3))
+rownames(mysdq.summary)<-c('XXX','XXY','XYY')
+colnames(mysdq.summary)<-c('N','Emotional','(SD)','Conduct','(SD)','Hyperactive','(SD)','Peer','(SD)','Prosocial','(SD)')
+for (i in 1:3){
+  mysdq.summary[i,]<-c(unlist(emotional[i])[2],unlist(emotional[i])[3],unlist(emotional[i])[4],
+                       unlist(conduct[i])[3],unlist(conduct[i])[4],
+                       unlist(hyperactive[i])[3],unlist(hyperactive[i])[4],
+                       unlist(peer[i])[3],unlist(peer[i])[4],
+                       unlist(prosocial[i])[3],unlist(prosocial[i])[4])
+  
+}
+mysdq.summary<-round(mysdq.summary,2)
+file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_Files/data/"
+write.csv(mysdq.summary, file = paste0(file.loc,"nicetab_sdq.csv"))
+
+
 #########################################################################
 #Look at CGAS
+#########################################################################
 #First check rater agreement
 myr<-rcorr(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
 my.dawba$CGAS<-as.integer(my.dawba1$cgas_r1/10)
@@ -157,6 +204,17 @@ scale_fill_cyclical(values = c("deeppink","darkorchid1", "deepskyblue"))+
 
 dev.off()
 file.show(pngname1) 
+socialanx<-describeBy(lowbias$socanx_concerns,lowbias$trisomy)
+
+#social anxiety symptoms
+table(lowbias$socanx_concerns,lowbias$trisomy)
+table(lowbias$sepanx_concern,lowbias$trisomy)
+table(lowbias$soc_vs_sep,lowbias$trisomy)
+table(lowbias$socfear_level,lowbias$trisomy)
+lowbias$sep_or_soc<-lowbias$socanx_concerns
+w<-which(lowbias$sepanx_concern==1)
+lowbias$sep_or_soc[w]<-1
+sepsoctable<-table(lowbias$sep_or_soc,lowbias$trisomy)
 
 
 
