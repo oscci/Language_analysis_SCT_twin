@@ -1,83 +1,134 @@
 
+
 #Reads in from text file created by DAWBA which has original symptom scores etc.
 #Script by DVMB 9th Dec 2017
 
 require(tidyverse)
-mydir<-"~/Dropbox/ERCadvanced/project SCT analysis/DAWBA/"
-myfile<-'dawba2spss20171208190354'
-mydata = read.table(paste0(mydir,myfile,".txt"),header=TRUE,sep = "\t")  # read text file 
+mydir <- "~/Dropbox/ERCadvanced/project SCT analysis/DAWBA/"
+myfile <- 'dawba2spss20171208190354'
+mydata = read.table(paste0(mydir, myfile, ".txt"),
+                    header = TRUE,
+                    sep = "\t")  # read text file
 
 #dawbaID is wrongly assigned so colnames are all out by one
 #Should be possible to fix this with row.names command but I have not succeeded
 #So will try to shuffle data along.
 
-for (i in length(colnames(mydata)):2){
-  mydata[,i]<-mydata[,(i-1)]
+for (i in length(colnames(mydata)):2) {
+  mydata[, i] <- mydata[, (i - 1)]
 }
-mydata[,1]<-rownames(mydata)
-rownames(mydata)<-c() #remove rownames
+mydata[, 1] <- rownames(mydata)
+rownames(mydata) <- c() #remove rownames
 
 #Variable definitions from DAWBA (intended for SPSS) are appended at end of this file
 
 #Read in codes and identify twins (all twin codes have 4+ characters)
 #NB dawba_codes.csv created from master xls list
 # Had to remove entries where ID was 'CARDIFF' and 'test'
-mycodes<-read.csv(paste0(mydir,'dawba_codes.csv'),stringsAsFactors=FALSE)
-colnames(mycodes)[2]<-'record_id' #for compatibility with Redcap
-mycodes$twin<-0
-w<-which(nchar(mycodes$record_id)>3)
-mycodes[w,3]<-1
+mycodes <-
+  read.csv(paste0(mydir, 'dawba_codes.csv'), stringsAsFactors = FALSE)
+colnames(mycodes)[2] <- 'record_id' #for compatibility with Redcap
+mycodes$twin <- 0
+w <- which(nchar(mycodes$record_id) > 3)
+mycodes[w, 3] <- 1
 
-matchlist<-mycodes$ID.Number %in% mydata$dawbaID
-shortcodes<-mycodes[matchlist,] #shortcodes just has cases found in mydata
+matchlist <- mycodes$ID.Number %in% mydata$dawbaID
+shortcodes <-
+  mycodes[matchlist, ] #shortcodes just has cases found in mydata
+#----------------------------------------------------------------------------------
+#run twice: first for twin data then for SCT
+#----------------------------------------------------------------------------------
+myprefix <- c('twin', 'sct')
+for (j in 2:2) {
+  thesecodes <- filter(shortcodes, twin == 1) #twins only
+  if (j == 2) {
+    thesecodes <- filter(shortcodes, twin == 0)
+    thesecodes<-thesecodes[-12,]#inexplicably, 107239 is featured in this list, tho no DAWBA done - this is the 12th entry so omitted by this command
+    thesecodes<-thesecodes[-3,]#this DAWBA completed for only 2 sections so exclude 
+    } #2nd loop select SCT
+  
+  thesedawbas <- thesecodes$ID.Number
 
-twincodes<-filter(shortcodes,twin==1) #twins only
-twindawbas<-twincodes$ID.Number
-myf<-filter(mydata, dawbaID %in% twindawbas) #pick only these twin cases from mydata
-twindone<-cbind(twincodes,myf) #bolt on the data from twincodes
-#NB dawbaID is now represented twice but that provides a check everything is properly aligned
+  myf <-
+    filter(mydata, dawbaID %in% thesedawbas) #pick only these twin cases from mydata
+  thesedone <- cbind(thesecodes, myf) #bolt on the data from thesecodes
+  #NB dawbaID is now represented twice but that provides a check everything is properly aligned
+  
+  #Select data to write to Redcap
+  #First import the template from redcap - nb this needs to just select dawba fields
+  mytemplate <-
+    read.csv(paste0(mydir, myprefix[j], '_redcap_template.csv'),
+             stringsAsFactors = FALSE)
+  
+  matchthese <- mytemplate$record_id %in% thesedone$record_id
+  mytemplate <-
+    mytemplate[matchthese, ] #for twins found N of 290 in mytemplate but 293 in thesedone
+  #We had two pairs given two codes; now deleted
+  #These are DAWBA codes 143498-143501
+  #Also one DAWBA code with no data and a twin ID (1028) that does not exist
+  #These are now corrected on dawba_codes.csv
+  
+  #NB the serial order in template file will be different from thesedone.
+  #This will not matter if we first paste the thesedone order into the template.
+  mytemplate$record_id <- thesedone$record_id
+  #Then we just need to select the correct columns to write to remaining template columns
+  #First block is DSM diagnoses
+  #asd_dsm_r1	adhd_comb_dsm_r1	adhd_hyp_dsm_r1	adhd_inatt_dsm_r1	generalized_anx_dsm_r1	social_anx_dsm_r1	separation_anx_dsm_r1	other_anx_dsm_r1	phobia_dsm_r1	depression_dsm_r1	opp_def_dsm_r1	conduct_dsm_r1	chronic_tic_dsm_r1	tourette_dsm_r1	anorexia_dsm_r1
+  
+  mydsmcols <-
+    c(
+      'dcpdd',
+      'dcadhdc',
+      'dcadhdh',
+      'dcadhdi',
+      'dcgena',
+      'dcsoph',
+      'dcsepa',
+      'dcotanx',
+      'dcspph',
+      'dcmadep',
+      'dcodd',
+      'dccd',
+      'dctic',
+      'dctic',
+      'dceat'
+    )
+  mytemplate[, 2:16] <- thesedone[, mydsmcols]
+  mytemplate[, 17:34] <-
+    NA #no icd for twins - in fact we'll delete these columns later as they create import problems
+  mytemplate[, 36:49] <- thesedone[, 569:582] #CGAS and Hon
+  if (j==1){
+  w <-
+    is.na(mytemplate$cgas_r1) #I had not coded some control twins at ceiling so need to add now
+  mytemplate[w, 36] <- 95
+  mytemplate[w, 37:49] <- 0
+  }
+  
+  mytemplate[, 52:57] <- thesedone[, 10:15] #SDQ scales
+  
+  mytemplate[, 59:78] <- thesedone[, 27:46] #sep anx symptoms
+  mytemplate[, 79:99] <- thesedone[, 73:93] #soc anx symptoms
+  
+  mytemplate$dawba_id <- thesedone$dawbaID
+  
+  mytemplate[, 101:124] <- thesedone[, 470:493] #positive items
+  mytemplate[, 125:135] <-
+    thesedone[, 380:390] #social adjustment scale SAS
+  mytemplate[, 137:190] <- thesedone[, 391:444] #ASD symptoms
+  
+  
+  #Now write template file so can import to redcap
+  mytemplate <-
+    mytemplate[, c(1:16, 36:190)] #remove unused ICD cols as they just create problems with NA
+  
+  w <-
+    which(mytemplate$asd_dsm_r1 > -1) #find and remove any with NA - these were incomplete DAWBAs
+  mytemplate <- mytemplate[w, ]
+  write.csv(mytemplate,
+            paste0(mydir, myprefix[j], '_from_dawba.csv'),
+            row.names = FALSE)
+}
 
-#Select data to write to Redcap
-#First import the template from redcap
-mytemplate<-read.csv(paste0(mydir,'twin_redcap_template.csv'),stringsAsFactors=FALSE)
-
-matchtwin<-mytemplate$record_id %in% twindone$record_id
-mytemplate<-mytemplate[matchtwin,] #N of 290 in mytemplate but 293 in twindone
-#suggests we have DAWBA for 3 cases not in main redcap file
-#Checked and it seemed we have two pairs given two codes; now deleted
-#These are DAWBA codes 143498-143501
-#Also one DAWBA code with no data and a twin ID (1028) that does not exist
-#These are now corrected on dawba_codes.csv
-
-#NB the serial order in template file will be different from twindone.
-#This will not matter if we first paste the twindone order into the template.
-mytemplate$record_id<-twindone$record_id
-#Then we just need to select the correct columns to write to remaining template columns
-#First block is DSM diagnoses
-#asd_dsm_r1	adhd_comb_dsm_r1	adhd_hyp_dsm_r1	adhd_inatt_dsm_r1	generalized_anx_dsm_r1	social_anx_dsm_r1	separation_anx_dsm_r1	other_anx_dsm_r1	phobia_dsm_r1	depression_dsm_r1	opp_def_dsm_r1	conduct_dsm_r1	chronic_tic_dsm_r1	tourette_dsm_r1	anorexia_dsm_r1
-
-mydsmcols<-c('dcpdd','dcadhdc','dcadhdh','dcadhdi','dcgena','dcsoph','dcsepa',
-             'dcotanx','dcspph','dcmadep','dcodd','dccd','dctic','dctic','dceat')
-mytemplate[,2:16]<-twindone[,mydsmcols]
-mytemplate[,17:34]<-NA #no icd for twins
-mytemplate[,36:49]<-twindone[,569:582] #CGAS and Hon
-
-w<-is.na(mytemplate$cgas_r1) #I had not coded those at ceiling so need to add now
-mytemplate[w,36]<-95 
-mytemplate[w,37:49]<-0
-mytemplate[,52:57]<-twindone[,10:15] #SQD scales
-
-mytemplate[,59:78]<-twindone[,27:46] #sep anx symptoms
-mytemplate[,79:99]<-twindone[,73:93] #soc anx symptoms
-
-mytemplate$dawba_id<-twindone$dawbaID
-
-#Now write template file so can import to redcap
-mytemplate<-mytemplate[,c(1:16,36:100)] #remove unused ICD cols as they just create problems with NA
-
-w<-which(mytemplate$asd_dsm_r1>-1) #find and remove any with NA - these were incomplete DAWBAs
-mytemplate<-mytemplate[w,]
-write.csv(mytemplate,paste0(mydir,'twin_from_dawba.csv'),row.names=FALSE)
 
 #Full list of variable names and values follows
 # variable labels dawbaID 'ID'.
@@ -661,7 +712,7 @@ write.csv(mytemplate,paste0(mydir,'twin_from_dawba.csv'),row.names=FALSE)
 # variable labels hon13 'HoNOSCA: Poor school attendance (Clinical rating)'.
 # variable labels hontot 'HoNOSCA: Total score (Clinical rating)'.
 # execute.
-# 
+#
 # value labels gender 1 'Male' 2 'Female'.
 # value labels p1type 1 'Parent' 2 'Mother' 3 'Father' 4 'Both parents' 5 'Stepmother' 6 'Stepfather' 7 'Foster mother' 8 'Foster father' 9 'Grandparent' 10 'Other relative' 11 'Residential care worker' 12 'Friend' 13 'Partner' 14 'Sibling' 15 'Son or daughter' 16 'Other non-relative'.
 # value labels p1a1a 0 'No' 1 'Yes'.
