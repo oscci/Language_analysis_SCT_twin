@@ -12,6 +12,7 @@ library(reshape2)
 library(psych)
 require(tidyverse)
 library(reshape2)
+library(yarrr)
 
 #Load all data from redcap
 mydir <- "~/Dropbox/ERCadvanced/project SCT analysis/data from redcap/"
@@ -67,12 +68,12 @@ short.sct<-dplyr::select(sct.data,record_id,age_at_test,wasi_matrices_ss,wasi_bl
                          wdck_jhsn_ss,sent_rep_ss,nonword_rep_ss,oromotor_ss,nara_acc_ss,nara_comp_ss,nara_rate_ss,
                          towre_words_ss,towre_nonwords_ss,phab_pic_ss,phab_digit_ss,gcc,why_tested,
                          srs_t_score,slt,schooling,piq,asd_dsm_r1,adhd_comb_dsm_r1,
-                         adhd_hyp_dsm_r1,adhd_inatt_dsm_r1,conduct_dsm_r1,splang_conc,partial_testing)
+                         adhd_hyp_dsm_r1,adhd_inatt_dsm_r1,conduct_dsm_r1,cgas_r1,splang_conc,partial_testing)
 short.twin<-dplyr::select(twin.data,record_id,age_at_test,wasi_matrices_ss,wasi_block_design_ss,wasi_vocab_ss,
                           wdck_jhsn_ss,sent_rep_ss,nonword_rep_ss,oromotor_ss,nara_acc_ss,nara_comp_ss,nara_rate_ss,
                           towre_words_ss,towre_nonwords_ss,phab_pic_ss,phab_digit_ss,gcc,why_tested,
                           srs_t_score,slt,schooling,piq,asd_dsm_r1,adhd_comb_dsm_r1,
-                          adhd_hyp_dsm_r1,adhd_inatt_dsm_r1,conduct_dsm_r1,splang_conc,partial_testing)
+                          adhd_hyp_dsm_r1,adhd_inatt_dsm_r1,conduct_dsm_r1,cgas_r1,splang_conc,partial_testing)
 short.sct$source<-'sct'
 short.sct$allgroup<-3 #default is no-bias SCT group,code 3
 w<-c(which(short.sct$why_tested==3),which(short.sct$why_tested==2))
@@ -315,11 +316,52 @@ lowscore<-min(fs1[,2])#the two omitted cases will be assigned lowest score as th
 all.data$langfac<-c(fs1[1:23,2],lowscore,fs1[24:65,2],lowscore,fs1[66:528,2])
 
 all.data$allgroup<-as.factor(all.data$allgroup)
-levels(all.data$allgroup)<-c('Twin TD','Twin LD','SCT no-bias','SCT bias')
+levels(all.data$allgroup)<-c('Twin TD','Twin DLD','SCT no-bias','SCT bias')
 #show means
 aggregate(all.data$langfac, list(all.data$allgroup), mean,na.rm=TRUE)
 aggregate(all.data$global_neurodev, list(all.data$allgroup), mean,na.rm=TRUE)
 plot(all.data$langfac,all.data$global_jittered)
 cor(all.data[,c(8,38,41)],use="complete.obs")
 
+png(file="myglobal.png",width=400,height=350)
+pirateplot(formula = all.data$global_jittered~ allgroup,
+           point.o = .5,
+           bar.o=.0,
+           inf.o=.2,
+           bean.o=.5,
+           jitter=.18,
+           data = all.data,
+           ylab='Global rating',
+           ylim=c(0,10),
+           main="Global rating")
+dev.off()
+png(file="mylangfac.png",width=400,height=350)
 
+pirateplot(formula = all.data$langfac~ allgroup,
+           point.o = .5,
+           bar.o=.0,
+           inf.o=.2,
+           bean.o=.5,
+           jitter=.18,
+           data = all.data,
+           ylab='Language factor',
+           ylim=c(-30,30),
+           main="Language factor")
+dev.off()
+png(file="mynwdrep.png",width=400,height=350)
+
+pirateplot(formula = all.data$nonword_rep_ss~ allgroup,
+           point.o = .5,
+           bar.f.o=.0,
+           inf.f.o=.2,
+           bean.f.o=.5,
+           jitter=.18,
+           data = all.data,
+           ylab='Scaled score',
+           ylim=c(-2,18),
+           main="Nonword repetition")
+dev.off()
+
+#Correlation between phenotypes
+cor(all.data[,c(8,42,39,28)], use="complete.obs")
+plot(all.data$cgas_r1,all.data$global_jittered)
