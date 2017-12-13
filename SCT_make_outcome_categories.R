@@ -1,5 +1,6 @@
-#Create outcome categories for genetic analysis
-#DVM Bishop 23rd Sept 2017
+# Create outcome categories for genetic analysis including Global impairment rating
+# started DVM Bishop 23rd Sept 2017
+# amended 12 Dec 2017
 
 #NB found some missing data when doing this; case 336
 # case 344 altered school code from 2 to 4 on basis of DAWBA notes
