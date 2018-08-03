@@ -6,21 +6,24 @@ output: html_document
 `r Sys.time()`
 
 ```{r load_packages, include = FALSE}
+#devtools::install_github("rubenarslan/formr")
 library(tidyverse)
-library(knitr) #for kable
+library(knitr) #for kable - allows nice tables in Word output - but can be temperamental
 library(gridExtra)
 library(grid)
 library(Hmisc)
 library(doBy)
-library(lme4)
+library(lme4) #linear model
 library(lmerTest) #Adding this extra package provides p-values (if you want them) for your fixed effects.
 library(ggridges) #for joyplot
 library(car)
 require(psych)
 library(beeswarm) #particular plot type
-library(yarrr) #for pirate plot
-library(lavaan)
-library(semPlot)
+library(beanplot) #ditto
+library(yarrr) #for pirate plot - another plot type
+library(lavaan) #for SEM to extract language factor
+library(semPlot) #used with Lavaan
+require(formr) #to handle conflicts with 'select' function in dplyr
 
 ```
 
@@ -42,7 +45,7 @@ Given text-based entries, going to be a bit of a nightmare to code.
 ## Step 1
 Read in background files: these are very messy with a lot of text entries and some inconsistencies in formatting. Both twins are in one row.
 
-```{r,readbkgfiles echo=FALSE}
+```{r readbkgfiles, echo=FALSE}
 # Read in SCT background file
 sct.bkg <- read.csv("backgrounds_sct.csv",stringsAsFactors=FALSE)
 # Read in twin background file
@@ -58,7 +61,7 @@ Select variables to be used.
 redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
 #Use latest version
 sct.redcap <- 'SCTData_DATA_2018-01-22_1351.csv'
-twin.redcap <- 'TwinsData_DATA_2018-01-22_1400.csv'
+twin.redcap <- 'TwinsData_DATA_2018-08-03_1414.csv' #updated to include ccc2_consistent variable
 sct.data <- read.csv(paste0(redcap.dir,sct.redcap),stringsAsFactors = FALSE)
 twin.data <- read.csv(paste0(redcap.dir,twin.redcap),stringsAsFactors = FALSE)
 
@@ -70,14 +73,20 @@ twin.data$dyslexia<-twin.data$dld_rd%%10 #modulus 10 , ie last digit
 twin.data$lang_disorder<-round((twin.data$dld_rd-4.5)/10) #first digit is dld code
 
 #----------------------------------------------------------------------------------
+```
 
+#Select data for short file
+```{r colselect}
 keepcols <- c('record_id','age_at_test','partial_testing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
-              'sent_rep_ss','oromotor_ss','nonword_rep_ss','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','gcc','scdi','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
+              'sent_rep_ss','oromotor_ss','nonword_rep_ss','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
               'hyperkinetic_icd_r1','adhd_comb_dsm_r1','adhd_hyp_dsm_r1','adhd_inatt_dsm_r1',
-              'conduct_dsm_r1','asd_dsm_r1','autism_icd_r1','srs_t_score')
+              'conduct_dsm_r1','asd_dsm_r1','autism_icd_r1','srs_t_score',
+              'gcc','scdi','ccc_a','ccc_b','ccc_c','ccc_d','ccc_e','ccc_f',
+              'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent','mo_educ','fa_educ')
 
-sct.short <- select(sct.data,keepcols)
-twin.short <-select(twin.data,keepcols)
+twin.short <- select(twin.data,keepcols)
+sct.short <- select(sct.data,keepcols) #NB 'select' is ambiguous between packages so have to specify dplyr
+
 #----------------------------------------------------------------------------------
 
 #Add columns that are specific to twins or SCTs so all aligned
@@ -93,6 +102,9 @@ sct.short$why_tested <-sct.data$why_tested
 twin.short$trisomy <- NA
 twin.short$pre_postnatal_diag <- NA
 twin.short$why_tested <- NA
+twin.short$splang_conc<-twin.data$splang_conc
+sct.short$splang_conc<-NA
+
 #----------------------------------------------------------------------------------
 #Bolt SCT and twin files together
 all.short <-rbind(sct.short,twin.short)
@@ -104,17 +116,28 @@ all.short<-all.short[-w,]
 Should have twin groups with N = 143 SCT, 194 twin1 and 194 twin2 (these are randomly assigned twin 1 and 2), 
 Numbers are greater than for Newbury et al, as some children did not feature in that study because of lack of DNA.
 
+Twins recruited in relation to splang_conc, which is coded as
+0, never
+1, preschool only
+2, continuing, mild
+3, continuing, severe
+4, reading concerns only
+9, unclear
+
+Trisomies - divided according to reason for diagnosis
+why tested used to make bias column: coded as: 
+ 0, maternal age
+ 1, medical concerns
+ 2, behavioural concerns
+ 3, neurodevelopmental concerns
+ 4, family history of genetic problems
+ 9, no information
+
 ```{r ncheck}
 twintab <- table(all.short$randomtwininclude)
 names(twintab)<-c('SCT','twin1','twin2')
 
-#why tested used to make bias column: coded as: 
-# 0, maternal age
-# 1, medical concerns
-# 2, behavioural concerns
-# 3, neurodevelopmental concerns
-# 4, family history of genetic problems
-# 9, no information
+
 all.short$bias<-'NA'
 w<-which(all.short$randomtwininclude==0)
 all.short$bias[w]<-0
@@ -126,6 +149,13 @@ rownames(scttab)<-c('XXX','XXY','XYY')
 twintab
 scttab
 rowSums(scttab)
+
+all.short$parentconc<-NA
+w<-which(all.short$randomtwininclude>0)
+all.short$parentconc[w]<-0
+w<-which(all.short$splang_conc>0)
+all.short$parentconc[w]<-1
+table(all.short$parentconc,all.short$randomtwininclude)
 
 ```
 #Deal with missing data
@@ -177,6 +207,9 @@ md <- which(is.na(all.short[,mc:(mc+3)]))
 print(paste0(length(md),' missing values from ',nrow(all.short)*4,' datapoints in 4 language tests'))
 ```
 #Compute language factor, using script from Appendix 2
+I don't think we will use this, as the focus will be more on individual tests, but it's included for the time being. This is the factor we used for language phenotype in Newbury et al.
+
+
 ```{r langfactor}
 
 model.f5a <- ' f1 =~ wasi_vocab_ss + wdck_jhsn_ss + sent_rep_ss + oromotor_ss 
@@ -184,11 +217,12 @@ model.f5a <- ' f1 =~ wasi_vocab_ss + wdck_jhsn_ss + sent_rep_ss + oromotor_ss
 fit.mod.E2 <- cfa(model.f5a, data = all.short,estimator = "ML",missing = "ML")
 lbls<-c("Vocabulary", "Woodcock\nJohnson", "Sentence\nRepetition", "Oromotor","Language")
 semPaths(fit.mod.E2, "std", title = TRUE, curvePivot = TRUE, edge.label.cex = 1.2,width=10,height=5,nodeLabels=lbls,intercepts = FALSE,sizeMan = 10, sizeLat = 10)
-all.short$langfactor <- predict(fit.mod.E2) #factor scores
+all.short$langfactor <- as.numeric( predict(fit.mod.E2)) #factor scores
 beanplot(all.short$langfactor~all.short$randomtwininclude)
+#using beanplot as pirateplot was acting funny!
 
 ```
-```
+
 
 #Create general neurodevelopmental index, using script from Appendix 3
 Our goal is to create a single scale reflecting global level of neurodevelopmental impairment. Data from initial parental telephone interview are available for all children. Data from language testing are available for all but two very low-functioning children, who were unable to attempt our tasks. Data from parental questionnaires (CCC-2 and SRS) and DAWBA DSM5 diagnoses are available for a subset. For SCT cases, questionnaire data were available for 127 out of 143 children, and DAWBA for 89 children. For comparison twin children, questionnaire data were available for 316 out of 388 children, and DAWBA for 276 children. We use all available data for each child to create a scale by adding points as follows:
@@ -314,7 +348,114 @@ pirateplot(formula = all.short$global_jittered~ randomtwininclude,
            ylim=c(0,10),
            main="Distribution of global impairment\n in SCT and Comparison groups")
 ```
+##Create 8 groups:
+1. XXX-nobias
+2. XXY-nobias
+3. XYY-nobias
+4. XXX-hibias
+5. XXY-hibias
+6. XYY-hibias
+7. twin_noconcern
+8. twin_concern
+NB as currently defined, not taking into account co-twin status. So a twin_noconcern could have cotwin with concern, ie have family risk.
 
+```{r groupcreate}
+all.short$group8<-all.short$trisomy
+w<-which(all.short$bias==1)
+all.short$group8[w]<-all.short$group8[w]+3 #convert 1 2 3 to 4 5 6
+w<-which(all.short$randomtwininclude>0)
+all.short$group8[w]<-7
+w<-which(all.short$parentconc==1)
+all.short$group8[w]<-8
+all.short$group8<-as.factor(all.short$group8)
+levels(all.short$group8)<-c('XXX.lowbias','XXY.lowbias','XYY.lowbias',
+                            'XXX.hibias','XXY.hibias','XYY.hibias',
+                            'twin.TD','twin.langconcerns')
+
+par.ed <-aggregate(all.short$mo_educ, by=list(all.short$group8),
+  FUN=mean, na.rm=TRUE)
+pirateplot(mo_educ~group8,data=all.short)
+pirateplot(fa_educ~group8,data=all.short)
+
+```
+##CCC-2 analysis
+Consider how CCC-2 profiles for SCTs compare with those in our previous paper. Also include twins with or without concerns as comparison group.  Show both subscales and the GCC and SIDC.
+Just use twin1 for this (regardless of language status)
+
+```{r ccc2}
+all.vshort<-filter(all.short,randomtwininclude<2) #remove twin2
+w<-which(colnames(all.vshort)=='ccc_a')
+x<-which(colnames(all.vshort)=='group8')
+cccbit<-all.vshort[,c(1,(w-2):(w+10),x)]#2 before ccc_a is GCC and SIDC
+w<-which(is.na(cccbit$ccc2_consistent))
+cccbit$ccc2_consistent[w]<--1 #we need a count of missing data, so convert NA to -1
+consistent.ccc<-table(cccbit$group8,cccbit$ccc2_consistent)
+
+colnames(consistent.ccc)<-c('No data','Inconsistent','Consistent')
+consistent.ccc
+print('Proportions of non-response to CCC-2')
+print(paste('All low bias SCT:',sum(consistent.ccc[1:3,1])/sum(consistent.ccc[1:3,])))
+print(paste('All high bias SCT:',sum(consistent.ccc[4:6,1])/sum(consistent.ccc[4:6,])))
+print(paste('Twin: no concerns:',sum(consistent.ccc[7,1])/sum(consistent.ccc[7,])))
+print(paste('Twin: language concerns:',sum(consistent.ccc[8,1])/sum(consistent.ccc[8,])))
+
+```
+##Now analyse CCC-2 for 8 groups
+
+```{r ccc.analyse}
+#First remove the cases with no response or inconsistent
+ccc.data<-filter(cccbit,ccc2_consistent>0)
+#create dataframe for results
+ccc.df<-data.frame(matrix(NA,nrow=8,ncol=30))
+ccc.df[,1]<-levels(ccc.data$group8)
+ccc.df[,2]<- table(ccc.data$group8)
+thiscol<- 1
+for (i in 1:12){
+  thiscol<-thiscol+2
+  thisdat<-ccc.data[,i+1]
+ ag <- aggregate(thisdat~ group8, ccc.data, function(x) c(mean = mean(x), se = sd(x)/sqrt(length(x))))
+  ccc.df[,(thiscol:(thiscol+1))]<-ag[,2]
+}
+colnames(ccc.df)<-c('Group','N','GCC.mean','GCC.se','SIDC.mean','SIDC.se','A.mean','A.se','B.mean','B.se','C.mean','C.se','D.mean','D.se',
+                    'E.mean','E.se','F.mean','F.se','G.mean','G.se','H.mean','H.se',
+                    'I.mean','I.se','J.mean','J.se')
+```
+
+```{r cccplot}
+#Need data in long form for ggplot2
+#set up the long form df with data from scale A
+ccc.dflong<-ccc.df[1:8,c(1,2,2,7:8)]
+colnames(ccc.dflong)[3:5]<-c('scale','mean','se')
+ccc.dflong$scale<-1
+mybase<-ccc.dflong
+
+#Now bolt on the other scales
+for (j in 2:10){
+  #rows to write to in new long df
+  startrow<-(j-1)*8+1
+  endrow<-(j*8)
+  #cols to read from in old df
+  startcol<-7+(j-1)*2
+  ccc.dflong<-rbind(ccc.dflong,mybase) #just duplicate first 8 rows before overwriting them
+  ccc.dflong$scale[startrow:endrow]<-j
+  ccc.dflong[startrow:endrow,4:5]<-ccc.df[,startcol:(startcol+1)]
+  
+}
+ccc.dflong$scale<-as.factor(ccc.dflong$scale)
+levels(ccc.dflong$scale)<-c('A','B','C','D','E','F','G','H','I','J')
+ccc.dflong$ci<-1.96*ccc.dflong$se
+linetypes<-c(1,1,1,2,2,2,1,1)
+ccc.dflong$lines<-as.factor(linetypes)
+ccc.dflong$plotgroup<-rep(c('XXX','XXY','XYY','XXX','XXY','XYY','twin_typical','twin_concerns'),10)
+
+#Plot the means
+ymax <- 12
+ymin <- 0
+cccplot<-ggplot(ccc.dflong, aes(x=scale, y=mean, colour=plotgroup,group=Group)) +
+    geom_line(aes(linetype=lines)) + geom_point(shape=21, fill="white") + 
+    ylim(ymin,ymax)
+cccplot+geom_errorbar(width=.1, aes(ymin=mean-se, ymax=mean+se))
+```
 
 ##Session information
 ```{r sessinfo}
