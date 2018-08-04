@@ -43,13 +43,44 @@ For background then need to pull off appropriate columns; simple for sct but for
 Given text-based entries, going to be a bit of a nightmare to code.
 
 ## Step 1
-Read in background files: these are very messy with a lot of text entries and some inconsistencies in formatting. Both twins are in one row.
+Read in background files: these are very messy with a lot of text entries and some inconsistencies in formatting. Both twins are in one row, so reshaped to make long
+Have done ad hoc coding of milestones as follows
+Words
+1. < 15 months or 'normal'
+2. 15-24 mo or 'delayed'
+3. > 24 mo or 'very delayed'
+
+Sentences
+1. < 36 months or 'normal'
+2. 37-48 months or 'delayed'
+3. > 4 yr or 'very delayed' or 'not yet'
+
+Walking
+1. < 16 months or 'normal'
+2. 16-18 months or 'delayed' or 'late'
+3. 19 months+ or 'very delayed' etc
+
+Dry
+1. < 37 mo or 'normal'
+2. 37-59 mo or 'late'
+3. 60 + mo or 'very late' or 'not yet'
 
 ```{r readbkgfiles, echo=FALSE}
 # Read in SCT background file
-sct.bkg <- read.csv("backgrounds_sct.csv",stringsAsFactors=FALSE)
+sct.bkg <- read.csv("background_sct.csv",stringsAsFactors=FALSE)
 # Read in twin background file
-twin.bkg <- read.csv("backgroundstwins.csv",stringsAsFactors=FALSE)
+twin.bkg <- read.csv("background_twin.csv",stringsAsFactors=FALSE)
+twin.bkg<-twin.bkg[1:306,] #remove extraneous rows
+#reshape twin file so rows for A and B
+twinall.bkg<-twin.bkg[,c(1,3,7,11,15)]
+colnames(twinall.bkg)<-c('Code','Word_code','Sent_code','Walk_code','Dry_code')
+colnames(twin.bkg)[c(5,9,13,17)]<-c('Word_code','Sent_code','Walk_code','Dry_code')
+twinall.bkg<-rbind(twinall.bkg,twin.bkg[,c(1,5,9,13,17)])
+twinall.bkg$Code[1:306]<-paste0(twinall.bkg$Code[1:306],'A')
+twinall.bkg$Code[307:612]<-paste0(twinall.bkg$Code[307:612],'B')
+
+
+
 ```
 ## Step 2
 Read in latest SCT from redcap.
@@ -72,17 +103,23 @@ colnames(twin.data)[w] <-'neurodev_diag'
 twin.data$dyslexia<-twin.data$dld_rd%%10 #modulus 10 , ie last digit
 twin.data$lang_disorder<-round((twin.data$dld_rd-4.5)/10) #first digit is dld code
 
+#add gender info to sct data so it merges properly
+sct.data$female<-0
+w<-which(sct.data$trisomy==1)
+sct.data$female[w]<-1
+
 #----------------------------------------------------------------------------------
 ```
 
 #Select data for short file
 ```{r colselect}
-keepcols <- c('record_id','age_at_test','partial_testing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
+keepcols <- c('record_id','female','age_at_test','partial_testing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
               'sent_rep_ss','oromotor_ss','nonword_rep_ss','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
               'hyperkinetic_icd_r1','adhd_comb_dsm_r1','adhd_hyp_dsm_r1','adhd_inatt_dsm_r1',
               'conduct_dsm_r1','asd_dsm_r1','autism_icd_r1','srs_t_score',
               'gcc','scdi','ccc_a','ccc_b','ccc_c','ccc_d','ccc_e','ccc_f',
-              'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent','mo_educ','fa_educ')
+              'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent','mo_educ','fa_educ',
+              'nepsy_oromotor_seq_raw')
 
 twin.short <- select(twin.data,keepcols)
 sct.short <- select(sct.data,keepcols) #NB 'select' is ambiguous between packages so have to specify dplyr
@@ -197,20 +234,19 @@ all.short$oromotor_ss[w] <- 1
 
 #Now substitute NA for any remaining > 900
 mycols<-colnames(all.short)
-mc <-which(mycols=='wasi_vocab_ss')
+mc <-which(mycols=='wasi_matrices_ss')
 
+for (i in mc:(mc+5)){
+  w <- which(all.short[,i]>900)
+  all.short[w,i]<-NA
+  
+}
 #Parental educ variables, missing is 9
 w<-which(all.short$mo_educ==9)
 all.short$mo_educ[w]<-NA
 w<-which(all.short$fa_educ==9)
 all.short$fa_educ[w]<-NA
 
-
-for (i in mc:(mc+3)){
-  w <- which(all.short[,i]>900)
-  all.short[w,i]<-NA
-  
-}
 md <- which(is.na(all.short[,mc:(mc+3)]))
 print(paste0(length(md),' missing values from ',nrow(all.short)*4,' datapoints in 4 language tests'))
 ```
@@ -219,7 +255,8 @@ I don't think we will use this, as the focus will be more on individual tests, b
 
 
 ```{r langfactor}
-
+dolangfactor<-0
+if(dolangfactor==1){
 model.f5a <- ' f1 =~ wasi_vocab_ss + wdck_jhsn_ss + sent_rep_ss + oromotor_ss 
               wasi_vocab_ss ~~ wdck_jhsn_ss'     
 fit.mod.E2 <- cfa(model.f5a, data = all.short,estimator = "ML",missing = "ML")
@@ -228,7 +265,7 @@ semPaths(fit.mod.E2, "std", title = TRUE, curvePivot = TRUE, edge.label.cex = 1.
 all.short$langfactor <- as.numeric( predict(fit.mod.E2)) #factor scores
 beanplot(all.short$langfactor~all.short$randomtwininclude)
 #using beanplot as pirateplot was acting funny!
-
+}
 ```
 
 
@@ -245,7 +282,9 @@ Our goal is to create a single scale reflecting global level of neurodevelopment
 *Low IQ (PIQ < 70 or refusal/inability to do battery - with exception of reading tests) = 1
 
 ```{r makeglobal}
-# NB coding for slt is:
+doglobalfactor<-0
+if (doglobalfactor==1){ 
+  #NB coding for slt is:
 #0, never ; 1, preschool only; 2, beyond 4 yr; 3, ongoing; 8, assessed only; 9, no information
 
 # Neurodev diagnosis codes:
@@ -355,6 +394,7 @@ pirateplot(formula = all.short$global_jittered~ randomtwininclude,
            ylab='Global rating',
            ylim=c(0,10),
            main="Distribution of global impairment\n in SCT and Comparison groups")
+}
 ```
 ##Create 8 groups:
 1. XXX-nobias
@@ -533,6 +573,20 @@ for (i in 1:(numcols-1)){
 longlangmeans$scale<-as.factor(longlangmeans$scale)
 
 ```
+##Plot language measures
+Despite my renorming, oromotor looks low.
+Check raw vs ss in both twin and sct
+```{r oromotor}
+#added nepsy_oromotor_seq_raw to list of variables so we can look at it
+#focus just on those in same age range: nb SCT includes both older and younger kids
+
+bit<-filter(all.vshort,age_at_test>71)
+bit<-filter(bit,age_at_test<145)
+pirateplot(age_at_test~group8,data=bit)
+pirateplot(nepsy_oromotor_seq_raw~group8,data=bit)
+pirateplot(oromotor_ss~group8,data=bit)
+
+```
 
 ```{r langplots}
 #Plot the means
@@ -559,7 +613,78 @@ Also qu of whether should renorm everything to the twin typical group. But probl
 
 Qu of whether better reading is all down to changes in curriculum since tests were normed. There is a consistent gap between the two twin groups- just that everyone doing well.
 
+```{r wasi}
+mycollist<-c('red','green','blue','pink','purple','darkblue','black','grey')
+plot(all.vshort$wasi_block_design_ss,all.vshort$wasi_vocab_ss,col=mycollist[all.vshort$group8])
+abline(coef=c(0,1))
+
+all.vshort$PV<-all.vshort$wasi_block_design_ss-all.vshort$wasi_vocab_ss
+ ag <- aggregate(all.vshort$PV~ group8, all.vshort, function(x) c(N=length(x),mean = mean(x), sd = sd(x)))
+
+#just look at lowbias trisomies plus controls
+all.short.lorisk<-filter(all.vshort,group8%in%levels(all.vshort$group8)[c(1,2,3,7)])
+plot(all.short.lorisk$wasi_block_design_ss,all.short.lorisk$wasi_vocab_ss,col=mycollist[all.short.lorisk$group8])
+abline(coef=c(0,1))
+
+```
+##Preliminary look at background variables
+Estimate of early language milestones.
+Would also be of interest to see how diagnosis relates to language profile
+
+```{r langbackground}
+#as gender is important here, we'll make a 10-group code!
+all.vshort$group10<-all.vshort$group8
+levels(all.vshort$group10)<-c(levels(all.vshort$group10)[1:6],'TD.male','TD.female','LD.male','LD.female')
+w1<-which(all.vshort$group8=='twin.TD')
+w2<-which(all.vshort$group8=='twin.langconcerns')
+w3<-which(all.vshort$female==0)
+w4<-which(all.vshort$female==1)
+w<-intersect(w1,w3)
+all.vshort$group10[w]<-levels(all.vshort$group10)[7]
+w<-intersect(w1,w4)
+all.vshort$group10[w]<-levels(all.vshort$group10)[8]
+w<-intersect(w2,w3)
+all.vshort$group10[w]<-levels(all.vshort$group10)[9]
+w<-intersect(w2,w4)
+all.vshort$group10[w]<-levels(all.vshort$group10)[10]
+
+#add 4 columns to all.vshort for the milestone codes
+
+all.vshort$Words_code<-NA
+all.vshort$Sent_code<-NA
+all.vshort$Walk_code<-NA
+all.vshort$Dry_code<-NA
+lastcol<-dim(all.vshort)[2]
+col1<-lastcol-3
+col2<-lastcol
+#add data for twins
+tstart<-min(which(all.vshort$randomtwininclude>0)) #start row for twins
+for (j in tstart:nrow(all.vshort)){
+  w<-which(twinall.bkg$Code==all.vshort$record_id[j])
+  all.vshort[j,col1:col2]<-twinall.bkg[w,2:5]
+}
+#add data for SCTs
+tend<-tstart-2 #end row for SCTs (nb last SCT (370) ? not on background file?)
+for (j in 1:tend){
+  w<-which(sct.bkg$Code==all.vshort$record_id[j])
+  all.vshort[j,col1:col2]<-sct.bkg[w,c(3,5,7,9)]
+}
+t1<-table(all.vshort$group10,all.vshort$Words_code)
+colnames(t1)<-c('1stwords_normal','1stwords_late','1stwords_v.late')
+t2<-table(all.vshort$group10,all.vshort$Sent_code)
+colnames(t2)<-c('Sentences_normal','Sentences_late','Sentences_v.late')
+t3<-table(all.vshort$group10,all.vshort$Walk_code)
+colnames(t3)<-c('Walk_normal','Walk_late','Walk_v.late')
+
+t4<-table(all.vshort$group10,all.vshort$Dry_code)
+colnames(t4)<-c('Dry_normal','Dry_late','Dry_v.late')
+
+prop.table(t1,1) #gives proportions by row (index 1)
+prop.table(t2,1)
+prop.table(t3,1)
+prop.table(t4,1)
+```
 ##Session information
 ```{r sessinfo}
 sessionInfo()
-```
+``
