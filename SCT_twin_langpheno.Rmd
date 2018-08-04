@@ -126,12 +126,12 @@ Twins recruited in relation to splang_conc, which is coded as
 
 Trisomies - divided according to reason for diagnosis
 why tested used to make bias column: coded as: 
- 0, maternal age
- 1, medical concerns
- 2, behavioural concerns
- 3, neurodevelopmental concerns
- 4, family history of genetic problems
- 9, no information
+0, maternal age
+1, medical concerns
+2, behavioural concerns
+3, neurodevelopmental concerns
+4, family history of genetic problems
+9, no information
 
 ```{r ncheck}
 twintab <- table(all.short$randomtwininclude)
@@ -198,10 +198,18 @@ all.short$oromotor_ss[w] <- 1
 #Now substitute NA for any remaining > 900
 mycols<-colnames(all.short)
 mc <-which(mycols=='wasi_vocab_ss')
-for (i in mc:(mc+3)){
-w <- which(all.short[,i]>900)
-all.short[w,i]<-NA
 
+#Parental educ variables, missing is 9
+w<-which(all.short$mo_educ==9)
+all.short$mo_educ[w]<-NA
+w<-which(all.short$fa_educ==9)
+all.short$fa_educ[w]<-NA
+
+
+for (i in mc:(mc+3)){
+  w <- which(all.short[,i]>900)
+  all.short[w,i]<-NA
+  
 }
 md <- which(is.na(all.short[,mc:(mc+3)]))
 print(paste0(length(md),' missing values from ',nrow(all.short)*4,' datapoints in 4 language tests'))
@@ -294,48 +302,48 @@ for (i in 1:nrows){
   }
   if(length(wd)<1){temp=0}
   if (temp>0){all.short$global_neurodev[i]<-all.short$global_neurodev[i]+1}
-
-#Add 1 to code if evidence of ADHD on parental interview or DAWBA
+  
+  #Add 1 to code if evidence of ADHD on parental interview or DAWBA
   w2<-unlist(gregexpr(pattern ='1',toString(all.short$neurodev_diagnosis[i]))) #ADHD code is 1
   if(w2==0){
-  w2<-max(all.short$adhd_comb_dsm_r1[i],all.short$adhd_hyp_dsm_r1[i],all.short$adhd_inatt_dsm_r1[i])
+    w2<-max(all.short$adhd_comb_dsm_r1[i],all.short$adhd_hyp_dsm_r1[i],all.short$adhd_inatt_dsm_r1[i])
   }
-if (w2>0){all.short$global_neurodev[i]<-all.short$global_neurodev[i]+1}
+  if (w2>0){all.short$global_neurodev[i]<-all.short$global_neurodev[i]+1}
   
-# add 1 to code if meets language test criteria for lang_disorder OR (if no data) has diagnosis of this 
-# reported on parent interview
-
-temp<-all.short$lang_disorder[i] #coding according to test battery, 2 if with poor comp, 1 otherwise
-w1<-temp
-if(w1==2){w1<-1} #just one point added regardless of whether lang_dis code is 1 or 2
-if(temp==9){ #no data on language tests so use parent interview
-  w1<-unlist(gregexpr(pattern ='8',toString(all.short$neurodev_diagnosis[i]))) #DLD code is 8
-  if(all.short$slt[i]==3){w1<-1} #regardless of diagnosis, ongoing SLT counts as DLD
-  if(all.short$splang_conc[i]==3){w1<-1}#also serious language concerns count as DLD
-} 
-if (w1>0){all.short$global_neurodev[i]<-all.short$global_neurodev[i]+w1}
-#NB more severe language problems with poor comprehension get addition of 2 points
-
-# add 1 to code if significant behaviour problems on interview or DAWBA
-
+  # add 1 to code if meets language test criteria for lang_disorder OR (if no data) has diagnosis of this 
+  # reported on parent interview
+  
+  temp<-all.short$lang_disorder[i] #coding according to test battery, 2 if with poor comp, 1 otherwise
+  w1<-temp
+  if(w1==2){w1<-1} #just one point added regardless of whether lang_dis code is 1 or 2
+  if(temp==9){ #no data on language tests so use parent interview
+    w1<-unlist(gregexpr(pattern ='8',toString(all.short$neurodev_diagnosis[i]))) #DLD code is 8
+    if(all.short$slt[i]==3){w1<-1} #regardless of diagnosis, ongoing SLT counts as DLD
+    if(all.short$splang_conc[i]==3){w1<-1}#also serious language concerns count as DLD
+  } 
+  if (w1>0){all.short$global_neurodev[i]<-all.short$global_neurodev[i]+w1}
+  #NB more severe language problems with poor comprehension get addition of 2 points
+  
+  # add 1 to code if significant behaviour problems on interview or DAWBA
+  
   w1<-unlist(gregexpr(pattern ='4',toString(all.short$neurodev_diagnosis[i]))) #behav problems code is 4
   w2<-all.short$conduct_dsm_r1[i]
-if (is.na(w2)){w2<-0}
+  if (is.na(w2)){w2<-0}
   if (max(w1,w2)>0){all.short$global_neurodev[i]<-all.short$global_neurodev[i]+1}
   
-# add 2 to code if ASD on interview or DAWBA or SRS is 90 or more
-
-w1<-unlist(gregexpr(pattern ='3',toString(all.short$neurodev_diagnosis[i]))) #ASD code is 3
-w2<-all.short$asd_dsm_r1[i]
-if(is.na(w2)){w2<-0}
-w3<-0
-
-if(all.short$srs_t_score[i]>89) {w3<-1} #SRS t score 90
-
-     if(all.short$srs_t_score[i]>900){w3<-0} 
-if (max(w1,w2,w3)>0){all.short$global_neurodev[i]<-all.short$global_neurodev[i]+2}
-#vertically jittered data created so all points visible on plot
-all.short$global_jittered[i]<-all.short$global_neurodev[i]+.5*runif(1)-.25
+  # add 2 to code if ASD on interview or DAWBA or SRS is 90 or more
+  
+  w1<-unlist(gregexpr(pattern ='3',toString(all.short$neurodev_diagnosis[i]))) #ASD code is 3
+  w2<-all.short$asd_dsm_r1[i]
+  if(is.na(w2)){w2<-0}
+  w3<-0
+  
+  if(all.short$srs_t_score[i]>89) {w3<-1} #SRS t score 90
+  
+  if(all.short$srs_t_score[i]>900){w3<-0} 
+  if (max(w1,w2,w3)>0){all.short$global_neurodev[i]<-all.short$global_neurodev[i]+2}
+  #vertically jittered data created so all points visible on plot
+  all.short$global_jittered[i]<-all.short$global_neurodev[i]+.5*runif(1)-.25
 }
 pirateplot(formula = all.short$global_jittered~ randomtwininclude,
            point.o = .5,
@@ -372,8 +380,16 @@ levels(all.short$group8)<-c('XXX.lowbias','XXY.lowbias','XYY.lowbias',
                             'XXX.hibias','XXY.hibias','XYY.hibias',
                             'twin.TD','twin.langconcerns')
 
+#Consider impact of parent education
+#0, under 16 (no qualifications)
+#1, to 16 (GCSE/Olevel)
+#2, to 18 (Alevel)
+#3, to 21 (degree)
+#4, postgraduate
+#9, not known
+
 par.ed <-aggregate(all.short$mo_educ, by=list(all.short$group8),
-  FUN=mean, na.rm=TRUE)
+                   FUN=mean, na.rm=TRUE)
 pirateplot(mo_educ~group8,data=all.short)
 pirateplot(fa_educ~group8,data=all.short)
 
@@ -413,7 +429,7 @@ thiscol<- 1
 for (i in 1:12){
   thiscol<-thiscol+2
   thisdat<-ccc.data[,i+1]
- ag <- aggregate(thisdat~ group8, ccc.data, function(x) c(mean = mean(x), se = sd(x)/sqrt(length(x))))
+  ag <- aggregate(thisdat~ group8, ccc.data, function(x) c(mean = mean(x), se = sd(x)/sqrt(length(x))))
   ccc.df[,(thiscol:(thiscol+1))]<-ag[,2]
 }
 colnames(ccc.df)<-c('Group','N','GCC.mean','GCC.se','SIDC.mean','SIDC.se','A.mean','A.se','B.mean','B.se','C.mean','C.se','D.mean','D.se',
@@ -443,7 +459,6 @@ for (j in 2:10){
 }
 ccc.dflong$scale<-as.factor(ccc.dflong$scale)
 levels(ccc.dflong$scale)<-c('A','B','C','D','E','F','G','H','I','J')
-ccc.dflong$ci<-1.96*ccc.dflong$se
 linetypes<-c(1,1,1,2,2,2,1,1)
 ccc.dflong$lines<-as.factor(linetypes)
 ccc.dflong$plotgroup<-rep(c('XXX','XXY','XYY','XXX','XXY','XYY','twin_typical','twin_concerns'),10)
@@ -452,10 +467,97 @@ ccc.dflong$plotgroup<-rep(c('XXX','XXY','XYY','XXX','XXY','XYY','twin_typical','
 ymax <- 12
 ymin <- 0
 cccplot<-ggplot(ccc.dflong, aes(x=scale, y=mean, colour=plotgroup,group=Group)) +
-    geom_line(aes(linetype=lines)) + geom_point(shape=21, fill="white") + 
-    ylim(ymin,ymax)
+  geom_line(aes(linetype=lines)) + geom_point(shape=21, fill="white") + 
+  ylim(ymin,ymax)
 cccplot+geom_errorbar(width=.1, aes(ymin=mean-se, ymax=mean+se))
 ```
+##Look at language tests in the same way
+Profile plot useful for overall indication
+
+```{r langmeasures}
+
+
+langcogcols<-c("wasi_matrices_ss" ,"wasi_block_design_ss", "wasi_vocab_ss" ,
+               "wdck_jhsn_ss" , "sent_rep_ss", "oromotor_ss" , "nonword_rep_ss", 
+               "nara_acc_ss" ,"nara_comp_ss","nara_rate_ss" ,"towre_words_ss",
+               "towre_nonwords_ss","phab_pic_ss","phab_digit_ss","group8"  )
+
+langcog<-dplyr::select(all.vshort,langcogcols)
+#Make shorter names for plotting
+colnames(langcog)<-c('Matrices','Blocks','Vocab','WJ Comp','SentRep','Oromotor','NwdRep',
+                     'ReadAcc','ReadComp','ReadRate','TOWREwd','TOWREnwd',
+                     'PicName','DigitName','Group')
+#convert missing data to NA
+numcols<-length(langcogcols)
+for (i in 1:(numcols-1)){
+  w<-which(langcog[,i]>900)
+  langcog[w,i]<-NA
+}
+#convert all variables to same scale: mean 100 and SD 15
+for (i in 1:3){
+  oldmean<-50
+  oldsd<-10
+  langcog[,i]<- 100+15*(langcog[,i]-oldmean)/oldsd
+}
+for (i in 5:7){
+  oldmean<-10
+  oldsd<-3
+  langcog[,i]<- 100+15*(langcog[,i]-oldmean)/oldsd
+}
+```
+
+This reveals big problem with oromotor - presumably because it does not have any variance at high end. For the time being will just add 15 to the SS, which aligns mean for TD twin group - but  need to consider this again.
+
+
+#Go direct to creation of longform means file
+```{r makelonglangmeans}
+#start by adding fudge factor to oromotor (see above)
+langcog[,6]<-langcog[,6]+15
+longlangmeans<-ccc.dflong #we will overwrite this dataframe
+longlangmeans$scale<-levels(longlangmeans$scale)[longlangmeans$scale] 
+for (i in 1:(numcols-1)){
+  startrow<-1+8*(i-1)
+  endrow<-8*i
+  thisdat<-langcog[,i]
+  longlangmeans[startrow:endrow,c(1,6,7)]<-longlangmeans[1:8,c(1,6,7)]#needed bcs more vars than in CCC
+  
+  ag <- aggregate(thisdat~ Group, langcog, function(x) N = length(x))
+  longlangmeans[startrow:endrow,2]<-ag[,2]
+  longlangmeans[startrow:endrow,3]<-colnames(langcog)[i]
+  ag <- aggregate(thisdat~ Group, langcog, function(x) mean = mean(x))
+  longlangmeans[startrow:endrow,4]<-ag[,2]
+  ag <- aggregate(thisdat~ Group, langcog, function(x) se = sd(x)/sqrt(length(x)))
+  longlangmeans[startrow:endrow,5]<-ag[,2]
+  
+}
+longlangmeans$scale<-as.factor(longlangmeans$scale)
+
+```
+
+```{r langplots}
+#Plot the means
+ymax <- 115
+ymin <- 60
+langplot<-ggplot(longlangmeans[1:56,], aes(x=scale, y=mean, colour=plotgroup,group=Group)) +
+  geom_line(aes(linetype=lines)) + geom_point(shape=21, fill="white") + 
+  ylim(ymin,ymax)
+langplot+geom_errorbar(width=.1, aes(ymin=mean-se, ymax=mean+se))
+
+#Repeat for reading data (nb fewer cases)
+readplot<-ggplot(longlangmeans[57:112,], aes(x=scale, y=mean, colour=plotgroup,group=Group)) +
+  geom_line(aes(linetype=lines)) + geom_point(shape=21, fill="white") + 
+  ylim(ymin,ymax)
+readplot+geom_errorbar(width=.1, aes(ymin=mean-se, ymax=mean+se))
+
+```
+
+Thoughts on plots: reading seems far less impaired than language tests.
+Twins with concerns doing fine on TOWRE and pretty good on Neale.
+For SCTs need to check if this is age-related - i.e. we have included more younger children in the language tests than in the reading tests.
+
+Also qu of whether should renorm everything to the twin typical group. But problem as they have higher parental ed I think. Would be worth doing postcode check.
+
+Qu of whether better reading is all down to changes in curriculum since tests were normed. There is a consistent gap between the two twin groups- just that everyone doing well.
 
 ##Session information
 ```{r sessinfo}
