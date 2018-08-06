@@ -3,6 +3,7 @@ title: "Logbook for analysis of SCT and twin language data"
 author: "Dorothy Bishop"
 output: html_document
 ---
+
 `r Sys.time()`
 
 ```{r load_packages, include = FALSE}
@@ -41,6 +42,8 @@ This can be same criterion as for doppler paper - check this.
 For background then need to pull off appropriate columns; simple for sct but for twins need to consider if twinA or twinB.
 
 Given text-based entries, going to be a bit of a nightmare to code.
+
+Also : CCC-2 nonresponse rates - https://www.aapor.org/About-Us/History/Presidential-Addresses/2004-Presidential-Address.aspx
 
 ## Step 1
 Read in background files: these are very messy with a lot of text entries and some inconsistencies in formatting. Both twins are in one row, so reshaped to make long
@@ -91,8 +94,9 @@ Select variables to be used.
 ```{r readredcap}
 redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
 #Use latest version
-sct.redcap <- 'SCTData_DATA_2018-01-22_1351.csv'
-twin.redcap <- 'TwinsData_DATA_2018-08-03_1414.csv' #updated to include ccc2_consistent variable
+sct.redcap <- 'SCTDATA_DATA_2018-08-06_0957.csv'
+twin.redcap <- 'TwinsData_DATA_2018-08-06_1451.csv' #updated to include ccc2_consistent variable
+#also now has pheno_include, which selects individual twins for inclusion
 sct.data <- read.csv(paste0(redcap.dir,sct.redcap),stringsAsFactors = FALSE)
 twin.data <- read.csv(paste0(redcap.dir,twin.redcap),stringsAsFactors = FALSE)
 
@@ -113,7 +117,7 @@ sct.data$female[w]<-1
 
 #Select data for short file
 ```{r colselect}
-keepcols <- c('record_id','female','age_at_test','partial_testing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
+keepcols <- c('record_id','female','age_at_test','partial_testing','pass_hearing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
               'sent_rep_ss','oromotor_ss','nonword_rep_ss','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
               'hyperkinetic_icd_r1','adhd_comb_dsm_r1','adhd_hyp_dsm_r1','adhd_inatt_dsm_r1',
               'conduct_dsm_r1','asd_dsm_r1','autism_icd_r1','srs_t_score',
@@ -132,6 +136,8 @@ sct.short$zygosity <- NA
 twin.short$randomtwininclude <- twin.data$randomtwininclude+1 #twins subdivided
 #randomly into 1 and 2 for replication sample
 twin.short$zygosity <- twin.data$zygosity
+#2 ASD, 3 ASDsib, 4 fail hearing screen (35dB plus mean for better ear), 5 other (rare condition)
+#The previous include variable was used for Doppler paper and had more stringent hearing criteria.
 
 sct.short$trisomy <- sct.data$trisomy
 sct.short$pre_postnatal_diag <- sct.data$pre_postnatal_diag
@@ -141,6 +147,9 @@ twin.short$pre_postnatal_diag <- NA
 twin.short$why_tested <- NA
 twin.short$splang_conc<-twin.data$splang_conc
 sct.short$splang_conc<-NA
+sct.short$pheno_include<-1
+twin.short$pheno_include<-twin.data$pheno_include #this codes reason for exclusion as:
+
 
 #----------------------------------------------------------------------------------
 #Bolt SCT and twin files together
@@ -148,6 +157,7 @@ all.short <-rbind(sct.short,twin.short)
 #remove case of isochromosome
 w<-which(all.short$trisomy==9)
 all.short<-all.short[-w,]
+all.short<-all.short[all.short$pheno_include==1,]
 ```
 #Check that Ns match those in the protocol
 Should have twin groups with N = 143 SCT, 194 twin1 and 194 twin2 (these are randomly assigned twin 1 and 2), 
@@ -160,6 +170,7 @@ Twins recruited in relation to splang_conc, which is coded as
 3, continuing, severe
 4, reading concerns only
 9, unclear
+We will be using this categorisation to subdivide twins; categories 2 and 3 distinguished.
 
 Trisomies - divided according to reason for diagnosis
 why tested used to make bias column: coded as: 
@@ -190,15 +201,22 @@ rowSums(scttab)
 all.short$parentconc<-NA
 w<-which(all.short$randomtwininclude>0)
 all.short$parentconc[w]<-0
-w<-which(all.short$splang_conc>0)
+w<-which(all.short$splang_conc%in%c(2,3))
 all.short$parentconc[w]<-1
 table(all.short$parentconc,all.short$randomtwininclude)
+min(sct.data$age_at_test)
+max(sct.data$age_at_test)
+min(twin.data$age_at_test)
+max(twin.data$age_at_test)
 
 ```
 #Deal with missing data
 Check for nonword rep - in some cases need to substitute low score, as unable to attempt task. 
 N.B. The process used to extract the language factor can handle missing data, so for measures used in that, we just substitute NA for values > 900.
 ```{r missingcheck}
+
+all.short$pass_hearing[all.short$pass_hearing==9]<-NA #change 9 to NA for pass_hearing
+#NB these include both refusal and equipment failure
 
 #missing data has codes of 996-999 for language tests
 w <- which(all.short$nonword_rep_ss>900)
@@ -252,6 +270,7 @@ print(paste0(length(md),' missing values from ',nrow(all.short)*4,' datapoints i
 ```
 #Compute language factor, using script from Appendix 2
 I don't think we will use this, as the focus will be more on individual tests, but it's included for the time being. This is the factor we used for language phenotype in Newbury et al.
+Could be useful if we need a general language measure at some point
 
 
 ```{r langfactor}
@@ -544,6 +563,30 @@ for (i in 5:7){
   oldsd<-3
   langcog[,i]<- 100+15*(langcog[,i]-oldmean)/oldsd
 }
+langcog$record_id<-all.vshort$record_id
+
+langcols<-c("Vocab","WJ Comp","SentRep","NwdRep" )
+langcog$N.lowlang<-0
+langcog$N.na.lang<-0
+for (j in 1:length(langcols)){
+  thiscol<-match(langcols[j],names(langcog))
+  w<-which(langcog[,thiscol]<85)
+  if (length(w)>0){
+  langcog$N.lowlang[w]<-langcog$N.lowlang[w]+1
+  }
+  w<-which(is.na(langcog[,thiscol]))
+   if (length(w)>0){
+  langcog$N.na.lang[w]<-langcog$N.na.lang[w]+1
+   }
+}
+langcog$DLD<-0
+langcog$DLD[langcog$N.lowlang>1]<-1
+langcog$piq<-all.vshort$piq
+langcog$DLD[langcog$piq<70]<-2
+langcog$DLD[langcog$N.na.lang>0]<-9
+dldtab<-table(langcog$Group,langcog$DLD)
+colnames(dldtab)<-c('None','DLD','LowIQ','missing')
+dldtab
 ```
 
 This reveals big problem with oromotor - presumably because it does not have any variance at high end. For the time being will just add 15 to the SS, which aligns mean for TD twin group - but  need to consider this again.
@@ -613,8 +656,13 @@ Also qu of whether should renorm everything to the twin typical group. But probl
 
 Qu of whether better reading is all down to changes in curriculum since tests were normed. There is a consistent gap between the two twin groups- just that everyone doing well.
 
+```{r dld_code}
+#Create code for DLD; if 2 of 4 tests (NWRep, SentRep, Vocab and WJComp) < 80 and PIQ>70
+
+```
+
 ```{r wasi}
-mycollist<-c('red','green','blue','pink','purple','darkblue','black','grey')
+mycollist<-c('red','green','blue','pink','purple','darkblue','grey','black')
 plot(all.vshort$wasi_block_design_ss,all.vshort$wasi_vocab_ss,col=mycollist[all.vshort$group8])
 abline(coef=c(0,1))
 
