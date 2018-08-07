@@ -19,11 +19,14 @@ sct.cases<-sct.data$record_id
 newlist<-as.numeric(sct.new$Family.Code)
 
 tempcheck<-data.frame(sct.data$record_id)
-tempcheck$row<-NA
+tempcheck$newrow<-NA
+tempcheck$oldrow<-NA
+tempcheck$orig.famcode<-NA
 #Do these one at a time in a loop. Inefficient but easier to check
 
 for (i in 1:length(sct.cases)){
-  m<-match(sct.cases[i],newlist)
+  m<-match(sct.cases[i],newlist) #row number of the match for the name/address file for new cases
+  tempcheck$newrow[i]<-m
   parent<-sct.new$Parent.surname[m]
   child<-sct.new$Child.name[m]
   dob<-sct.new$Date.of.birth[m]
@@ -37,9 +40,13 @@ for (i in 1:length(sct.cases)){
   try1<-intersect(p,c)
   try2<-intersect(p,d)
   try3<-intersect(c,d)
-  if(length(try1)>0){tempcheck$row[i]<-try1}
-  if(length(try2)>0){tempcheck$row[i]<-try2}
-  if(length(try3)>0){tempcheck$row[i]<-try3}
-  }
+  if(length(try1)>0){tempcheck$oldrow[i]<-try1}
+  if(length(try2)>0){tempcheck$oldrow[i]<-try2}
+  if(length(try3)>0){tempcheck$oldrow[i]<-try3}
+
+  origrow<-tempcheck$oldrow[i]
+  if(!is.na(origrow)){tempcheck$orig.famcode[i]<-sct.old$Family.Code[origrow]}
   
-  
+}
+
+write.table(tempcheck, "match_oldnew.csv", sep=",",row.names=FALSE,quote=FALSE)
