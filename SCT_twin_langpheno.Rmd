@@ -490,6 +490,11 @@ print(paste('All high bias SCT:',sum(consistent.ccc[4:6,1])/sum(consistent.ccc[4
 print(paste('Twin: no concerns:',sum(consistent.ccc[7,1])/sum(consistent.ccc[7,])))
 print(paste('Twin: language concerns:',sum(consistent.ccc[8,1])/sum(consistent.ccc[8,])))
 
+#total responses
+
+print(paste('All SCT:',1-sum(consistent.ccc[1:6,1])/sum(consistent.ccc[1:6,])))
+print(paste('Twin:',1-sum(consistent.ccc[7:8,1])/sum(consistent.ccc[7:8,])))
+
 ```
 ##Now analyse CCC-2 for 8 groups
 
