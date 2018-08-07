@@ -1,8 +1,10 @@
 ---
-title: "Logbook for analysis of SCT and twin language data"
-author: "Dorothy Bishop"
+title: Logbook for analysis of SCT and twin language data
+author: Dorothy Bishop
+date: started August 2018
 output: html_document
 ---
+
 
 `r Sys.time()`
 
@@ -94,7 +96,8 @@ Select variables to be used.
 ```{r readredcap}
 redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
 #Use latest version
-sct.redcap <- 'SCTDATA_DATA_2018-08-06_0957.csv'
+sct.redcap <- 'SCTDATA_DATA_2018-08-07_0759.csv'
+#updated to include code indicating whether participated in prior study
 twin.redcap <- 'TwinsData_DATA_2018-08-06_1451.csv' #updated to include ccc2_consistent variable
 #also now has pheno_include, which selects individual twins for inclusion
 sct.data <- read.csv(paste0(redcap.dir,sct.redcap),stringsAsFactors = FALSE)
@@ -142,9 +145,12 @@ twin.short$zygosity <- twin.data$zygosity
 sct.short$trisomy <- sct.data$trisomy
 sct.short$pre_postnatal_diag <- sct.data$pre_postnatal_diag
 sct.short$why_tested <-sct.data$why_tested
+sct.short$orig_famcode<-0
+sct.short$orig_famcode[sct.data$orig_famcode>0]<-1 #if seen before this is 1
 twin.short$trisomy <- NA
 twin.short$pre_postnatal_diag <- NA
 twin.short$why_tested <- NA
+twin.short$orig_famcode<-NA
 twin.short$splang_conc<-twin.data$splang_conc
 sct.short$splang_conc<-NA
 sct.short$pheno_include<-1
@@ -182,6 +188,8 @@ why tested used to make bias column: coded as:
 9, no information
 
 ```{r ncheck}
+
+
 twintab <- table(all.short$randomtwininclude)
 names(twintab)<-c('SCT','twin1','twin2')
 
@@ -208,6 +216,14 @@ min(sct.data$age_at_test)
 max(sct.data$age_at_test)
 min(twin.data$age_at_test)
 max(twin.data$age_at_test)
+
+#count how many SCT cases were in the earlier 2009 study (Bishop et al 2011 paper)
+print('In 2009 study')
+w<-which(all.short$orig_famcode==1)
+origstudy<-table(all.short$bias[w],all.short$trisomy[w])
+colnames(origstudy)<-c('XXX','XXY','XYY')
+rownames(origstudy)<-c('Low bias','High bias')
+origstudy
 
 ```
 #Deal with missing data
@@ -735,4 +751,4 @@ prop.table(t4,1)
 ##Session information
 ```{r sessinfo}
 sessionInfo()
-``
+```
