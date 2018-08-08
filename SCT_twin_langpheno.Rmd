@@ -9,7 +9,9 @@ output: html_document
 `r Sys.time()`
 
 ```{r load_packages, include = FALSE}
+#################################################################################
 #devtools::install_github("rubenarslan/formr")
+require(formr) #to handle conflicts with 'select' function in dplyr (may not be needed)
 library(tidyverse)
 library(knitr) #for kable - allows nice tables in Word output - but can be temperamental
 library(gridExtra)
@@ -26,77 +28,37 @@ library(beanplot) #ditto
 library(yarrr) #for pirate plot - another plot type
 library(lavaan) #for SEM to extract language factor
 library(semPlot) #used with Lavaan
-require(formr) #to handle conflicts with 'select' function in dplyr
+#################################################################################
 
 ```
 
 
 Need to create a main analysis file in which we have a code that corresponds to group.
-Have col for trisomy which corresponds to XX, XY, XXX, XXY and XYY: where we know that XX and XY will be twins
-Makes sense to use twin column to select just twin1, so just one from each pair
+Have col for trisomy which corresponds to XXX, XXY, XYY, and NA: NA will be twins
+Makes sense to use randomtwininclude to select just one from each pair
 For trisomies, have a col that specifies whether highbias or lowbias
-Should be able to use prior code from Newbury et al paper for this
 
 Have a col that determines if meeting criteria for DLD - regardless of whether twin or not.
+This can be same criterion as for doppler paper : this was:
+<i>Results from the language/cognitive test battery were used to categorise children as having DLD if they scored more than 1 SD below population norms on two or more out of 13 language/literacy measures, and as TD if they scored below this threshold on no more than one measure. In previous studies, we have excluded children who met this criterion solely on literacy measures (TOWRE and NARA-II); 
+Children were excluded from the sample if they met any of the following criteria: WASI nonverbal ability (performance IQ) more than two SDs below the population mean; diagnosis of autism spectrum disorder (ASD) in one or both twins; sensorineural hearing loss or failure of a hearing test on the day of testing; and brain injury or a serious medical condition affecting one or both twins.</i>
 
-This can be same criterion as for doppler paper - check this.
+nb index of multiple deprivation from postcode (English)
+http://imd-by-postcode.opendatacommunities.org/
 
-For background then need to pull off appropriate columns; simple for sct but for twins need to consider if twinA or twinB.
-
-Given text-based entries, going to be a bit of a nightmare to code.
-
-Also : CCC-2 nonresponse rates - https://www.aapor.org/About-Us/History/Presidential-Addresses/2004-Presidential-Address.aspx
+Also see re: CCC-2 nonresponse rates - https://www.aapor.org/About-Us/History/Presidential-Addresses/2004-Presidential-Address.aspx
 
 ## Step 1
-Read in background files: these are very messy with a lot of text entries and some inconsistencies in formatting. Both twins are in one row, so reshaped to make long
-Have done ad hoc coding of milestones as follows
-Words
-1. < 15 months or 'normal'
-2. 15-24 mo or 'delayed'
-3. > 24 mo or 'very delayed'
-
-Sentences
-1. < 36 months or 'normal'
-2. 37-48 months or 'delayed'
-3. > 4 yr or 'very delayed' or 'not yet'
-
-Walking
-1. < 16 months or 'normal'
-2. 16-18 months or 'delayed' or 'late'
-3. 19 months+ or 'very delayed' etc
-
-Dry
-1. < 37 mo or 'normal'
-2. 37-59 mo or 'late'
-3. 60 + mo or 'very late' or 'not yet'
-
-```{r readbkgfiles, echo=FALSE}
-# Read in SCT background file
-sct.bkg <- read.csv("background_sct.csv",stringsAsFactors=FALSE)
-# Read in twin background file
-twin.bkg <- read.csv("background_twin.csv",stringsAsFactors=FALSE)
-twin.bkg<-twin.bkg[1:306,] #remove extraneous rows
-#reshape twin file so rows for A and B
-twinall.bkg<-twin.bkg[,c(1,3,7,11,15)]
-colnames(twinall.bkg)<-c('Code','Word_code','Sent_code','Walk_code','Dry_code')
-colnames(twin.bkg)[c(5,9,13,17)]<-c('Word_code','Sent_code','Walk_code','Dry_code')
-twinall.bkg<-rbind(twinall.bkg,twin.bkg[,c(1,5,9,13,17)])
-twinall.bkg$Code[1:306]<-paste0(twinall.bkg$Code[1:306],'A')
-twinall.bkg$Code[307:612]<-paste0(twinall.bkg$Code[307:612],'B')
-
-
-
-```
-## Step 2
 Read in latest SCT from redcap.
 Do the same for the twins.
 Select variables to be used.
 
 
 ```{r readredcap}
+#########################################################################################
 redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
 #Use latest version
-sct.redcap <- 'SCTDATA_DATA_2018-08-07_0759.csv'
+sct.redcap <- 'SCTDATA_DATA_2018-08-08_1425.csv'
 #updated to include code indicating whether participated in prior study
 twin.redcap <- 'TwinsData_DATA_2018-08-06_1451.csv' #updated to include ccc2_consistent variable
 #also now has pheno_include, which selects individual twins for inclusion
@@ -114,22 +76,24 @@ twin.data$lang_disorder<-round((twin.data$dld_rd-4.5)/10) #first digit is dld co
 sct.data$female<-0
 w<-which(sct.data$trisomy==1)
 sct.data$female[w]<-1
-
+#########################################################################################
 #----------------------------------------------------------------------------------
 ```
 
 #Select data for short file
 ```{r colselect}
+#########################################################################################
+#Specify columns to retain that are common to both sct and twin
 keepcols <- c('record_id','female','age_at_test','partial_testing','pass_hearing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
               'sent_rep_ss','oromotor_ss','nonword_rep_ss','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
               'hyperkinetic_icd_r1','adhd_comb_dsm_r1','adhd_hyp_dsm_r1','adhd_inatt_dsm_r1',
               'conduct_dsm_r1','asd_dsm_r1','autism_icd_r1','srs_t_score',
               'gcc','scdi','ccc_a','ccc_b','ccc_c','ccc_d','ccc_e','ccc_f',
-              'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent','mo_educ','fa_educ',
+              'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent','mo_educ','fa_educ','deprivation_index',
               'nepsy_oromotor_seq_raw')
 
 twin.short <- select(twin.data,keepcols)
-sct.short <- select(sct.data,keepcols) #NB 'select' is ambiguous between packages so have to specify dplyr
+sct.short <- select(sct.data,keepcols) #NB 'select' is ambiguous between packages but should work ok if we use formr (otherwise need dplyr::select)
 
 #----------------------------------------------------------------------------------
 
@@ -155,18 +119,24 @@ twin.short$splang_conc<-twin.data$splang_conc
 sct.short$splang_conc<-NA
 sct.short$pheno_include<-1
 twin.short$pheno_include<-twin.data$pheno_include #this codes reason for exclusion as:
-
-
+#2 ASD, 3 ASD-sib, 4-hearing, 5- other
 #----------------------------------------------------------------------------------
 #Bolt SCT and twin files together
 all.short <-rbind(sct.short,twin.short)
+
 #remove case of isochromosome
 w<-which(all.short$trisomy==9)
 all.short<-all.short[-w,]
-all.short<-all.short[all.short$pheno_include==1,]
+
+all.short<-all.short[all.short$pheno_include==1,] #removes those with ASD, ASD-sib,hearing, other
+#########################################################################################
 ```
+
+
+## Step 2
+
 #Check that Ns match those in the protocol
-Should have twin groups with N = 143 SCT, 194 twin1 and 194 twin2 (these are randomly assigned twin 1 and 2), 
+Should have three groups with N = 142 SCT, 194 twin1 and 194 twin2 (these are randomly assigned twin 1 and 2), - but Ns less for twins because of exclusions
 Numbers are greater than for Newbury et al, as some children did not feature in that study because of lack of DNA.
 
 Twins recruited in relation to splang_conc, which is coded as
@@ -188,11 +158,9 @@ why tested used to make bias column: coded as:
 9, no information
 
 ```{r ncheck}
-
-
+###################################################################################
 twintab <- table(all.short$randomtwininclude)
 names(twintab)<-c('SCT','twin1','twin2')
-
 
 all.short$bias<-'NA'
 w<-which(all.short$randomtwininclude==0)
@@ -201,31 +169,43 @@ w<-c(which(all.short$why_tested==2),which(all.short$why_tested==3))
 all.short$bias[w]<-1
 scttab <- table(all.short$trisomy,all.short$bias)
 rownames(scttab)<-c('XXX','XXY','XYY')
+colnames(scttab)<-c('low bias','high bias','NA')
 #Show tables
 twintab
 scttab
 rowSums(scttab)
 
-all.short$parentconc<-NA
+all.short$parentconc<-NA #parental concern re language
 w<-which(all.short$randomtwininclude>0)
 all.short$parentconc[w]<-0
 w<-which(all.short$splang_conc%in%c(2,3))
 all.short$parentconc[w]<-1
-table(all.short$parentconc,all.short$randomtwininclude)
+
+parcontab<-table(all.short$parentconc,all.short$randomtwininclude)
+parcontab<-parcontab[,2:3]
+rownames(parcontab)<-c('No concern','Concern')
+colnames(parcontab)<-c('twin1','twin2')
+parcontab
+print('Age range (min, max, average) for SCT')
 min(sct.data$age_at_test)
 max(sct.data$age_at_test)
+mean(sct.data$age_at_test)
+print('Age range (min, max, average) for twin')
 min(twin.data$age_at_test)
 max(twin.data$age_at_test)
+mean(twin.data$age_at_test)
 
 #count how many SCT cases were in the earlier 2009 study (Bishop et al 2011 paper)
+print('')
 print('In 2009 study')
 w<-which(all.short$orig_famcode==1)
 origstudy<-table(all.short$bias[w],all.short$trisomy[w])
 colnames(origstudy)<-c('XXX','XXY','XYY')
 rownames(origstudy)<-c('Low bias','High bias')
 origstudy
-
+###################################################################################
 ```
+##Step 3
 #Deal with missing data
 Check for nonword rep - in some cases need to substitute low score, as unable to attempt task. 
 N.B. The process used to extract the language factor can handle missing data, so for measures used in that, we just substitute NA for values > 900.
@@ -280,6 +260,7 @@ w<-which(all.short$mo_educ==9)
 all.short$mo_educ[w]<-NA
 w<-which(all.short$fa_educ==9)
 all.short$fa_educ[w]<-NA
+ #NB Deprivation index: will be missing for Wales/Scotland and NI
 
 md <- which(is.na(all.short[,mc:(mc+3)]))
 print(paste0(length(md),' missing values from ',nrow(all.short)*4,' datapoints in 4 language tests'))
@@ -305,6 +286,8 @@ beanplot(all.short$langfactor~all.short$randomtwininclude)
 
 
 #Create general neurodevelopmental index, using script from Appendix 3
+Again, probably won't use this, but retained for time being.
+
 Our goal is to create a single scale reflecting global level of neurodevelopmental impairment. Data from initial parental telephone interview are available for all children. Data from language testing are available for all but two very low-functioning children, who were unable to attempt our tasks. Data from parental questionnaires (CCC-2 and SRS) and DAWBA DSM5 diagnoses are available for a subset. For SCT cases, questionnaire data were available for 127 out of 143 children, and DAWBA for 89 children. For comparison twin children, questionnaire data were available for 316 out of 388 children, and DAWBA for 276 children. We use all available data for each child to create a scale by adding points as follows:
 *History of speech problems = 1
 *Current help in mainstream school (support or special class or SLT) =1
@@ -430,6 +413,7 @@ pirateplot(formula = all.short$global_jittered~ randomtwininclude,
            ylim=c(0,10),
            main="Distribution of global impairment\n in SCT and Comparison groups")
 }
+#####################################################################################
 ```
 ##Create 8 groups:
 1. XXX-nobias
@@ -443,6 +427,7 @@ pirateplot(formula = all.short$global_jittered~ randomtwininclude,
 NB as currently defined, not taking into account co-twin status. So a twin_noconcern could have cotwin with concern, ie have family risk.
 
 ```{r groupcreate}
+#####################################################################################
 all.short$group8<-all.short$trisomy
 w<-which(all.short$bias==1)
 all.short$group8[w]<-all.short$group8[w]+3 #convert 1 2 3 to 4 5 6
@@ -468,6 +453,26 @@ par.ed <-aggregate(all.short$mo_educ, by=list(all.short$group8),
 pirateplot(mo_educ~group8,data=all.short)
 pirateplot(fa_educ~group8,data=all.short)
 
+
+pirateplot(deprivation_index~group8,data=all.short,main='Deprivation index: high is good')
+
+depcut<-3275*c(1,2,3,4,5,6,7,8,9)
+print('Deprivation index decile cutpoints are:')
+print(depcut)
+pirateplot(deprivation_index~mo_educ,data=all.short,main='Deprivation index: high is good')
+
+#Explore effect of removing top decile.
+#Better might be to weight comparison group by dep index
+pirateplot(deprivation_index~group8,data=all.short[all.short$deprivation_index<29475,],main='Deprivation index: high is good, excluding top decile')
+
+#Depriv index to decile
+all.short$depriv_decile <- cut(all.short$deprivation_index, 
+                       breaks = c(0,3275,6550,9825,13100,16375,19650,22925,26200,29475,Inf),
+                       labels = seq(1:10), 
+                       right = TRUE)
+all.short$depriv_decile<-as.integer(all.short$depriv_decile)
+deciletab<-table(all.short$depriv_decile,all.short$group8)
+pirateplot(depriv_decile~group8,data=all.short)
 ```
 ##CCC-2 analysis
 Consider how CCC-2 profiles for SCTs compare with those in our previous paper. Also include twins with or without concerns as comparison group.  Show both subscales and the GCC and SIDC.
@@ -699,9 +704,49 @@ abline(coef=c(0,1))
 ##Preliminary look at background variables
 Estimate of early language milestones.
 Would also be of interest to see how diagnosis relates to language profile
+Read in background files: these are very messy with a lot of text entries and some inconsistencies in formatting. Both twins are in one row, so reshaped to make long
+Have done ad hoc coding of milestones as follows
+Words
+1. < 15 months or 'normal'
+2. 15-24 mo or 'delayed'
+3. > 24 mo or 'very delayed'
+
+Sentences
+1. < 36 months or 'normal'
+2. 37-48 months or 'delayed'
+3. > 4 yr or 'very delayed' or 'not yet'
+
+Walking
+1. < 16 months or 'normal'
+2. 16-18 months or 'delayed' or 'late'
+3. 19 months+ or 'very delayed' etc
+
+Dry
+1. < 37 mo or 'normal'
+2. 37-59 mo or 'late'
+3. 60 + mo or 'very late' or 'not yet'
+
+```{r readbkgfiles, echo=FALSE}
+#####################################################################################
+# Read in SCT background file
+sct.bkg <- read.csv("background_sct.csv",stringsAsFactors=FALSE)
+# Read in twin background file
+twin.bkg <- read.csv("background_twin.csv",stringsAsFactors=FALSE)
+twin.bkg<-twin.bkg[1:306,] #remove extraneous rows
+#reshape twin file so rows for A and B
+twinall.bkg<-twin.bkg[,c(1,3,7,11,15)]
+colnames(twinall.bkg)<-c('Code','Word_code','Sent_code','Walk_code','Dry_code')
+colnames(twin.bkg)[c(5,9,13,17)]<-c('Word_code','Sent_code','Walk_code','Dry_code')
+twinall.bkg<-rbind(twinall.bkg,twin.bkg[,c(1,5,9,13,17)])
+twinall.bkg$Code[1:306]<-paste0(twinall.bkg$Code[1:306],'A')
+twinall.bkg$Code[307:612]<-paste0(twinall.bkg$Code[307:612],'B')
+#####################################################################################
+```
 
 ```{r langbackground}
 #as gender is important here, we'll make a 10-group code!
+#####################################################################################
+
 all.vshort$group10<-all.vshort$group8
 levels(all.vshort$group10)<-c(levels(all.vshort$group10)[1:6],'TD.male','TD.female','LD.male','LD.female')
 w1<-which(all.vshort$group8=='twin.TD')
@@ -752,6 +797,8 @@ prop.table(t1,1) #gives proportions by row (index 1)
 prop.table(t2,1)
 prop.table(t3,1)
 prop.table(t4,1)
+#####################################################################################
+
 ```
 ##Session information
 ```{r sessinfo}
