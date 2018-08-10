@@ -582,8 +582,8 @@ hist(temp$Oromotor_raw)
 mymean<-mean(temp$Oromotor_raw)
 mysd<-sd(temp$Oromotor_raw)
 
-all.short$oromotor_ss2<-round(100+15*(all.short$nepsy_oromotor_seq_raw-mymean)/mysd,0)
-all.short$oromotor_ss2[all.short$oromotor_ss2<55]<-55
+langcog$Oromotor<-round(100+15*(langcog$Oromotor_raw-mymean)/mysd,0)
+langcog$Oromotor[langcog$oromotor_ss2<55]<-55
 #We'll use this for all subsequent analyses
 #Need to update value in langcog2
 langcog2$Oromotor<-round(100+15*(langcog2$Oromotor_raw-mymean)/mysd,0)
