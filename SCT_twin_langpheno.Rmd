@@ -58,9 +58,9 @@ Select variables to be used.
 #########################################################################################
 redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
 #Use latest version
-sct.redcap <- 'SCTDATA_DATA_2018-08-08_1425.csv'
+sct.redcap <- 'SCTDATA_DATA_2018-08-09_1107.csv'
 #updated to include code indicating whether participated in prior study
-twin.redcap <- 'TwinsData_DATA_2018-08-06_1451.csv' #updated to include ccc2_consistent variable
+twin.redcap <- 'TwinsData_DATA_2018-08-09_1134.csv' #updated to include ccc2_consistent variable
 #also now has pheno_include, which selects individual twins for inclusion
 sct.data <- read.csv(paste0(redcap.dir,sct.redcap),stringsAsFactors = FALSE)
 twin.data <- read.csv(paste0(redcap.dir,twin.redcap),stringsAsFactors = FALSE)
@@ -68,6 +68,9 @@ twin.data <- read.csv(paste0(redcap.dir,twin.redcap),stringsAsFactors = FALSE)
 #fix any columns with discrepant names
 w<-which(colnames(twin.data)=='neurodev_diagnosis')
 colnames(twin.data)[w] <-'neurodev_diag'
+#Nb Coded so if you subtract 1 you get N older sibs: disregards birth order of twins
+w<-which(colnames(sct.data)=='position_in_family')
+colnames(sct.data)[w] <-'fam_position'
 
 twin.data$dyslexia<-twin.data$dld_rd%%10 #modulus 10 , ie last digit
 twin.data$lang_disorder<-round((twin.data$dld_rd-4.5)/10) #first digit is dld code
@@ -89,7 +92,7 @@ keepcols <- c('record_id','female','age_at_test','partial_testing','pass_hearing
               'hyperkinetic_icd_r1','adhd_comb_dsm_r1','adhd_hyp_dsm_r1','adhd_inatt_dsm_r1',
               'conduct_dsm_r1','asd_dsm_r1','autism_icd_r1','srs_t_score',
               'gcc','scdi','ccc_a','ccc_b','ccc_c','ccc_d','ccc_e','ccc_f',
-              'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent','mo_educ','fa_educ','deprivation_index',
+              'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent','mo_educ','fa_educ','deprivation_index','fam_structure','fam_position',
               'nepsy_oromotor_seq_raw')
 
 twin.short <- select(twin.data,keepcols)
@@ -428,6 +431,7 @@ NB as currently defined, not taking into account co-twin status. So a twin_nocon
 
 ```{r groupcreate}
 #####################################################################################
+all.short<-filter(all.short,randomtwininclude<2) #remove twin2
 all.short$group8<-all.short$trisomy
 w<-which(all.short$bias==1)
 all.short$group8[w]<-all.short$group8[w]+3 #convert 1 2 3 to 4 5 6
@@ -435,143 +439,82 @@ w<-which(all.short$randomtwininclude>0)
 all.short$group8[w]<-7
 w<-which(all.short$parentconc==1)
 all.short$group8[w]<-8
+all.short$group8level<-all.short$group8#useful to retain numeric code before converting to factor
 all.short$group8<-as.factor(all.short$group8)
 levels(all.short$group8)<-c('XXX.lowbias','XXY.lowbias','XYY.lowbias',
                             'XXX.hibias','XXY.hibias','XYY.hibias',
                             'twin.TD','twin.langconcerns')
+```
+##Covariates
+a)	Educational level of mother and father, transformed into an ordinal scale based on age at leaving full-time education/qualifications obtained, with points of 0 (prior to age 16 years), 1 (16 years/did GCSE or O-levels), 2 (18 years/ did A-levels), 3 (21 years, degree), 4 (postgraduate study). 
 
-#Consider impact of parent education
-#0, under 16 (no qualifications)
-#1, to 16 (GCSE/Olevel)
-#2, to 18 (Alevel)
-#3, to 21 (degree)
-#4, postgraduate
-#9, not known
+b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank over 32,000 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable.  
 
+c)	Living with single parent, coded as a binary variable (0 or 1), based on status at the time of the initial interview.
+
+d)	Number of older siblings. For twins, the co-twin was not counted.
+
+N.B. The finding that the lowbias SCT children are more likely to have older sibs is probably related to the fact that pre-natal testing is associated with older parents. We do have data on parental ages and could look at that, but not sure it's necessary. It does, though, make me concerned that there may be problems in using N older sibs as a covariate, as it could look causal when it is not. It might be reasonable to use it just within the twin group.
+
+```{r get.covariates}
+#Parental educational level
 par.ed <-aggregate(all.short$mo_educ, by=list(all.short$group8),
                    FUN=mean, na.rm=TRUE)
 pirateplot(mo_educ~group8,data=all.short)
 pirateplot(fa_educ~group8,data=all.short)
 
+#Deprivation index
+#pirateplot(deprivation_index~group8,data=all.short,main='Deprivation index: high is good')
 
-pirateplot(deprivation_index~group8,data=all.short,main='Deprivation index: high is good')
+#Can generate deciles, but better to normalise deprviation index as below
+#depcut<-3275*c(1,2,3,4,5,6,7,8,9)
+# print('Deprivation index decile cutpoints are:')
+# print(depcut)
+# pirateplot(deprivation_index~mo_educ,data=all.short,main='Deprivation index: high is good')
 
-depcut<-3275*c(1,2,3,4,5,6,7,8,9)
-print('Deprivation index decile cutpoints are:')
-print(depcut)
-pirateplot(deprivation_index~mo_educ,data=all.short,main='Deprivation index: high is good')
+#Use ranks to convert to normal distribution
+#Rw deprivation index is a rank out of 32750
+all.short$deprivz<-qnorm(all.short$deprivation_index/32750)
 
-#Explore effect of removing top decile.
-#Better might be to weight comparison group by dep index
-pirateplot(deprivation_index~group8,data=all.short[all.short$deprivation_index<29475,],main='Deprivation index: high is good, excluding top decile')
+pirateplot(deprivz~group8,data=all.short,xaxt='n')
+text(1,3.2,'XXX',cex=.8)
+text(2,3.2,'XXY',cex=.8)
+text(3,3.2,'XYY',cex=.8)
+text(4,3.2,'XXX',cex=.8)
+text(5,3.2,'XXY',cex=.8)
+text(6,3.2,'XYY',cex=.8)
+text(7,3.4,'Twin\nno concerns',cex=.8)
+text(8,3.2,'Twin\nlanguage\nproblems ',cex=.8)
+text(2,-3,'<-------Low bias------->')
+text(5,-3,'<-------High bias------->')
+all.short$singlepar<-0
+all.short$singlepar[all.short$fam_structure<3]<-1
+singlepar.tab<-table(all.short$group8,all.short$singlepar)
+colnames(singlepar.tab)<-c('2 parents','single parent')
+prop.table(singlepar.tab,1)
 
-#Depriv index to decile
-all.short$depriv_decile <- cut(all.short$deprivation_index, 
-                       breaks = c(0,3275,6550,9825,13100,16375,19650,22925,26200,29475,Inf),
-                       labels = seq(1:10), 
-                       right = TRUE)
-all.short$depriv_decile<-as.integer(all.short$depriv_decile)
-deciletab<-table(all.short$depriv_decile,all.short$group8)
-pirateplot(depriv_decile~group8,data=all.short)
+print('N older siblings')
+all.short$oldersibs<-all.short$fam_position-1
+nsib.tab<-table(all.short$group8,all.short$oldersibs)
+round(prop.table(nsib.tab,1),3)
 ```
-##CCC-2 analysis
-Consider how CCC-2 profiles for SCTs compare with those in our previous paper. Also include twins with or without concerns as comparison group.  Show both subscales and the GCC and SIDC.
-Just use twin1 for this (regardless of language status)
-
-```{r ccc2}
-all.vshort<-filter(all.short,randomtwininclude<2) #remove twin2
-w<-which(colnames(all.vshort)=='ccc_a')
-x<-which(colnames(all.vshort)=='group8')
-cccbit<-all.vshort[,c(1,(w-2):(w+10),x)]#2 before ccc_a is GCC and SIDC
-w<-which(is.na(cccbit$ccc2_consistent))
-cccbit$ccc2_consistent[w]<--1 #we need a count of missing data, so convert NA to -1
-consistent.ccc<-table(cccbit$group8,cccbit$ccc2_consistent)
-
-colnames(consistent.ccc)<-c('No data','Inconsistent','Consistent')
-consistent.ccc
-print('Proportions of non-response to CCC-2')
-print(paste('All low bias SCT:',sum(consistent.ccc[1:3,1])/sum(consistent.ccc[1:3,])))
-print(paste('All high bias SCT:',sum(consistent.ccc[4:6,1])/sum(consistent.ccc[4:6,])))
-print(paste('Twin: no concerns:',sum(consistent.ccc[7,1])/sum(consistent.ccc[7,])))
-print(paste('Twin: language concerns:',sum(consistent.ccc[8,1])/sum(consistent.ccc[8,])))
-
-#total responses
-
-print(paste('All SCT:',1-sum(consistent.ccc[1:6,1])/sum(consistent.ccc[1:6,])))
-print(paste('Twin:',1-sum(consistent.ccc[7:8,1])/sum(consistent.ccc[7:8,])))
-
-```
-##Now analyse CCC-2 for 8 groups
-
-```{r ccc.analyse}
-#First remove the cases with no response or inconsistent
-ccc.data<-filter(cccbit,ccc2_consistent>0)
-#create dataframe for results
-ccc.df<-data.frame(matrix(NA,nrow=8,ncol=30))
-ccc.df[,1]<-levels(ccc.data$group8)
-ccc.df[,2]<- table(ccc.data$group8)
-thiscol<- 1
-for (i in 1:12){
-  thiscol<-thiscol+2
-  thisdat<-ccc.data[,i+1]
-  ag <- aggregate(thisdat~ group8, ccc.data, function(x) c(mean = mean(x), se = sd(x)/sqrt(length(x))))
-  ccc.df[,(thiscol:(thiscol+1))]<-ag[,2]
-}
-colnames(ccc.df)<-c('Group','N','GCC.mean','GCC.se','SIDC.mean','SIDC.se','A.mean','A.se','B.mean','B.se','C.mean','C.se','D.mean','D.se',
-                    'E.mean','E.se','F.mean','F.se','G.mean','G.se','H.mean','H.se',
-                    'I.mean','I.se','J.mean','J.se')
-```
-
-```{r cccplot}
-#Need data in long form for ggplot2
-#set up the long form df with data from scale A
-ccc.dflong<-ccc.df[1:8,c(1,2,2,7:8)]
-colnames(ccc.dflong)[3:5]<-c('scale','mean','se')
-ccc.dflong$scale<-1
-mybase<-ccc.dflong
-
-#Now bolt on the other scales
-for (j in 2:10){
-  #rows to write to in new long df
-  startrow<-(j-1)*8+1
-  endrow<-(j*8)
-  #cols to read from in old df
-  startcol<-7+(j-1)*2
-  ccc.dflong<-rbind(ccc.dflong,mybase) #just duplicate first 8 rows before overwriting them
-  ccc.dflong$scale[startrow:endrow]<-j
-  ccc.dflong[startrow:endrow,4:5]<-ccc.df[,startcol:(startcol+1)]
-  
-}
-ccc.dflong$scale<-as.factor(ccc.dflong$scale)
-levels(ccc.dflong$scale)<-c('A','B','C','D','E','F','G','H','I','J')
-linetypes<-c(1,1,1,2,2,2,1,1)
-ccc.dflong$lines<-as.factor(linetypes)
-ccc.dflong$plotgroup<-rep(c('XXX','XXY','XYY','XXX','XXY','XYY','twin_typical','twin_concerns'),10)
-
-#Plot the means
-ymax <- 12
-ymin <- 0
-cccplot<-ggplot(ccc.dflong, aes(x=scale, y=mean, colour=plotgroup,group=Group)) +
-  geom_line(aes(linetype=lines)) + geom_point(shape=21, fill="white") + 
-  ylim(ymin,ymax)
-cccplot+geom_errorbar(width=.1, aes(ymin=mean-se, ymax=mean+se))
-```
-##Look at language tests in the same way
-Profile plot useful for overall indication
+##Plot language test and reading data
+First do plots showing whole distribution
 
 ```{r langmeasures}
 
 
 langcogcols<-c("wasi_matrices_ss" ,"wasi_block_design_ss", "wasi_vocab_ss" ,
-               "wdck_jhsn_ss" , "sent_rep_ss", "oromotor_ss" , "nonword_rep_ss", 
+               "wdck_jhsn_ss" , "sent_rep_ss" , "nonword_rep_ss", 
                "nara_acc_ss" ,"nara_comp_ss","nara_rate_ss" ,"towre_words_ss",
-               "towre_nonwords_ss","phab_pic_ss","phab_digit_ss","group8"  )
+               "towre_nonwords_ss","phab_pic_ss","phab_digit_ss",
+               "oromotor_ss","group8","group8level","nepsy_oromotor_seq_raw","age_at_test")
 
-langcog<-dplyr::select(all.vshort,langcogcols)
+langcog<-dplyr::select(all.short,langcogcols)
 #Make shorter names for plotting
-colnames(langcog)<-c('Matrices','Blocks','Vocab','WJ Comp','SentRep','Oromotor','NwdRep',
+colnames(langcog)<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','NwdRep',
                      'ReadAcc','ReadComp','ReadRate','TOWREwd','TOWREnwd',
-                     'PicName','DigitName','Group')
+                     'PicName','DigitName','Oromotor','Group','Grouplevel','Oromotor_raw','Age')
 #convert missing data to NA
 numcols<-length(langcogcols)
 for (i in 1:(numcols-1)){
@@ -584,222 +527,94 @@ for (i in 1:3){
   oldsd<-10
   langcog[,i]<- 100+15*(langcog[,i]-oldmean)/oldsd
 }
-for (i in 5:7){
+for (i in 5:6){
   oldmean<-10
   oldsd<-3
   langcog[,i]<- 100+15*(langcog[,i]-oldmean)/oldsd
 }
-langcog$record_id<-all.vshort$record_id
+langcog$record_id<-all.short$record_id
+langcog2<-filter(langcog,Grouplevel<4) #we're using numeric code for factor level to make this easier
+langcog2$Group<-as.factor(langcog2$Grouplevel)
+levels(langcog2$Group)<-c('XXX','XXY','XYY')
 
-langcols<-c("Vocab","WJ Comp","SentRep","NwdRep" )
-langcog$N.lowlang<-0
-langcog$N.na.lang<-0
-for (j in 1:length(langcols)){
-  thiscol<-match(langcols[j],names(langcog))
-  w<-which(langcog[,thiscol]<85)
-  if (length(w)>0){
-  langcog$N.lowlang[w]<-langcog$N.lowlang[w]+1
-  }
-  w<-which(is.na(langcog[,thiscol]))
-   if (length(w)>0){
-  langcog$N.na.lang[w]<-langcog$N.na.lang[w]+1
-   }
+langcog3<-filter(langcog,Grouplevel>6) #we're using numeric code for factor level to make this easier
+langcog3$Group<-as.factor(langcog3$Grouplevel)
+levels(langcog3$Group)<-c('TD','Lang.concern')
+```
+#Oromotor adjustment
+Preliminary check shows that oromotor norms seem v odd. Even TD twins have low means.
+The norming was based on the percentile scores in the test manual.
+It's possible there was something about our administration of the test that created bias - we were concerned that the instructions were not very clear.
+
+Seems preferable to norm this test against the TD twins - esp. as they look v normal on everything else.
+
+
+```{r oromotor.raw}
+#oromotor with raw scores - nb not age-adjusted, so do as scatter by age
+plot(langcog2$Oromotor_raw~langcog2$Age,col=langcog2$Grouplevel+1,pch=16,
+     ylab='Raw Score',xlab='Age in months',main='Raw NEPSY Oromotor Score',ylim=c(0,70))
+
+nepsy.norms<-read.csv('Nepsy for extrapolation.csv')
+oro.norms<-nepsy.norms[14:18,4:11] #age bands 5 to 12
+#row14 is the age in months
+lines(oro.norms[1,],oro.norms[2,],lty=2,col='darkgray')
+lines(oro.norms[1,],oro.norms[3,],lty=1,col='darkgray')
+lines(oro.norms[1,],oro.norms[4,],lty=2,col='darkgray')
+lines(oro.norms[1,],oro.norms[5,],lty=2,col='red')
+
+#Redo this with twins: something wrong with norms?
+plot(langcog3$Oromotor_raw~langcog3$Age,col=langcog3$Grouplevel+1,pch=16,
+     ylab='Raw Score',xlab='Age in months',main='Raw NEPSY Oromotor Score',ylim=c(0,70))
+
+nepsy.norms<-read.csv('Nepsy for extrapolation.csv')
+oro.norms<-nepsy.norms[14:18,4:11] #age bands 5 to 12
+#row14 is the age in months
+lines(oro.norms[1,],oro.norms[2,],lty=2,col='darkgray')
+lines(oro.norms[1,],oro.norms[3,],lty=1,col='darkgray')
+lines(oro.norms[1,],oro.norms[4,],lty=2,col='darkgray')
+lines(oro.norms[1,],oro.norms[5,],lty=2,col='red')
+
+#For twins, it looks as if there's very little relationship with age.
+#Could just use mean and SD to make a z-score from raw score - at least for initial analysis
+temp<-filter(langcog3,Group=='TD') #select TD only
+cor(temp$Age,temp$Oromotor_raw)
+hist(temp$Oromotor_raw)
+mymean<-mean(temp$Oromotor_raw)
+mysd<-sd(temp$Oromotor_raw)
+
+all.short$oromotor_ss2<-round(100+15*(all.short$nepsy_oromotor_seq_raw-mymean)/mysd,0)
+all.short$oromotor_ss2[all.short$oromotor_ss2<55]<-55
+#We'll use this for all subsequent analyses
+#Need to update value in langcog2
+langcog2$Oromotor<-round(100+15*(langcog2$Oromotor_raw-mymean)/mysd,0)
+langcog2$Oromotor[langcog2$Oromotor<55]<-55
+```
+
+#Now do a grid of beeswarm plots
+
+```{r beeswarmgrid}
+longname<-c('Matrices','Block Design','Vocabulary','Comprehension','Sentence Repetition','Nonword Repetition',
+                     'Reading Accuracy','Reading Comprehension','Reading Rate','Speeded word reading','Speeded nonword reading',
+                     'Rapid Naming: Pictures','Rapid Naming: Digits','Oromotor')
+
+png_lang_bees<-'beeswarm_lang.png' #name to save png file
+png(png_lang_bees,width=1000,height=1000)
+par(mfrow=c(5,3)) #5 row and 3 columns
+par(mar=c(5.1,4.1,4.1,0.2))
+
+for (i in 1:14){
+  mytitle<-longname[i]
+beeswarm(langcog2[,i]~Group , data = langcog2, xlab='Trisomy',ylab='Scaled score',
+         pch = 16,cex=1.7,col=2,main=mytitle,ylim=c(50,130))
+bxplot(langcog2[,i]~Group , data = langcog2, probs = 0.5, col = 1,add=TRUE) #adds medians
+abline(a=100,b=0,col='darkgray',lty=1)
+abline(a=85,b=0,col='darkgray',lty=2)
+abline(a=70,b=0,col='darkgray',lty=2)
 }
-langcog$DLD<-0
-langcog$DLD[langcog$N.lowlang>1]<-1
-langcog$piq<-all.vshort$piq
-langcog$DLD[langcog$piq<70]<-2
-langcog$DLD[langcog$N.na.lang>0]<-9
-dldtab<-table(langcog$Group,langcog$DLD)
-colnames(dldtab)<-c('None','DLD','LowIQ','missing')
-dldtab
+dev.off()
 ```
 
-This reveals big problem with oromotor - presumably because it does not have any variance at high end. For the time being will just add 15 to the SS, which aligns mean for TD twin group - but  need to consider this again.
 
-
-#Go direct to creation of longform means file
-```{r makelonglangmeans}
-#start by adding fudge factor to oromotor (see above)
-langcog[,6]<-langcog[,6]+15
-longlangmeans<-ccc.dflong #we will overwrite this dataframe
-longlangmeans$scale<-levels(longlangmeans$scale)[longlangmeans$scale] 
-for (i in 1:(numcols-1)){
-  startrow<-1+8*(i-1)
-  endrow<-8*i
-  thisdat<-langcog[,i]
-  longlangmeans[startrow:endrow,c(1,6,7)]<-longlangmeans[1:8,c(1,6,7)]#needed bcs more vars than in CCC
-  
-  ag <- aggregate(thisdat~ Group, langcog, function(x) N = length(x))
-  longlangmeans[startrow:endrow,2]<-ag[,2]
-  longlangmeans[startrow:endrow,3]<-colnames(langcog)[i]
-  ag <- aggregate(thisdat~ Group, langcog, function(x) mean = mean(x))
-  longlangmeans[startrow:endrow,4]<-ag[,2]
-  ag <- aggregate(thisdat~ Group, langcog, function(x) se = sd(x)/sqrt(length(x)))
-  longlangmeans[startrow:endrow,5]<-ag[,2]
-  
-}
-longlangmeans$scale<-as.factor(longlangmeans$scale)
-
-```
-##Plot language measures
-Despite my renorming, oromotor looks low.
-Check raw vs ss in both twin and sct
-```{r oromotor}
-#added nepsy_oromotor_seq_raw to list of variables so we can look at it
-#focus just on those in same age range: nb SCT includes both older and younger kids
-
-bit<-filter(all.vshort,age_at_test>71)
-bit<-filter(bit,age_at_test<145)
-pirateplot(age_at_test~group8,data=bit)
-pirateplot(nepsy_oromotor_seq_raw~group8,data=bit)
-pirateplot(oromotor_ss~group8,data=bit)
-
-```
-
-```{r langplots}
-#Plot the means
-ymax <- 115
-ymin <- 60
-langplot<-ggplot(longlangmeans[1:56,], aes(x=scale, y=mean, colour=plotgroup,group=Group)) +
-  geom_line(aes(linetype=lines)) + geom_point(shape=21, fill="white") + 
-  ylim(ymin,ymax)
-langplot+geom_errorbar(width=.1, aes(ymin=mean-se, ymax=mean+se))
-
-#Repeat for reading data (nb fewer cases)
-readplot<-ggplot(longlangmeans[57:112,], aes(x=scale, y=mean, colour=plotgroup,group=Group)) +
-  geom_line(aes(linetype=lines)) + geom_point(shape=21, fill="white") + 
-  ylim(ymin,ymax)
-readplot+geom_errorbar(width=.1, aes(ymin=mean-se, ymax=mean+se))
-
-```
-
-Thoughts on plots: reading seems far less impaired than language tests.
-Twins with concerns doing fine on TOWRE and pretty good on Neale.
-For SCTs need to check if this is age-related - i.e. we have included more younger children in the language tests than in the reading tests.
-
-Also qu of whether should renorm everything to the twin typical group. But problem as they have higher parental ed I think. Would be worth doing postcode check.
-
-Qu of whether better reading is all down to changes in curriculum since tests were normed. There is a consistent gap between the two twin groups- just that everyone doing well.
-
-```{r dld_code}
-#Create code for DLD; if 2 of 4 tests (NWRep, SentRep, Vocab and WJComp) < 80 and PIQ>70
-
-```
-
-```{r wasi}
-mycollist<-c('red','green','blue','pink','purple','darkblue','grey','black')
-plot(all.vshort$wasi_block_design_ss,all.vshort$wasi_vocab_ss,col=mycollist[all.vshort$group8])
-abline(coef=c(0,1))
-
-all.vshort$PV<-all.vshort$wasi_block_design_ss-all.vshort$wasi_vocab_ss
- ag <- aggregate(all.vshort$PV~ group8, all.vshort, function(x) c(N=length(x),mean = mean(x), sd = sd(x)))
-
-#just look at lowbias trisomies plus controls
-all.short.lorisk<-filter(all.vshort,group8%in%levels(all.vshort$group8)[c(1,2,3,7)])
-plot(all.short.lorisk$wasi_block_design_ss,all.short.lorisk$wasi_vocab_ss,col=mycollist[all.short.lorisk$group8])
-abline(coef=c(0,1))
-
-```
-##Preliminary look at background variables
-Estimate of early language milestones.
-Would also be of interest to see how diagnosis relates to language profile
-Read in background files: these are very messy with a lot of text entries and some inconsistencies in formatting. Both twins are in one row, so reshaped to make long
-Have done ad hoc coding of milestones as follows
-Words
-1. < 15 months or 'normal'
-2. 15-24 mo or 'delayed'
-3. > 24 mo or 'very delayed'
-
-Sentences
-1. < 36 months or 'normal'
-2. 37-48 months or 'delayed'
-3. > 4 yr or 'very delayed' or 'not yet'
-
-Walking
-1. < 16 months or 'normal'
-2. 16-18 months or 'delayed' or 'late'
-3. 19 months+ or 'very delayed' etc
-
-Dry
-1. < 37 mo or 'normal'
-2. 37-59 mo or 'late'
-3. 60 + mo or 'very late' or 'not yet'
-
-```{r readbkgfiles, echo=FALSE}
-#####################################################################################
-# Read in SCT background file
-sct.bkg <- read.csv("background_sct.csv",stringsAsFactors=FALSE)
-# Read in twin background file
-twin.bkg <- read.csv("background_twin.csv",stringsAsFactors=FALSE)
-twin.bkg<-twin.bkg[1:306,] #remove extraneous rows
-#reshape twin file so rows for A and B
-twinall.bkg<-twin.bkg[,c(1,3,7,11,15)]
-colnames(twinall.bkg)<-c('Code','Word_code','Sent_code','Walk_code','Dry_code')
-colnames(twin.bkg)[c(5,9,13,17)]<-c('Word_code','Sent_code','Walk_code','Dry_code')
-twinall.bkg<-rbind(twinall.bkg,twin.bkg[,c(1,5,9,13,17)])
-twinall.bkg$Code[1:306]<-paste0(twinall.bkg$Code[1:306],'A')
-twinall.bkg$Code[307:612]<-paste0(twinall.bkg$Code[307:612],'B')
-#####################################################################################
-```
-
-```{r langbackground}
-#as gender is important here, we'll make a 10-group code!
-#####################################################################################
-
-all.vshort$group10<-all.vshort$group8
-levels(all.vshort$group10)<-c(levels(all.vshort$group10)[1:6],'TD.male','TD.female','LD.male','LD.female')
-w1<-which(all.vshort$group8=='twin.TD')
-w2<-which(all.vshort$group8=='twin.langconcerns')
-w3<-which(all.vshort$female==0)
-w4<-which(all.vshort$female==1)
-w<-intersect(w1,w3)
-all.vshort$group10[w]<-levels(all.vshort$group10)[7]
-w<-intersect(w1,w4)
-all.vshort$group10[w]<-levels(all.vshort$group10)[8]
-w<-intersect(w2,w3)
-all.vshort$group10[w]<-levels(all.vshort$group10)[9]
-w<-intersect(w2,w4)
-all.vshort$group10[w]<-levels(all.vshort$group10)[10]
-
-#add 4 columns to all.vshort for the milestone codes
-
-all.vshort$Words_code<-NA
-all.vshort$Sent_code<-NA
-all.vshort$Walk_code<-NA
-all.vshort$Dry_code<-NA
-lastcol<-dim(all.vshort)[2]
-col1<-lastcol-3
-col2<-lastcol
-#add data for twins
-tstart<-min(which(all.vshort$randomtwininclude>0)) #start row for twins
-for (j in tstart:nrow(all.vshort)){
-  w<-which(twinall.bkg$Code==all.vshort$record_id[j])
-  all.vshort[j,col1:col2]<-twinall.bkg[w,2:5]
-}
-#add data for SCTs
-tend<-tstart-2 #end row for SCTs (nb last SCT (370) ? not on background file?)
-for (j in 1:tend){
-  w<-which(sct.bkg$Code==all.vshort$record_id[j])
-  all.vshort[j,col1:col2]<-sct.bkg[w,c(3,5,7,9)]
-}
-t1<-table(all.vshort$group10,all.vshort$Words_code)
-colnames(t1)<-c('1stwords_normal','1stwords_late','1stwords_v.late')
-t2<-table(all.vshort$group10,all.vshort$Sent_code)
-colnames(t2)<-c('Sentences_normal','Sentences_late','Sentences_v.late')
-t3<-table(all.vshort$group10,all.vshort$Walk_code)
-colnames(t3)<-c('Walk_normal','Walk_late','Walk_v.late')
-
-t4<-table(all.vshort$group10,all.vshort$Dry_code)
-colnames(t4)<-c('Dry_normal','Dry_late','Dry_v.late')
-
-prop.table(t1,1) #gives proportions by row (index 1)
-prop.table(t2,1)
-prop.table(t3,1)
-prop.table(t4,1)
-#####################################################################################
-
-```
 ##Session information
 ```{r sessinfo}
 sessionInfo()
