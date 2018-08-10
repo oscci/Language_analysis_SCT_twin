@@ -28,6 +28,7 @@ library(beanplot) #ditto
 library(yarrr) #for pirate plot - another plot type
 library(lavaan) #for SEM to extract language factor
 library(semPlot) #used with Lavaan
+library(standardize)
 #################################################################################
 
 ```
@@ -58,9 +59,9 @@ Select variables to be used.
 #########################################################################################
 redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
 #Use latest version
-sct.redcap <- 'SCTDATA_DATA_2018-08-09_1107.csv'
+sct.redcap <- 'SCTDATA_DATA_2018-08-10_1544.csv'
 #updated to include code indicating whether participated in prior study
-twin.redcap <- 'TwinsData_DATA_2018-08-09_1134.csv' #updated to include ccc2_consistent variable
+twin.redcap <- 'TwinsData_DATA_2018-08-10_1538.csv' #updated to include ccc2_consistent variable
 #also now has pheno_include, which selects individual twins for inclusion
 sct.data <- read.csv(paste0(redcap.dir,sct.redcap),stringsAsFactors = FALSE)
 twin.data <- read.csv(paste0(redcap.dir,twin.redcap),stringsAsFactors = FALSE)
@@ -84,16 +85,17 @@ sct.data$female[w]<-1
 ```
 
 #Select data for short file
+N
 ```{r colselect}
 #########################################################################################
 #Specify columns to retain that are common to both sct and twin
 keepcols <- c('record_id','female','age_at_test','partial_testing','pass_hearing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
-              'sent_rep_ss','oromotor_ss','nonword_rep_ss','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
+              'sent_rep_ss','oromotor_ss_2','nonword_rep_ss','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
               'hyperkinetic_icd_r1','adhd_comb_dsm_r1','adhd_hyp_dsm_r1','adhd_inatt_dsm_r1',
               'conduct_dsm_r1','asd_dsm_r1','autism_icd_r1','srs_t_score',
               'gcc','scdi','ccc_a','ccc_b','ccc_c','ccc_d','ccc_e','ccc_f',
               'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent','mo_educ','fa_educ','deprivation_index','fam_structure','fam_position',
-              'nepsy_oromotor_seq_raw')
+              'nepsy_oromotor_seq_raw','oromotor_ss')#retain original oromotors in case needed
 
 twin.short <- select(twin.data,keepcols)
 sct.short <- select(sct.data,keepcols) #NB 'select' is ambiguous between packages but should work ok if we use formr (otherwise need dplyr::select)
@@ -498,23 +500,25 @@ all.short$oldersibs<-all.short$fam_position-1
 nsib.tab<-table(all.short$group8,all.short$oldersibs)
 round(prop.table(nsib.tab,1),3)
 ```
-##Plot language test and reading data
-First do plots showing whole distribution
+##Analyse language test and reading data
+First select the data and convert to common scale
 
 ```{r langmeasures}
 
 
 langcogcols<-c("wasi_matrices_ss" ,"wasi_block_design_ss", "wasi_vocab_ss" ,
-               "wdck_jhsn_ss" , "sent_rep_ss" , "nonword_rep_ss", 
+               "wdck_jhsn_ss" , "sent_rep_ss" , "nonword_rep_ss",  "oromotor_ss_2",
                "nara_acc_ss" ,"nara_comp_ss","nara_rate_ss" ,"towre_words_ss",
                "towre_nonwords_ss","phab_pic_ss","phab_digit_ss",
-               "oromotor_ss","group8","group8level","nepsy_oromotor_seq_raw","age_at_test")
+              "group8","group8level","nepsy_oromotor_seq_raw","age_at_test")
+#Note we now are using the oromotor_ss_2 variable: normed against TD twins
+#THis was created using a chunk which is preserved below for historic reasons.
 
 langcog<-dplyr::select(all.short,langcogcols)
 #Make shorter names for plotting
-colnames(langcog)<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','NwdRep',
+colnames(langcog)<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','NwdRep','Oromotor',
                      'ReadAcc','ReadComp','ReadRate','TOWREwd','TOWREnwd',
-                     'PicName','DigitName','Oromotor','Group','Grouplevel','Oromotor_raw','Age')
+                     'PicName','DigitName','Group','Grouplevel','Oromotor_raw','Age')
 #convert missing data to NA
 numcols<-length(langcogcols)
 for (i in 1:(numcols-1)){
@@ -541,26 +545,32 @@ langcog3<-filter(langcog,Grouplevel>6) #we're using numeric code for factor leve
 langcog3$Group<-as.factor(langcog3$Grouplevel)
 levels(langcog3$Group)<-c('TD','Lang.concern')
 ```
+
+
 #Oromotor adjustment
-Preliminary check shows that oromotor norms seem v odd. Even TD twins have low means.
-The norming was based on the percentile scores in the test manual.
+Preliminary check showed that oromotor norms seem v odd. Even TD twins have low means.
+The norming was based on the percentile scores in the test manual (see Appendix for Newbury et al 2018 - this gives detailed account of how we created norms).
 It's possible there was something about our administration of the test that created bias - we were concerned that the instructions were not very clear.
 
-Seems preferable to norm this test against the TD twins - esp. as they look v normal on everything else.
+Seems preferable to norm this test against the TD twins - esp. as they look pretty normal on everything else. This next chunk was used to do that: this variable saved back to redcap as oromotor_ss_2. This is now used for all analyses here.
 
 
 ```{r oromotor.raw}
+do_oroconvert<-0 #We no longer need to run this chunk; it is just for historical interest
+if(do_oroconvert==1){
 #oromotor with raw scores - nb not age-adjusted, so do as scatter by age
 plot(langcog2$Oromotor_raw~langcog2$Age,col=langcog2$Grouplevel+1,pch=16,
      ylab='Raw Score',xlab='Age in months',main='Raw NEPSY Oromotor Score',ylim=c(0,70))
 
 nepsy.norms<-read.csv('Nepsy for extrapolation.csv')
+#The Nepsy file is a csv file that contains the norms from the test manual
+
 oro.norms<-nepsy.norms[14:18,4:11] #age bands 5 to 12
 #row14 is the age in months
 lines(oro.norms[1,],oro.norms[2,],lty=2,col='darkgray')
 lines(oro.norms[1,],oro.norms[3,],lty=1,col='darkgray')
 lines(oro.norms[1,],oro.norms[4,],lty=2,col='darkgray')
-lines(oro.norms[1,],oro.norms[5,],lty=2,col='red')
+lines(oro.norms[1,],oro.norms[5,],lty=2,col='red') #10th centile
 
 #Redo this with twins: something wrong with norms?
 plot(langcog3$Oromotor_raw~langcog3$Age,col=langcog3$Grouplevel+1,pch=16,
@@ -574,28 +584,30 @@ lines(oro.norms[1,],oro.norms[3,],lty=1,col='darkgray')
 lines(oro.norms[1,],oro.norms[4,],lty=2,col='darkgray')
 lines(oro.norms[1,],oro.norms[5,],lty=2,col='red')
 
-#For twins, it looks as if there's very little relationship with age.
-#Could just use mean and SD to make a z-score from raw score - at least for initial analysis
-temp<-filter(langcog3,Group=='TD') #select TD only
-cor(temp$Age,temp$Oromotor_raw)
-hist(temp$Oromotor_raw)
-mymean<-mean(temp$Oromotor_raw)
-mysd<-sd(temp$Oromotor_raw)
+#Create norms based on regression of oromotor raw score on age
+#(NB relationship with age is very weak)
 
-langcog$Oromotor<-round(100+15*(langcog$Oromotor_raw-mymean)/mysd,0)
-langcog$Oromotor[langcog$oromotor_ss2<55]<-55
-#We'll use this for all subsequent analyses
-#Need to update value in langcog2
-langcog2$Oromotor<-round(100+15*(langcog2$Oromotor_raw-mymean)/mysd,0)
-langcog2$Oromotor[langcog2$Oromotor<55]<-55
+temp<-filter(langcog3,Group=='TD') #select TD only
+mymod<-lm(Oromotor_raw~Age,data=temp)
+mymod$residuals
+myintercept<-summary(mymod)$coefficients[1,1]
+myb<-summary(mymod)$coefficients[2,1]
+myse<-summary(mymod)$sigma
+z.oro<-100+15*(langcog$Oromotor_raw-(myintercept+langcog$Age*myb))/myse
+plot(z.oro,langcog$Oromotor)
+writebit<-cbind(langcog$record_id,round(z.oro,0))
+write.csv(writebit,'update_oro.csv',row.names=FALSE)
+#Creates csv file for import to redcap. NB need to then separate to twin and SCt and
+#to set floor at 55.
+}
 ```
 
 #Now do a grid of beeswarm plots
 
 ```{r beeswarmgrid}
-longname<-c('Matrices','Block Design','Vocabulary','Comprehension','Sentence Repetition','Nonword Repetition',
+longname<-c('Matrices','Block Design','Vocabulary','Comprehension','Sentence Repetition','Nonword Repetition','Oromotor',
                      'Reading Accuracy','Reading Comprehension','Reading Rate','Speeded word reading','Speeded nonword reading',
-                     'Rapid Naming: Pictures','Rapid Naming: Digits','Oromotor')
+                     'Rapid Naming: Pictures','Rapid Naming: Digits')
 
 png_lang_bees<-'beeswarm_lang.png' #name to save png file
 png(png_lang_bees,width=1000,height=1000)
@@ -610,10 +622,108 @@ bxplot(langcog2[,i]~Group , data = langcog2, probs = 0.5, col = 1,add=TRUE) #add
 abline(a=100,b=0,col='darkgray',lty=1)
 abline(a=85,b=0,col='darkgray',lty=2)
 abline(a=70,b=0,col='darkgray',lty=2)
+mean_TD<-mean(langcog3[langcog3$Group=="TD",i],na.rm=T)
+  sd_TD<-sd(langcog3[langcog3$Group=="TD",i],na.rm=T)
+  
+  up.lim<-mean_TD+sd_TD
+  low.lim<-mean_TD-sd_TD
+  
+  polygon(c(0,0,4,4), c(up.lim, low.lim, low.lim, up.lim),
+          col=adjustcolor("yellow",alpha.f=0.3), border = NA)
+
 }
 dev.off()
 ```
+![Beeswarm plots](beeswarm_lang.png)
+#Effect sizes
+For 3 trisomy groups and twin LD group, compute effect size for mean difference from twin TD group. First divide into boys and girls and look at relative to same sex reference group.
 
+I'm having some trouble with formatting this. I only want the Y labels for group 1, but that means adjusting margins, and then if they are different for the groups, they are scaled differently.
+I have used workaround by creating a null group, but this has an x-axis from -1 to 1 which takes up unnecessary space and is hard to suppress.
+Use of xlim also doesn't seem to work to equate range of scales. Also tried ylim, as this is a sideways barplot, in case x and y are transposed, but still no joy.
+
+So currently it gives an idea of what it looks like, but I'm not sure I will continue with this. I think heatmap may be preferable, so will try that first.
+
+```{r effsizes}
+#Make 10 groups to distinguish boys and girls
+langcog$Group10level<-langcog$Grouplevel
+langcog$Group10level[langcog$Group10level==8]<-9
+w<-which(langcog$Group10level>6)
+langcog$Group10level[w]<-langcog$Group10level[w]+all.short$female[w]
+langcog$Group10<-as.factor(langcog$Group10level)
+
+levels(langcog$Group10)<-c(levels(all.short$group8)[1:6],'TD.male','TD.female','LD.male','LD.female')
+
+
+my.es<-data.frame(matrix(NA,nrow=14,ncol=5))
+colnames(my.es)<-c('XXX','Girl: Lang concerns','XXY','XYY','Boy: Lang concerns')
+rownames(my.es)<-longname
+mygroups<-c(1,10,2,3,9)
+mycols<-c('white','red','red','blue','blue','blue')
+my.n<-my.es
+  for (i in 1:14){
+    
+    for (k in 1:5){
+      j<-mygroups[k]
+      refgp<-7 #default ref group is TD boys
+      if (k<2||k>4){refgp<-8} #TD girls as reference group for XXX and LD girls
+    y<-langcog[langcog$Group10level==refgp,i]
+    w<-which(is.na(y))
+    if (length(w)>0){
+    y<-y[-w]}
+    x<-langcog[langcog$Group10level==j,i]
+    w<-which(is.na(x))
+     if (length(w)>0){
+    x<-x[-w]}
+    
+    lx <- length(x)- 1
+    ly <- length(y)- 1
+    md  <- abs(mean(x) - mean(y))        ## mean difference (numerator)
+    csd <- lx * var(x) + ly * var(y)
+    csd <- csd/(lx + ly)
+    csd <- sqrt(csd)                     ## common sd computation
+    cd  <- md/csd                        ## cohen's d
+    my.es[i,k]<-cd
+    my.n[i,k]<-lx
+  }
+  }
+#my.es<-my.es[order(rowMeans(my.es[,1:3])),] #sort by the average for trisomy group
+#blank added to try and fit in test labels, but have not achieved desired effect.
+blankcol<-rep(0,nrow(my.es))
+my.es2<-cbind(blankcol,my.es)
+colnames(my.es2)[1]<-''
+
+png('effsizes.png',width=800,height=500)
+par(mfrow=c(1,6))
+ par(las=2) # make label text perpendicular to axis
+ par(mar=c(3,11,2,.1)) #bottom, left, top and right margins
+ barplot(my.es2[,1], horiz=TRUE,
+   names.arg=rownames(my.es2),col='white') #plot blank data to just show bar labels
+par(mar=c(3,1,2,1))
+for (j in 2:6){
+barplot(my.es2[,j], main=paste(colnames(my.es2)[j],'\nN = ',my.n[1,(j-1)]), horiz=TRUE,col=mycols[j])
+}
+dev.off()
+```
+![Effect size profiles](effsizes.png)
+
+The effect size profiles don't seem all that informative, and the sample sizes are probably too small to give reliable estimates.
+
+```{r langpredict}
+#Dummy coding trisomy type into 2 categories
+regbit3<-filter(all.short,group8level<4)
+regbit3$XXX.v.rest<-regbit3$group8level
+w<-which(regbit3$group8level>1)
+regbit3$XXX.v.rest[w]<-0
+regbit3$XYY.v.rest<-regbit3$group8level-2
+w<-which(regbit3$group8level<3)
+regbit3$XYY.v.rest[w]<-0
+for (i in 6:19){
+mymodel<-lm(regbit3[,i]~deprivz+singlepar+mo_educ+XXX.v.rest+XYY.v.rest,data=regbit3)
+print(colnames(regbit3)[i])
+print(summary(mymodel))
+}
+```
 
 ##Session information
 ```{r sessinfo}
