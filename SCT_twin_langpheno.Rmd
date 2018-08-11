@@ -707,7 +707,33 @@ dev.off()
 ```
 ![Effect size profiles](effsizes.png)
 
-The effect size profiles don't seem all that informative, and the sample sizes are probably too small to give reliable estimates.
+The effect size profiles don't seem all that informative, and the sample sizes are probably too small to give reliable estimates. Would a heatmap be any better?
+```{r heatmap.es}
+
+
+my.es2[,1] <- paste(letters[seq(14,1,by=-1)],'.',rownames(my.es)) #to keep factors in the right order!
+colnames(my.es2)[1]<-'Test'
+es.m<-melt(my.es2)
+colnames(es.m)[2:3]<-c('Group','Cohen_d')
+levels(es.m$Group)<-c('XXX','Girl.LD','XXY','XYY','Boy.LD')
+es.m$Test<-as.factor(es.m$Test)
+levels(es.m$Test)<-c( "Rapid Naming: Digits","Rapid Naming: Pictures","Speeded nonword reading",
+"Speeded word reading","Reading Rate","Reading Comprehension",
+"Reading Accuracy","Oromotor","Nonword Repetition" ,    
+"Sentence Repetition", "Comprehension","Vocabulary" ,           
+"Block Design","Matrices"  )
+ ggplot(es.m, aes(Group,Test)) + geom_tile(aes(fill = Cohen_d),
+     colour = "white") + scale_fill_gradient(low = "white",
+     high = "red")+
+    # theme_minimal()+ 
+  theme(axis.text.x = element_text(vjust = 1, angle=90,
+                                   size = 10, hjust = 0.5),
+        axis.text.y = element_text(vjust = 0.5, 
+                                   size = 10, hjust = 1),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        legend.position = 'top')
+```
 
 ```{r langpredict}
 #Dummy coding trisomy type into 2 categories
