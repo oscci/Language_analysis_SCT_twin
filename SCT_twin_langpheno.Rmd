@@ -13,6 +13,7 @@ output: html_document
 #devtools::install_github("rubenarslan/formr")
 require(formr) #to handle conflicts with 'select' function in dplyr (may not be needed)
 library(tidyverse)
+library(reshape2)  #for melt
 library(knitr) #for kable - allows nice tables in Word output - but can be temperamental
 library(gridExtra)
 library(grid)
@@ -708,10 +709,12 @@ dev.off()
 ![Effect size profiles](effsizes.png)
 
 The effect size profiles don't seem all that informative, and the sample sizes are probably too small to give reliable estimates. Would a heatmap be any better?
+Having done this with boy/girl separate, think may be better with combined twin:LD group - few girls with LD and not sure sex-specific plot is v informative.
+
 ```{r heatmap.es}
 
 
-my.es2[,1] <- paste(letters[seq(14,1,by=-1)],'.',rownames(my.es)) #to keep factors in the right order!
+my.es2[,1] <- paste(letters[seq(14,1,-1)],'.',rownames(my.es)) #to keep factors in the right order!
 colnames(my.es2)[1]<-'Test'
 es.m<-melt(my.es2)
 colnames(es.m)[2:3]<-c('Group','Cohen_d')
@@ -745,10 +748,308 @@ regbit3$XYY.v.rest<-regbit3$group8level-2
 w<-which(regbit3$group8level<3)
 regbit3$XYY.v.rest[w]<-0
 for (i in 6:19){
+  #need to turn missing into NA
+  w<-which(regbit3[,i]>899)
+  regbit3[w,i]<-NA
 mymodel<-lm(regbit3[,i]~deprivz+singlepar+mo_educ+XXX.v.rest+XYY.v.rest,data=regbit3)
 print(colnames(regbit3)[i])
 print(summary(mymodel))
 }
+```
+``{r lang.manova}
+#First just do groups 1-3
+
+col1<-which(colnames(regbit3)=='wasi_matrices_ss')
+
+Y <- as.matrix(regbit3[,col1:(col1+13)])
+fit3 <- manova(Y ~ regbit3$group8+regbit3$mo_educ)
+mymanova<-summary(fit3, test="Pillai")
+
+
+```
+##CCC-2 analysis
+Consider how CCC-2 profiles for SCTs compare with those in our previous paper. Also include twins with or without concerns as comparison group.  Show both subscales and the GCC and SIDC.
+
+```{r ccc2}
+w<-which(colnames(all.short)=='ccc_a')
+x<-which(colnames(all.short)=='group8')
+y<-which(colnames(all.short)=='group8level')
+cccbit<-all.short[,c(1,(w-2):(w+10),x,y)]#2 before ccc_a is GCC and SIDC
+w<-which(is.na(cccbit$ccc2_consistent))
+cccbit$ccc2_consistent[w]<--1 #we need a count of missing data, so convert NA to -1
+consistent.ccc<-table(cccbit$group8,cccbit$ccc2_consistent)
+
+colnames(consistent.ccc)<-c('No data','Inconsistent','Consistent')
+consistent.ccc
+print('Proportions of non-response to CCC-2')
+print(paste('All low bias SCT:',sum(consistent.ccc[1:3,1])/sum(consistent.ccc[1:3,])))
+print(paste('All high bias SCT:',sum(consistent.ccc[4:6,1])/sum(consistent.ccc[4:6,])))
+print(paste('Twin: no concerns:',sum(consistent.ccc[7,1])/sum(consistent.ccc[7,])))
+print(paste('Twin: language concerns:',sum(consistent.ccc[8,1])/sum(consistent.ccc[8,])))
+
+#total responses
+
+print(paste('All SCT:',1-sum(consistent.ccc[1:6,1])/sum(consistent.ccc[1:6,])))
+print(paste('Twin:',1-sum(consistent.ccc[7:8,1])/sum(consistent.ccc[7:8,])))
+
+```
+##Now analyse CCC-2 for 8 groups
+
+```{r ccc.analyse}
+#First remove the cases with no response or inconsistent
+ccc.data<-filter(cccbit,ccc2_consistent>0)
+#create dataframe for results
+ccc.df<-data.frame(matrix(NA,nrow=8,ncol=30))
+ccc.df[,1]<-levels(ccc.data$group8)
+ccc.df[,2]<- table(ccc.data$group8)
+thiscol<- 1
+for (i in 1:12){
+  thiscol<-thiscol+2
+  thisdat<-ccc.data[,i+1]
+  ag <- aggregate(thisdat~ group8, ccc.data, function(x) c(mean = mean(x), se = sd(x)/sqrt(length(x))))
+  ccc.df[,(thiscol:(thiscol+1))]<-ag[,2]
+}
+colnames(ccc.df)<-c('Group','N','GCC.mean','GCC.se','SIDC.mean','SIDC.se','A.mean','A.se','B.mean','B.se','C.mean','C.se','D.mean','D.se',
+                    'E.mean','E.se','F.mean','F.se','G.mean','G.se','H.mean','H.se',
+                    'I.mean','I.se','J.mean','J.se')
+```
+
+```{r cccplot}
+#Need data in long form for ggplot2
+#set up the long form df with data from scale A
+ccc.dflong<-ccc.df[1:8,c(1,2,2,7:8)]
+colnames(ccc.dflong)[3:5]<-c('scale','mean','se')
+ccc.dflong$scale<-1
+mybase<-ccc.dflong
+
+#Now bolt on the other scales
+for (j in 2:10){
+  #rows to write to in new long df
+  startrow<-(j-1)*8+1
+  endrow<-(j*8)
+  #cols to read from in old df
+  startcol<-7+(j-1)*2
+  ccc.dflong<-rbind(ccc.dflong,mybase) #just duplicate first 8 rows before overwriting them
+  ccc.dflong$scale[startrow:endrow]<-j
+  ccc.dflong[startrow:endrow,4:5]<-ccc.df[,startcol:(startcol+1)]
+  
+}
+ccc.dflong$scale<-as.factor(ccc.dflong$scale)
+levels(ccc.dflong$scale)<-c('A','B','C','D','E','F','G','H','I','J')
+linetypes<-c(1,1,1,2,2,2,1,1)
+ccc.dflong$lines<-as.factor(linetypes)
+ccc.dflong$plotgroup<-rep(c('XXX','XXY','XYY','XXX','XXY','XYY','twin_typical','twin_concerns'),10)
+
+#Plot the means
+ymax <- 12
+ymin <- 0
+cccplot<-ggplot(ccc.dflong, aes(x=scale, y=mean, colour=plotgroup,group=Group)) +
+  geom_line(aes(linetype=lines)) + geom_point(shape=21, fill="white") + 
+  ylim(ymin,ymax)
+cccplot+geom_errorbar(width=.1, aes(ymin=mean-se, ymax=mean+se))
+```
+##Manova for CCC-2
+Follow https://www.statmethods.net/stats/anova.html
+
+```{r ccc2.manova}
+#First just do groups 1-3
+ccc.gp3<-filter(ccc.data,group8level<4)
+colA<-which(colnames(ccc.gp3)=='ccc_a')
+
+Y <- as.matrix(ccc.gp3[,colA:(colA+9)])
+fit3 <- manova(Y ~ ccc.gp3$group8)
+summary(fit3, test="Pillai")
+
+#Now add group 8
+temp<-filter(ccc.data,group8level==8)
+ccc.gp4<-rbind(ccc.gp3,temp)
+Y <- as.matrix(ccc.gp4[,colA:(colA+9)])
+fit4 <- manova(Y ~ ccc.gp4$group8)
+summary(fit4, test="Pillai")
+```
+
+```{r makelonglangmeans}
+
+longlangmeans<-ccc.dflong #we will overwrite this dataframe
+longlangmeans$scale<-levels(longlangmeans$scale)[longlangmeans$scale] 
+for (i in 1:(numcols-1)){
+  startrow<-1+8*(i-1)
+  endrow<-8*i
+  thisdat<-langcog[,i]
+  longlangmeans[startrow:endrow,c(1,6,7)]<-longlangmeans[1:8,c(1,6,7)]#needed bcs more vars than in CCC
+  
+  ag <- aggregate(thisdat~ Group, langcog, function(x) N = length(x))
+  longlangmeans[startrow:endrow,2]<-ag[,2]
+  longlangmeans[startrow:endrow,3]<-colnames(langcog)[i]
+  ag <- aggregate(thisdat~ Group, langcog, function(x) mean = mean(x))
+  longlangmeans[startrow:endrow,4]<-ag[,2]
+  ag <- aggregate(thisdat~ Group, langcog, function(x) se = sd(x)/sqrt(length(x)))
+  longlangmeans[startrow:endrow,5]<-ag[,2]
+  
+}
+longlangmeans$scale<-as.factor(longlangmeans$scale)
+
+```
+##Plot language measures
+Despite my renorming, oromotor looks low.
+Check raw vs ss in both twin and sct
+```{r oromotor}
+#added nepsy_oromotor_seq_raw to list of variables so we can look at it
+#focus just on those in same age range: nb SCT includes both older and younger kids
+
+bit<-filter(all.vshort,age_at_test>71)
+bit<-filter(bit,age_at_test<145)
+pirateplot(age_at_test~group8,data=bit)
+pirateplot(nepsy_oromotor_seq_raw~group8,data=bit)
+pirateplot(oromotor_ss~group8,data=bit)
+
+```
+
+```{r langplots}
+#Plot the means
+ymax <- 115
+ymin <- 60
+langplot<-ggplot(longlangmeans[1:56,], aes(x=scale, y=mean, colour=plotgroup,group=Group)) +
+  geom_line(aes(linetype=lines)) + geom_point(shape=21, fill="white") + 
+  ylim(ymin,ymax)
+langplot+geom_errorbar(width=.1, aes(ymin=mean-se, ymax=mean+se))
+
+#Repeat for reading data (nb fewer cases)
+readplot<-ggplot(longlangmeans[57:112,], aes(x=scale, y=mean, colour=plotgroup,group=Group)) +
+  geom_line(aes(linetype=lines)) + geom_point(shape=21, fill="white") + 
+  ylim(ymin,ymax)
+readplot+geom_errorbar(width=.1, aes(ymin=mean-se, ymax=mean+se))
+
+```
+
+Thoughts on plots: reading seems far less impaired than language tests.
+Twins with concerns doing fine on TOWRE and pretty good on Neale.
+For SCTs need to check if this is age-related - i.e. we have included more younger children in the language tests than in the reading tests.
+
+Also qu of whether should renorm everything to the twin typical group. But problem as they have higher parental ed I think. Would be worth doing postcode check.
+
+Qu of whether better reading is all down to changes in curriculum since tests were normed. There is a consistent gap between the two twin groups- just that everyone doing well.
+
+```{r dld_code}
+#Create code for DLD; if 2 of 4 tests (NWRep, SentRep, Vocab and WJComp) < 80 and PIQ>70
+
+```
+
+```{r wasi}
+mycollist<-c('red','green','blue','pink','purple','darkblue','grey','black')
+plot(all.vshort$wasi_block_design_ss,all.vshort$wasi_vocab_ss,col=mycollist[all.vshort$group8])
+abline(coef=c(0,1))
+
+all.vshort$PV<-all.vshort$wasi_block_design_ss-all.vshort$wasi_vocab_ss
+ ag <- aggregate(all.vshort$PV~ group8, all.vshort, function(x) c(N=length(x),mean = mean(x), sd = sd(x)))
+
+#just look at lowbias trisomies plus controls
+all.short.lorisk<-filter(all.vshort,group8%in%levels(all.vshort$group8)[c(1,2,3,7)])
+plot(all.short.lorisk$wasi_block_design_ss,all.short.lorisk$wasi_vocab_ss,col=mycollist[all.short.lorisk$group8])
+abline(coef=c(0,1))
+
+```
+##Preliminary look at background variables
+Estimate of early language milestones.
+These are not on Redcap file: separate background files from xls.
+
+Read in background files: these are very messy with a lot of text entries and some inconsistencies in formatting. Both twins are in one row, so reshaped to make long
+
+
+Have done coding of milestones as follows. First 3 from Neligan/Prudham 75/90/97 cutoffs
+Words
+1. < 16 months or 'normal'
+2. 16-19 mo or 'delayed'
+3. > 19 mo or 'very delayed'
+
+Sentences
+1. < 27 months or 'normal'
+2. 27-33 months or 'delayed'
+3. > 33 yr or 'very delayed' or 'not yet'
+
+Walking
+1. < 15 months or 'normal'
+2. 15-18 months or 'delayed' or 'late'
+3. 19 months+ or 'very delayed' etc
+
+Dry
+1. < 48 mo or 'normal'
+2. 48-71 mo or 'late'
+3. 72 + mo or 'very late' or 'not yet'
+
+```{r readbkgfiles, echo=FALSE}
+#####################################################################################
+# Read in SCT background file
+sct.bkg <- read.csv("background_sct1.csv",stringsAsFactors=FALSE)
+# Read in twin background file
+twin.bkg <- read.csv("background_twin1.csv",stringsAsFactors=FALSE)
+twin.bkg<-twin.bkg[1:306,] #remove extraneous rows
+#reshape twin file so rows for A and B
+twinall.bkg<-twin.bkg[,c(1,3,7,11,15)]
+colnames(twinall.bkg)<-c('Code','Word_code','Sent_code','Walk_code','Dry_code')
+colnames(twin.bkg)[c(5,9,13,17)]<-c('Word_code','Sent_code','Walk_code','Dry_code')
+twinall.bkg<-rbind(twinall.bkg,twin.bkg[,c(1,5,9,13,17)])
+twinall.bkg$Code[1:306]<-paste0(twinall.bkg$Code[1:306],'A')
+twinall.bkg$Code[307:612]<-paste0(twinall.bkg$Code[307:612],'B')
+#####################################################################################
+```
+
+```{r langbackground}
+#as gender is important here, we'll make a 10-group code!
+#####################################################################################
+all.vshort<-all.short #for historical reasons use vshort, but probably not necessary
+all.vshort$group10<-all.vshort$group8
+levels(all.vshort$group10)<-c(levels(all.vshort$group10)[1:6],'TD.male','TD.female','LD.male','LD.female')
+w1<-which(all.vshort$group8=='twin.TD')
+w2<-which(all.vshort$group8=='twin.langconcerns')
+w3<-which(all.vshort$female==0)
+w4<-which(all.vshort$female==1)
+w<-intersect(w1,w3)
+all.vshort$group10[w]<-levels(all.vshort$group10)[7]
+w<-intersect(w1,w4)
+all.vshort$group10[w]<-levels(all.vshort$group10)[8]
+w<-intersect(w2,w3)
+all.vshort$group10[w]<-levels(all.vshort$group10)[9]
+w<-intersect(w2,w4)
+all.vshort$group10[w]<-levels(all.vshort$group10)[10]
+
+#add 4 columns to all.vshort for the milestone codes
+
+all.vshort$Words_code<-NA
+all.vshort$Sent_code<-NA
+all.vshort$Walk_code<-NA
+all.vshort$Dry_code<-NA
+lastcol<-dim(all.vshort)[2]
+col1<-lastcol-3
+col2<-lastcol
+#add data for twins
+tstart<-min(which(all.vshort$randomtwininclude>0)) #start row for twins
+for (j in tstart:nrow(all.vshort)){
+  w<-which(twinall.bkg$Code==all.vshort$record_id[j])
+  all.vshort[j,col1:col2]<-twinall.bkg[w,2:5]
+}
+#add data for SCTs
+tend<-tstart-2 #end row for SCTs (nb last SCT (370) ? not on background file?)
+for (j in 1:tend){
+  w<-which(sct.bkg$Code==all.vshort$record_id[j])
+  all.vshort[j,col1:col2]<-sct.bkg[w,c(3,5,7,9)]
+}
+t1<-table(all.vshort$group10,all.vshort$Words_code)
+colnames(t1)<-c('1stwords_normal','1stwords_late','1stwords_v.late')
+t2<-table(all.vshort$group10,all.vshort$Sent_code)
+colnames(t2)<-c('Sentences_normal','Sentences_late','Sentences_v.late')
+t3<-table(all.vshort$group10,all.vshort$Walk_code)
+colnames(t3)<-c('Walk_normal','Walk_late','Walk_v.late')
+
+t4<-table(all.vshort$group10,all.vshort$Dry_code)
+colnames(t4)<-c('Dry_normal','Dry_late','Dry_v.late')
+
+prop.table(t1,1) #gives proportions by row (index 1)
+prop.table(t2,1)
+prop.table(t3,1)
+prop.table(t4,1)
+#####################################################################################
+
 ```
 
 ##Session information
