@@ -387,8 +387,9 @@ ncol<-length(colnames(all.short))
 
 #start by just duplicating original scaled scores
 nnew<-length(shortlangnames)
-all.short[,(ncol+1):(ncol+nnew)]<-all.short[,langcols]
-colnames(all.short)[(ncol+1):(ncol+nnew)]<-shortlangnames
+nurange<-(ncol+1):(ncol+nnew) #column range for ss values
+all.short[,nurange]<-all.short[,langcols]
+colnames(all.short)[nurange]<-shortlangnames
 #First 3 are normed with mean 50 and SD 10
 for (i in 1:3){
   oldmean<-50
@@ -407,13 +408,13 @@ for (i in c(5,7)){
 Now make shorter sctfile that excluded the high bias group
 
 ```{r exclude.hibias}
-lobias.sct<-filter(all.short,group8level<4) #we're using numeric code for factor level to make this easier
+lobias.sct<-filter(all.short,group8level%in%c(1:3,8)) #we're using numeric code for factor level to make this easier
 lobias.sct$Group<-as.factor(lobias.sct$group8level)
-levels(lobias.sct$Group)<-c('XXX','XXY','XYY')
+levels(lobias.sct$Group)<-c('XXX','XXY','XYY','Twin')
 
-twin.only<-filter(all.short,group8level>6) #we're using numeric code for factor level to make this easier
-twin.only$Group<-as.factor(twin.only$group8level)
-levels(twin.only$Group)<-c('TD','Lang.concern')
+twin.TD<-filter(all.short,group8level==7) #we're using numeric code for factor level to make this easier
+twin.TD$Group<-'TD.twin'
+
 ```
 
 #Now do a grid of beeswarm plots
@@ -430,15 +431,15 @@ par(mar=c(5.1,4.1,4.1,0.2))
 
 for (i in 1:14){
   mytitle<-longname[i]
-beeswarm(lobias.sct[,langcols[i]]~Group , data = lobias.sct, xlab='Trisomy',ylab='Scaled score',
-         pch = 16,cex=1.7,col=2,main=mytitle,ylim=c(50,130))
-bxplot(lobias.sct[,langcols[i]]~Group , data = lobias.sct, probs = 0.5, col = 1,add=TRUE) #adds medians
+beeswarm(lobias.sct[,nurange[i]]~Group , data = lobias.sct, xlab='Group',ylab='Scaled score',
+         pch = 16,cex=1.7,col=c(2,2,2,4),main=mytitle,ylim=c(50,140))
+bxplot(lobias.sct[,nurange[i]]~Group , data = lobias.sct, probs = 0.5, col = 1,add=TRUE) #adds medians
 abline(a=100,b=0,col='darkgray',lty=1)
 abline(a=85,b=0,col='darkgray',lty=2)
 abline(a=70,b=0,col='darkgray',lty=2)
 
-mean_TD<-mean(twin.only[twin.only$Group=="TD",langcols[i]],na.rm=T)
-  sd_TD<-sd(twin.only[twin.only$Group=="TD",langcols[i]],na.rm=T)
+mean_TD<-mean(twin.TD[,nurange[i]],na.rm=T)
+  sd_TD<-sd(twin.TD[,nurange[i]],na.rm=T)
   
   up.lim<-mean_TD+sd_TD
   low.lim<-mean_TD-sd_TD
@@ -450,25 +451,40 @@ mean_TD<-mean(twin.only[twin.only$Group=="TD",langcols[i]],na.rm=T)
 dev.off()
 ```
 ![Beeswarm plots](beeswarm_lang.png)
-#Effect sizes
-For 3 trisomy groups and twin LD group, compute effect size for mean difference from twin TD group. First divide into boys and girls and look at relative to same sex reference group.
 
-I'm having some trouble with formatting this. I only want the Y labels for group 1, but that means adjusting margins, and then if they are different for the groups, they are scaled differently.
-I have used workaround by creating a null group, but this has an x-axis from -1 to 1 which takes up unnecessary space and is hard to suppress.
-Use of xlim also doesn't seem to work to equate range of scales. Also tried ylim, as this is a sideways barplot, in case x and y are transposed, but still no joy.
 
-So currently it gives an idea of what it looks like, but I'm not sure I will continue with this. I think heatmap may be preferable, so will try that first.
 
 
 ```{r lang.manova}
 #First just do groups 1-3
+gp3<-filter(lobias.sct,group8level<4)
+sct.matrix <- as.matrix(gp3[,nurange])
+gp3.fit <- manova(sct.matrix ~ gp3$Group+gp3$mo_educ)
+mymanova3<-summary(gp3.fit, test="Pillai")
+print('Manova on the 14 language measures for the 3 Low Bias SCT groups only')
+mymanova3
+
+lobias.sct$mycontrast<-lobias.sct$group8level
+lobias.sct$mycontrast[lobias.sct$mycontrast<4]<-1
+gp2.matrix <- as.matrix(lobias.sct[,nurange])
+gp2.fit <- manova(gp2.matrix ~ lobias.sct$mycontrast+lobias.sct$mo_educ)
+mymanova2<-summary(gp2.fit, test="Pillai")
+print('Manova on the 14 language measures for the SCT vs twin (language disordered) group')
+mymanova2
 
 
-Y <- as.matrix(lobias.sct[,langcols])
-lobias.fit <- manova(Y ~ lobias.sct$Group+lobias.sct$mo_educ)
-mymanova<-summary(lobias.fit, test="Pillai")
-print('Manova on the 14 language measures for the Low Bias SCT group')
-mymanova
+gp4.matrix <- as.matrix(lobias.sct[,nurange])
+gp4.fit <- manova(gp4.matrix ~ lobias.sct$group8level)
+mymanova4<-summary(gp4.fit, test="Pillai")
+print('Manova on the 14 language measures for the 3 SCT vs twin(language disordered)  group')
+mymanova4
+
+par(mfrow=c(3,5))
+for (i in 1:14){
+beeswarm(lobias.sct[,nurange[i]]~mycontrast , data = lobias.sct, xlab='Group',ylab='Scaled score',
+         pch = 12,cex=1,col=c(2,2,2,4),main=mytitle,ylim=c(50,140))
+bxplot(lobias.sct[,nurange[i]]~mycontrast , data = lobias.sct, probs = 0.5, col = 1,add=TRUE) #adds medians
+}
 
 ```
 ##CCC-2 analysis
