@@ -58,7 +58,7 @@ Select variables to be used.
 
 ```{r readredcap}
 #########################################################################################
-redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
+redcap.dir <-"c:/Users/pthompson/Dropbox/project SCT analysis/Data from Redcap/"
 #Use latest version - now includes milestones
 sct.redcap <- 'SCTDATA_DATA_2018-08-13_1234.csv'
 #updated to include code indicating whether participated in prior study
@@ -66,7 +66,8 @@ twin.redcap <- 'TwinsData_DATA_2018-08-13_1234.csv' #updated to include ccc2_con
 #also now has pheno_include, which selects individual twins for inclusion
 sct.data <- read.csv(paste0(redcap.dir,sct.redcap),stringsAsFactors = FALSE)
 twin.data <- read.csv(paste0(redcap.dir,twin.redcap),stringsAsFactors = FALSE)
-
+names(sct.data)[1]<-"record_id"
+names(twin.data)[1]<-"record_id"
 #fix any columns with discrepant names
 w<-which(colnames(twin.data)=='neurodev_diagnosis')
 colnames(twin.data)[w] <-'neurodev_diag'
@@ -485,6 +486,209 @@ beeswarm(lobias.sct[,nurange[i]]~mycontrast , data = lobias.sct, xlab='Group',yl
          pch = 12,cex=1,col=c(2,2,2,4),main=mytitle,ylim=c(50,140))
 bxplot(lobias.sct[,nurange[i]]~mycontrast , data = lobias.sct, probs = 0.5, col = 1,add=TRUE) #adds medians
 }
+
+
+
+## A) redo excluding SCT cases who are either aged below 6 yr or above 12 yr.
+
+lobias.sct$mycontrast<-lobias.sct$group8level
+lobias.sct$mycontrast[lobias.sct$mycontrast<4]<-1
+
+rm_ids<-filter(lobias.sct, mycontrast == 1, Age < 72)$record_id
+rm_ids2<-filter(lobias.sct, mycontrast == 1, Age > 144)$record_id
+
+lobias.sct2<-lobias.sct[!lobias.sct$record_id %in% c(rm_ids,rm_ids2),]
+
+gp2.matrix <- as.matrix(lobias.sct2[,nurange])
+gp2A.fit <- manova(gp2.matrix ~ lobias.sct2$mycontrast+lobias.sct2$mo_educ)
+mymanova2A<-summary(gp2.fit, test="Pillai")
+print('Manova on the 14 language measures for the SCT vs twin (language disordered) group')
+mymanova2A
+
+
+gp4.matrix <- as.matrix(lobias.sct2[,nurange])
+gp4A.fit <- manova(gp4.matrix ~ lobias.sct2$group8level)
+mymanova4A<-summary(gp4A.fit, test="Pillai")
+print('Manova on the 14 language measures for the 3 SCT vs twin(language disordered)  group')
+mymanova4A
+
+#######
+library(reshape2)
+library(ggpubr)
+
+# Get lower triangle of the correlation matrix
+  get_lower_tri<-function(cormat){
+    cormat[upper.tri(cormat)] <- NA
+    return(cormat)
+  }
+  # Get upper triangle of the correlation matrix
+  get_upper_tri <- function(cormat){
+    cormat[lower.tri(cormat)]<- NA
+    return(cormat)
+  }
+
+cormat_SCT <- round(cor(lobias.sct2[lobias.sct2$mycontrast==1,nurange],use="na.or.complete"),2)
+#head(cormat_SCT)
+
+melted_cormat_SCT <- melt(get_upper_tri(cormat_SCT), na.rm = TRUE)
+#head(melted_cormat_SCT)
+
+hm1<-ggplot(melted_cormat_SCT, aes(Var2, Var1, fill = value))+
+ geom_tile(color = "white")+
+ scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+   midpoint = 0, limit = c(-1,1), space = "Lab", 
+    name="Pearson\nCorrelation") +
+  theme_minimal()+ # minimal theme
+ theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+    size = 12, hjust = 1))+
+ coord_fixed() + 
+geom_text(aes(Var2, Var1, label = value), color = "black", size = 4) +
+theme(
+  axis.title.x = element_text("SCT"),
+  axis.title.y = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  axis.ticks = element_blank(),
+  legend.justification = c(1, 0),
+  legend.position = c(0.6, 0.7),
+  legend.direction = "horizontal")+
+  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+                title.position = "top", title.hjust = 0.5))
+
+#########
+
+cormat_TWIN <- round(cor(lobias.sct2[lobias.sct2$mycontrast==8,nurange],use="na.or.complete"),2)
+#head(cormat_TWIN)
+
+melted_cormat_TWIN <- melt(get_upper_tri(cormat_TWIN), na.rm = TRUE)
+#head(melted_cormat_TWIN)
+
+hm2<-ggplot(melted_cormat_TWIN, aes(Var2, Var1, fill = value))+
+ geom_tile(color = "white")+
+ scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+   midpoint = 0, limit = c(-1,1), space = "Lab", 
+    name="Pearson\nCorrelation") +
+  theme_minimal()+ # minimal theme
+ theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+    size = 12, hjust = 1))+
+ coord_fixed() + 
+geom_text(aes(Var2, Var1, label = value), color = "black", size = 4) +
+theme(
+  axis.title.x = element_text("TWIN"),
+  axis.title.y = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  axis.ticks = element_blank(),
+  legend.justification = c(1, 0),
+  legend.position = c(0.6, 0.7),
+  legend.direction = "horizontal")+
+  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+                title.position = "top", title.hjust = 0.5))
+
+png_heat<-'heat_plot.png'
+png(png_heat,width=1000,height=1000)
+print(ggarrange(hm1, hm2,  common.legend = TRUE))
+dev.off()
+
+#######
+#car::scatterplotMatrix(~Matrices+Blocks+Vocab+Comprehnsn+SentRep+Oromotor+NwdRep+ReadAcc+ReadComp+ReadRate+TOWREwd+TOWREnwd+PicName+DigitName|mycontrast, data=lobias.sct[,c(nurange,87)])
+
+
+
+
+```
+![](heat_plot.png)
+
+
+## Multigroup Confirmatory Factor Analysis
+
+```{r lavaan,echo=TRUE}
+
+#fit inital CFA per group (TWIN model)
+model2A <- ' lang =~ Vocab+Comprehnsn+SentRep+NwdRep+Matrices+Blocks
+            Read =~ ReadComp+ReadRate+PicName+DigitName+Oromotor
+ PicName ~~  DigitName
+NwdRep ~~   ReadRate
+Matrices ~~ Blocks
+'
+fit2A <- cfa(model2A, 
+           data = lobias.sct2[lobias.sct2$mycontrast==8,c(nurange)])
+summary(fit2A,fit.measures=TRUE)
+#modindices(fit2A)
+
+#fit inital CFA per group (SCT model)
+model2B <- ' lang =~ Vocab+Comprehnsn+SentRep+NwdRep+Matrices+Blocks
+            Read =~ ReadComp+ReadRate+PicName+DigitName+Oromotor
+ PicName ~~  DigitName
+NwdRep ~~   ReadRate
+Matrices ~~ Blocks
+'
+fit2B <- cfa(model2B, 
+           data = lobias.sct2[lobias.sct2$mycontrast==1,c(nurange)])
+summary(fit2B,fit.measures=TRUE)
+#modindices(fit2B)
+
+##########
+
+#Next fit the multigroup CFA model and check for invariance: configural, weak/loading invariance, strong/scalar invariance, strict invariance.
+
+model3 <- ' lang =~ Vocab+Comprehnsn+SentRep+NwdRep+Matrices+Blocks
+            Read =~ ReadComp+ReadRate+PicName+DigitName+Oromotor
+ PicName ~~  DigitName
+NwdRep ~~   ReadRate
+Matrices ~~ Blocks
+'
+fit3 <- cfa(model3, 
+           data = lobias.sct2[,c(nurange,87)], 
+           group = "mycontrast")
+summary(fit3,fit.measures=TRUE)
+
+#overall invariance check, see http://users.ugent.be/~yrosseel/lavaan/multiplegroup6Dec2012.pdf for interpretation.
+library(semTools)
+measurementInvariance(model=model3, 
+           data = lobias.sct2[,c(nurange,87)], 
+           group = "mycontrast")
+
+#Step-by-step invariance tests
+
+fit4 <- cfa(model3, 
+           data = lobias.sct2[,c(nurange,87)], 
+           group = "mycontrast",group.equal=c("loadings"))
+summary(fit4,fit.measures=TRUE)
+#modindices(fit4)
+
+anova(fit3,fit4) #non significant = pass
+
+fit5 <- cfa(model3, 
+           data = lobias.sct2[,c(nurange,87)], 
+           group = "mycontrast",group.equal=c("loadings","intercepts"))
+summary(fit5,fit.measures=TRUE)
+
+anova(fit4,fit5) #significant = partial invariance possible but need to identify which to allow to estimate freely.
+
+fit6 <- cfa(model3, 
+           data = lobias.sct2[,c(nurange,87)], 
+           group = "mycontrast",group.equal=c("loadings","intercepts"), group.partial=c("Matrices~1","Comprehnsn~1"))
+summary(fit6,fit.measures=TRUE)
+
+anova(fit4,fit6) # now non-significant = pass. Looks like groups have no differences after allowing for invariance.
+
+fit7 <- cfa(model3, 
+           data = lobias.sct2[,c(nurange,87)], 
+           group = "mycontrast",group.equal=c("loadings","intercepts","residuals"), group.partial=c("Matrices~1","Comprehnsn~1"))
+summary(fit7,fit.measures=TRUE)
+
+anova(fit6,fit7) #pass
+
+fit8 <- cfa(model3, 
+           data = lobias.sct2[,c(nurange,87)], 
+           group = "mycontrast",group.equal=c("loadings","intercepts","residuals", "lv.variances",
+"lv.covariances"), group.partial=c("Matrices~1","Comprehnsn~1"))
+summary(fit8,fit.measures=TRUE)
+
+anova(fit7,fit8)#pass
 
 ```
 ##CCC-2 analysis
