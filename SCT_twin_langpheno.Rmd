@@ -30,6 +30,10 @@ library(yarrr) #for pirate plot - another plot type
 library(lavaan) #for SEM to extract language factor
 library(semPlot) #used with Lavaan
 library(standardize)
+library(ggpubr)
+library(reshape2)
+library(ggcorrplot)
+
 #################################################################################
 
 ```
@@ -58,11 +62,13 @@ Select variables to be used.
 
 ```{r readredcap}
 #########################################################################################
-redcap.dir <-"c:/Users/pthompson/Dropbox/project SCT analysis/Data from Redcap/"
+#redcap.dir <-"c:/Users/pthompson/Dropbox/project SCT analysis/Data from Redcap/"
+redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
+
 #Use latest version - now includes milestones
 sct.redcap <- 'SCTDATA_DATA_2018-08-13_1234.csv'
 #updated to include code indicating whether participated in prior study
-twin.redcap <- 'TwinsData_DATA_2018-08-13_1234.csv' #updated to include ccc2_consistent variable
+twin.redcap <- 'TwinsData_DATA_2018-08-19_1139.csv' #updated to include ccc2_consistent variable
 #also now has pheno_include, which selects individual twins for inclusion
 sct.data <- read.csv(paste0(redcap.dir,sct.redcap),stringsAsFactors = FALSE)
 twin.data <- read.csv(paste0(redcap.dir,twin.redcap),stringsAsFactors = FALSE)
@@ -87,6 +93,19 @@ sct.data$female[w]<-1
 ```
 
 #Select data for short file
+NB see SCT_twin_langpheno_orig.Rmd for script re creation of oromotor_ss_2.
+Basically, we took the TD twins as norms, and used regression of raw score on Age to create residualised scaled scores
+
+myintercept<-summary(mymod)$coefficients[1,1] gave value of 35.754
+myb<-summary(mymod)$coefficients[2,1] gave value of 0.07612
+myse<-summary(mymod)$sigma gave value of 9.1667
+Then formula is:
+
+z.oro<-100+15*(langcog$Oromotor_raw-(myintercept+langcog$Age*myb))/myse
+
+The original script was tweaked on 19/8/18 to add values of oromotor_ss_2 for the 2nd twin.
+
+
 
 ```{r colselect}
 #########################################################################################
@@ -145,11 +164,181 @@ all.short<-all.short[all.short$pheno_include==1,] #removes those with ASD, ASD-s
 w<-which(colnames(all.short)=='age_at_test')
 colnames(all.short)[w]<-'Age'
 
+#add a column identifying age range: 1 = <6, 2 = 6-11;11, 3 = 12+
+all.short$ageband<-2
+w<-which(all.short$Age<72)
+all.short$ageband[w]<-1
+w<-which(all.short$Age>143)
+all.short$ageband[w]<-3
+
 #########################################################################################
 ```
 
+##Step 2
+#Deal with missing data
+Codes are
 
-## Step 2
+999 – test not given
+
+998 – result not valid (maladministration)
+
+997 – result not valid (child refusal etc.)
+
+996 – child too old/young for norms
+
+Check for nonword rep - in some cases OK to substitute low score, if child unable to attempt task. 
+```{r missingcheck}
+
+all.short$pass_hearing[all.short$pass_hearing==9]<-NA #change 9 to NA for pass_hearing
+#NB these include both refusal and equipment failure
+
+#missing data has codes of 996-999 for language tests
+w <- which(all.short$nonword_rep_ss>900)
+print('Cases with missing nonword rep data: ')
+all.short$record_id[w]
+#These cases all checked : all SCT cases who either were not tested because v limited spoken language, or who refused spoken tests or had low scores on other language tests. All these cases assigned a scaled score of 3.
+all.short$nonword_rep_ss[w] <- 3
+
+#999 is code where child was not tested bcs too low-functioning
+w <- which(all.short$wasi_vocab_ss==999)
+print('Cases with missing Vocab data (999) reassigned to floor: ')
+all.short$record_id[w]
+#These assigned SS of 2.33 SD below mean (equivalent to 3 on NEPSY scale)
+all.short$wasi_vocab_ss[w] <- 25
+
+w <- which(all.short$wdck_jhsn_ss==999)
+print('Cases with missing Woodcock_J data (999) reassigned to floor: ')
+all.short$record_id[w]
+#These assigned SS of 2.33 SD below mean (equivalent to 3 on NEPSY scale)
+all.short$wdck_jhsn_ss[w] <- 55
+
+w <- which(all.short$sent_rep_ss==999)
+print('Cases with missing Sent rep data (999) reassigned to floor:: ')
+all.short$record_id[w]
+#These assigned SS of 2.33 SD below mean (equivalent to 3 on NEPSY scale)
+all.short$sent_rep_ss[w] <- 3
+
+w <- which(all.short$oromotor_ss_2==999)
+print('Cases with missing oromotor data (999) reassigned to floor:: ')
+all.short$record_id[w]
+#These assigned SS of 55 , as this corresponds to floor in this sample
+all.short$oromotor_ss_2[w] <- 55
+
+#Now count how many tests have missing data
+mycols<-colnames(all.short)
+#Identify the range of columns where 900+ is missing data code
+mc <-which(mycols=='wasi_matrices_ss')
+mc0<-which(mycols=='nonword_rep_ss') #end of range for spoken language
+mc1<-which(mycols=='phab_digit_ss') #end of range of reading related
+mc2<-which(mycols=='ccc_a') #end of range of reading related
+mc3<-which(mycols=='ccc_j') #end of range of reading related
+
+all.short$nmissinglang<-0
+for(i in 1:nrow(all.short)){
+  mytests<-all.short[i,mc:mc0]
+ nna<- length(which(is.na(mytests)))
+ n9<- length(which(mytests>900))
+  all.short$nmissinglang[i]<-(nna+n9)
+  
+}
+table(all.short$nmissinglang,all.short$ageband)
+
+all.short$nmissingread<-0
+for(i in 1:nrow(all.short)){
+  mytests<-all.short[i,(mc0+1):mc1]
+   nna<- length(which(is.na(mytests)))
+ n9<- length(which(mytests>900))
+  all.short$nmissingread[i]<-(nna+n9)
+  
+}
+table(all.short$nmissingread,all.short$ageband)
+
+
+#Put in NA for missing data codes all lang/read/CCC-2
+for (i in c(mc:mc1,mc2:mc3)){
+  w <- which(all.short[,i]>900)
+  all.short[w,i]<-NA
+  
+  ncol<-length(colnames(all.short)) #define ncol here
+  
+}
+
+#Parental educ variables, missing is 9
+w<-which(all.short$mo_educ==9)
+all.short$mo_educ[w]<-NA
+w<-which(all.short$fa_educ==9)
+all.short$fa_educ[w]<-NA
+
+
+```
+Rescale all variables to mean 100 and SD 15 and save in new columns
+
+```{r rescalelang}
+shortlangnames<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','Oromotor','NwdRep',
+                  'ReadAcc','ReadComp','ReadRate','TOWREwd','TOWREnwd',
+                  'PicName','DigitName')
+
+#convert all variables to same scale: mean 100 and SD 15
+#This has to be hard coded because different tests on different scales
+langcogcols<-c("wasi_matrices_ss" ,"wasi_block_design_ss", "wasi_vocab_ss" ,
+               "wdck_jhsn_ss" , "sent_rep_ss" ,  "oromotor_ss_2","nonword_rep_ss", 
+               "nara_acc_ss" ,"nara_comp_ss","nara_rate_ss" ,"towre_words_ss",
+               "towre_nonwords_ss","phab_pic_ss","phab_digit_ss")
+#Note we now are using the oromotor_ss_2 variable: normed against TD twins
+
+langcols<-which(colnames(all.short)%in%langcogcols)
+#NB this finds columns corresponding to langcogcols, but they will be in the order they occur in file
+#start by just duplicating original scaled scores
+nnew<-length(shortlangnames)
+nurange<-(ncol+1):(ncol+nnew) #column range for ss values, NB ncol defined in prev block
+all.short[,nurange]<-all.short[,langcols]
+colnames(all.short)[nurange]<-shortlangnames
+#First 3 are normed with mean 50 and SD 10
+for (i in 1:3){
+  oldmean<-50
+  oldsd<-10
+  all.short[,(i+ncol)]<- 100+15*(all.short[,langcols[i]]-oldmean)/oldsd
+}
+
+for (i in c(5,7)){
+  oldmean<-10
+  oldsd<-3
+  all.short[,(i+ncol)]<- 100+15*(all.short[,langcols[i]]-oldmean)/oldsd
+}
+
+```
+
+```{r interpolatemissing}
+#If just one value is missing in lang or reading groups, substitute the mean for others
+langrange<-(ncol+1):(ncol+7)
+readrange<-(ncol+8):(ncol+13)
+#Start with language range
+w<-which(all.short$nmissinglang==1) #find those rows with just one missing value
+for(s in 1:length(w)){
+  thisrow<-w[s] #row with missing value
+  v<-which(is.na(all.short[thisrow,langrange])) #which value is missing?
+  mycol<-langrange[v] #column with missing data
+  all.short[thisrow,langrange[v]]<-round(rowMeans(all.short[thisrow,langrange],na.rm=TRUE),0) #mean of other values substituted
+}
+
+print(paste0('Interpolated ', length(w),' missing values from ',nrow(all.short)*length(langrange),
+             ' datapoints in ',length(langrange),' nonverbal and language tests; cases with one missing datapoint, mean substituted'))
+
+w<-which(all.short$nmissingread==1) #find those rows with just one missing value
+for(s in 1:length(w)){
+  thisrow<-w[s] #row with missing value
+  v<-which(is.na(all.short[thisrow,readrange])) #which value is missing?
+  mycol<-readrange[v]
+  all.short[thisrow,readrange[v]]<-round(rowMeans(all.short[thisrow,readrange],na.rm=TRUE),0) #mean of other values substituted
+}
+print(paste0('Interpolated ', length(w),' missing values from ',nrow(all.short)*length(readrange),
+             ' datapoints in ',length(readrange),' reading and rapidnaming tests; cases with one missing datapoint, mean substituted'))
+
+
+
+
+```
+## Step 3
 
 #Check that Ns match those in the protocol
 Should have three groups with N = 142 SCT, 194 twin1 and 194 twin2 (these are randomly assigned twin 1 and 2), - but Ns less for twins because of exclusions
@@ -219,69 +408,33 @@ origstudy<-table(all.short$bias[w],all.short$trisomy[w])
 colnames(origstudy)<-c('XXX','XXY','XYY')
 rownames(origstudy)<-c('Low bias','High bias')
 origstudy
+
+#Count how many cases available for MANOVAs
+#Must have full data on lang or reading (5 yr olds excluded on this basis)
+w<-which(all.short$nmissinglang<2) #we have retained those with one missing value
+tempshort<-all.short[w,]
+scttab <- table(tempshort$trisomy,tempshort$bias)
+rownames(scttab)<-c('XXX','XXY','XYY')
+colnames(scttab)<-c('low bias','high bias','NA')
+#Show tables
+print('Cases with full data for nv/lang analysis')
+
+scttab
+rowSums(scttab)
+
+w<-which(all.short$nmissingread<2) #we have retained those with one missing value
+tempshort<-all.short[w,]
+scttab <- table(tempshort$trisomy,tempshort$bias)
+rownames(scttab)<-c('XXX','XXY','XYY')
+colnames(scttab)<-c('low bias','high bias','NA')
+#Show tables
+print('Cases with full data for reading/naming analysis')
+
+scttab
+rowSums(scttab)
 ###################################################################################
 ```
-##Step 3
-#Deal with missing data
-Check for nonword rep - in some cases need to substitute low score, as unable to attempt task. 
-N.B. The process used to extract the language factor can handle missing data, so for measures used in that, we just substitute NA for values > 900.
-```{r missingcheck}
 
-all.short$pass_hearing[all.short$pass_hearing==9]<-NA #change 9 to NA for pass_hearing
-#NB these include both refusal and equipment failure
-
-#missing data has codes of 996-999 for language tests
-w <- which(all.short$nonword_rep_ss>900)
-print('Cases with missing nonword rep data: ')
-all.short$record_id[w]
-#These cases all checked : all SCT cases who either were not tested because v limited spoken language, or who refused spoken tests or had low scores on other language tests. All these cases assigned a scaled score of 3.
-all.short$nonword_rep_ss[w] <- 3
-
-#999 is code where child was not tested bcs too low-functioning
-w <- which(all.short$wasi_vocab_ss==999)
-print('Cases with missing Vocab data (999) reassigned to floor: ')
-all.short$record_id[w]
-#These assigned SS of 2.33 SD below mean (equivalent to 3 on NEPSY scale)
-all.short$wasi_vocab_ss[w] <- 25
-
-w <- which(all.short$wdck_jhsn_ss==999)
-print('Cases with missing Woodcock_J data (999) reassigned to floor: ')
-all.short$record_id[w]
-#These assigned SS of 2.33 SD below mean (equivalent to 3 on NEPSY scale)
-all.short$wdck_jhsn_ss[w] <- 55
-
-w <- which(all.short$sent_rep_ss==999)
-print('Cases with missing Sent rep data (999) reassigned to floor:: ')
-all.short$record_id[w]
-#These assigned SS of 2.33 SD below mean (equivalent to 3 on NEPSY scale)
-all.short$sent_rep_ss[w] <- 3
-
-w <- which(all.short$oromotor_ss==999)
-print('Cases with missing oromotor data (999) reassigned to floor:: ')
-all.short$record_id[w]
-#These assigned SS of 1 , as this corresponds to floor in this sample
-all.short$oromotor_ss[w] <- 1
-
-#Now substitute NA for any remaining test scores > 900
-mycols<-colnames(all.short)
-#Identify the range of columns where 900+ is missing data code
-mc <-which(mycols=='wasi_matrices_ss')
-mc2<-which(mycols=='ccc_j')
-for (i in mc:mc2){
-  w <- which(all.short[,i]>900)
-  all.short[w,i]<-NA
-  
-}
-#Parental educ variables, missing is 9
-w<-which(all.short$mo_educ==9)
-all.short$mo_educ[w]<-NA
-w<-which(all.short$fa_educ==9)
-all.short$fa_educ[w]<-NA
- #NB Deprivation index: will be missing for Wales/Scotland and NI
-
-md <- which(is.na(all.short[,mc:(mc+3)]))
-print(paste0(length(md),' missing values from ',nrow(all.short)*4,' datapoints in 4 language tests'))
-```
 
 ##Create 8 groups:
 1. XXX-nobias
@@ -309,6 +462,23 @@ all.short$group8<-as.factor(all.short$group8)
 levels(all.short$group8)<-c('XXX.lowbias','XXY.lowbias','XYY.lowbias',
                             'XXX.hibias','XXY.hibias','XYY.hibias',
                             'twin.TD','twin.langconcerns')
+
+#Add code for thse with NA data on the language tests
+#For MANOVA, only those with complete data are included
+all.short$langdatacomplete<-1 #applied after interpolating values if only one missing
+mycols<-colnames(all.short)
+mcx1 <-which(mycols=='Matrices')
+mcx2<-which(mycols=='DigitName')
+for (i in mcx1:mcx2){
+  w <- which(is.na(all.short[,i]))
+  all.short$langdatacomplete[w]<-0
+  
+}
+
+#Now recode all SCTs together in one group for contrast with twins
+all.short$trisomyvstwin<-1
+all.short$trisomyvstwin[all.short$group8level<7]<-2
+
 ```
 ##Covariates
 a)	Educational level of mother and father, transformed into an ordinal scale based on age at leaving full-time education/qualifications obtained, with points of 0 (prior to age 16 years), 1 (16 years/did GCSE or O-levels), 2 (18 years/ did A-levels), 3 (21 years, degree), 4 (postgraduate study). 
@@ -340,7 +510,14 @@ pirateplot(fa_educ~group8,data=all.short)
 #Use ranks to convert to normal distribution
 #Rw deprivation index is a rank out of 32750
 all.short$deprivz<-qnorm(all.short$deprivation_index/32750)
+w<-which(is.na(all.short$deprivz))
+all.short$deprivz[w]<-0
+#Assign zscore of zero to those outside england where no dep index
 
+#NB rows below 143 are trisomies
+print(paste('N SCT with missing dep index (assigned 0) = ',length(which(w<143))))
+print(paste('N twin with missing dep index (assigned 0) = ',length(which(w>142))))
+all.short$deprivz[w]<-0
 pirateplot(deprivz~group8,data=all.short,xaxt='n')
 text(1,3.2,'XXX',cex=.8)
 text(2,3.2,'XXY',cex=.8)
@@ -362,59 +539,29 @@ print('N older siblings')
 all.short$oldersibs<-all.short$fam_position-1
 nsib.tab<-table(all.short$group8,all.short$oldersibs)
 round(prop.table(nsib.tab,1),3)
+
+ncol<-length(colnames(all.short)) #we will use this in later block as start column when adding new columns with all scaled on same scale
 ```
 ##Analyse language test and reading data
-First select the data and convert to common scale
+First select the data 
 
-```{r langmeasures}
+Then make shorter sctfile that excludes the high bias group
 
-
-langcogcols<-c("wasi_matrices_ss" ,"wasi_block_design_ss", "wasi_vocab_ss" ,
-               "wdck_jhsn_ss" , "sent_rep_ss" ,  "oromotor_ss_2","nonword_rep_ss", 
-               "nara_acc_ss" ,"nara_comp_ss","nara_rate_ss" ,"towre_words_ss",
-               "towre_nonwords_ss","phab_pic_ss","phab_digit_ss")
-#Note we now are using the oromotor_ss_2 variable: normed against TD twins
-
-langcols<-which(colnames(all.short)%in%langcogcols)
-#NB this finds columns corresponding to langcogcols, but they will be in the order they occur in file
-
-#Make shorter names for plotting - create new variables on same scale for this
-shortlangnames<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','Oromotor','NwdRep',
-                     'ReadAcc','ReadComp','ReadRate','TOWREwd','TOWREnwd',
-                     'PicName','DigitName')
-ncol<-length(colnames(all.short))
-#convert all variables to same scale: mean 100 and SD 15
-#This has to be hard coded because different tests on different scales
-
-#start by just duplicating original scaled scores
-nnew<-length(shortlangnames)
-nurange<-(ncol+1):(ncol+nnew) #column range for ss values
-all.short[,nurange]<-all.short[,langcols]
-colnames(all.short)[nurange]<-shortlangnames
-#First 3 are normed with mean 50 and SD 10
-for (i in 1:3){
-  oldmean<-50
-  oldsd<-10
-  all.short[,(i+ncol)]<- 100+15*(all.short[,langcols[i]]-oldmean)/oldsd
-}
-
-for (i in c(5,7)){
-  oldmean<-10
-  oldsd<-3
-   all.short[,(i+ncol)]<- 100+15*(all.short[,langcols[i]]-oldmean)/oldsd
-}
-
-```
-
-Now make shorter sctfile that excluded the high bias group
-
-```{r exclude.hibias}
+```{r make.subfiles}
 lobias.sct<-filter(all.short,group8level%in%c(1:3,8)) #we're using numeric code for factor level to make this easier
 lobias.sct$Group<-as.factor(lobias.sct$group8level)
 levels(lobias.sct$Group)<-c('XXX','XXY','XYY','Twin')
 
+#exclude those with incomplete data as they won't feature in MANOVA
+lobias.sct2<-filter(lobias.sct,langdatacomplete==1)
+
+#exclude those outside twin age band - this is a new file so we can compute medians for those separately
+lobias.sct3<-filter(lobias.sct2,ageband==2)
+
 twin.TD<-filter(all.short,group8level==7) #we're using numeric code for factor level to make this easier
 twin.TD$Group<-'TD.twin'
+
+trisomy.only<-filter(all.short,group8level<7) 
 
 ```
 
@@ -422,32 +569,37 @@ twin.TD$Group<-'TD.twin'
 
 ```{r beeswarmgrid}
 longname<-c('Matrices','Block Design','Vocabulary','Comprehension','Sentence Repetition','Nonword Repetition','Oromotor',
-                     'Reading Accuracy','Reading Comprehension','Reading Rate','Speeded word reading','Speeded nonword reading',
-                     'Rapid Naming: Pictures','Rapid Naming: Digits')
+            'Reading Accuracy','Reading Comprehension','Reading Rate','Speeded word reading','Speeded nonword reading',
+            'Rapid Naming: Pictures','Rapid Naming: Digits')
 
 png_lang_bees<-'beeswarm_lang.png' #name to save png file
 png(png_lang_bees,width=1000,height=1000)
 par(mfrow=c(5,3)) #5 row and 3 columns
 par(mar=c(5.1,4.1,4.1,0.2))
+#beeswarm jittered values (last value in jitter statement determines amount of jitter)
 
+pointcol<-c(1,16,10) #use open circle, filled circle, circle +, for ageband 1-3
+agebit<-pointcol[lobias.sct2$ageband]
+#alldatabit<-pointcol[(1+lobias.sct$langdatacomplete)] #orig values are 0 and 1, so add 1
 for (i in 1:14){
   mytitle<-longname[i]
-beeswarm(lobias.sct[,nurange[i]]~Group , data = lobias.sct, xlab='Group',ylab='Scaled score',
-         pch = 16,cex=1.7,col=c(2,2,2,4),main=mytitle,ylim=c(50,140))
-bxplot(lobias.sct[,nurange[i]]~Group , data = lobias.sct, probs = 0.5, col = 1,add=TRUE) #adds medians
-abline(a=100,b=0,col='darkgray',lty=1)
-abline(a=85,b=0,col='darkgray',lty=2)
-abline(a=70,b=0,col='darkgray',lty=2)
-
-mean_TD<-mean(twin.TD[,nurange[i]],na.rm=T)
+  beeswarm(jitter(lobias.sct2[,nurange[i]],3)~Group , data = lobias.sct2, xlab='Group',ylab='Scaled score',spacing=.8,
+           pch = 16,pwpch=agebit,cex=1.7,col=c(2,2,2,4),main=mytitle,ylim=c(55,135))
+  bxplot(lobias.sct2[,nurange[i]]~Group , data = lobias.sct2, probs = 0.5, col = 1,lty=3,add=TRUE) #adds medians for all cases with dotted line
+   bxplot(lobias.sct3[,nurange[i]]~Group , data = lobias.sct3, probs = 0.5, col = 1,add=TRUE) #adds medians just for those in Twin age range, with continuous line
+  abline(a=100,b=0,col='darkgray',lty=1)
+  abline(a=85,b=0,col='darkgray',lty=2)
+  abline(a=70,b=0,col='darkgray',lty=2)
+  
+  mean_TD<-mean(twin.TD[,nurange[i]],na.rm=T)
   sd_TD<-sd(twin.TD[,nurange[i]],na.rm=T)
   
   up.lim<-mean_TD+sd_TD
   low.lim<-mean_TD-sd_TD
   
-  polygon(c(0,0,4,4), c(up.lim, low.lim, low.lim, up.lim),
+  polygon(c(0,0,5,5), c(up.lim, low.lim, low.lim, up.lim),
           col=adjustcolor("yellow",alpha.f=0.3), border = NA)
-
+  
 }
 dev.off()
 ```
@@ -458,247 +610,133 @@ dev.off()
 
 ```{r lang.manova}
 #First just do groups 1-3
-gp3<-filter(lobias.sct,group8level<4)
+#NB cases with missing data are excluded, so doesn't matter if you use lobias.sct or lobias.sct2
+#Result will be the same, but use lobias.sct2 to get numbers to report
+gp3<-filter(lobias.sct2,group8level<4)
 sct.matrix <- as.matrix(gp3[,nurange])
-gp3.fit <- manova(sct.matrix ~ gp3$Group+gp3$mo_educ)
+gp3.fit <- manova(sct.matrix ~ gp3$Group+gp3$mo_educ+gp3$deprivz)
 mymanova3<-summary(gp3.fit, test="Pillai")
 print('Manova on the 14 language measures for the 3 Low Bias SCT groups only')
+mytab<-table(gp3$trisomy)
+names(mytab)<-c('XXX','XXY','XYY')
+print('Ns for analysis:')
+print(mytab)
 mymanova3
+#summary.aov(gp3.fit) - if you want to inspect individual language measures
 
-lobias.sct$mycontrast<-lobias.sct$group8level
-lobias.sct$mycontrast[lobias.sct$mycontrast<4]<-1
-gp2.matrix <- as.matrix(lobias.sct[,nurange])
-gp2.fit <- manova(gp2.matrix ~ lobias.sct$mycontrast+lobias.sct$mo_educ)
+
+
+
+#for comparison with twin group, need to restrict to those aged 6-11
+w<-c(which(lobias.sct2$ageband==2))
+lobias.agematch<-lobias.sct2[w,]
+gp2.matrix <- as.matrix(lobias.agematch[,nurange])
+gp2.fit <- manova(gp2.matrix ~ lobias.agematch$trisomyvstwin+lobias.agematch$mo_educ+lobias.agematch$deprivz)
 mymanova2<-summary(gp2.fit, test="Pillai")
-print('Manova on the 14 language measures for the SCT vs twin (language disordered) group')
+mytab<-table(lobias.agematch$trisomyvstwin)
+names(mytab)<-c('Trisomy','Twin')
+print('Ns for analysis:')
+print(mytab)
+print('Manova on the 14 language measures for the SCT vs twin (language disordered) group, aged 6-11;11')
 mymanova2
 
-
-gp4.matrix <- as.matrix(lobias.sct[,nurange])
-gp4.fit <- manova(gp4.matrix ~ lobias.sct$group8level)
-mymanova4<-summary(gp4.fit, test="Pillai")
-print('Manova on the 14 language measures for the 3 SCT vs twin(language disordered)  group')
-mymanova4
-
-par(mfrow=c(3,5))
+#This plot not really adding anything, now we have coded age in the other beeswarm
+png('png_2gp_bees.png',width=1000,height=1000)
+par(mfrow=c(4,4)) #4 row and 4 columns
+par(mar=c(5.1,4.1,4.1,0.2))
 for (i in 1:14){
-beeswarm(lobias.sct[,nurange[i]]~mycontrast , data = lobias.sct, xlab='Group',ylab='Scaled score',
-         pch = 12,cex=1,col=c(2,2,2,4),main=mytitle,ylim=c(50,140))
-bxplot(lobias.sct[,nurange[i]]~mycontrast , data = lobias.sct, probs = 0.5, col = 1,add=TRUE) #adds medians
+  mytitle<-longname[i]
+  beeswarm(jitter(lobias.sct2[,nurange[i]],3)~mycontrast , data = lobias.sct2, xlab='Group',ylab='Scaled score',
+           pch = 16,cex=1,col=c(2,4),main=mytitle,ylim=c(50,140),spacing=.8)
+  bxplot(lobias.sct2[,nurange[i]]~mycontrast , data = lobias.sct2, probs = 0.5, col = 1,add=TRUE) #adds medians
 }
-
-
-
-## A) redo excluding SCT cases who are either aged below 6 yr or above 12 yr.
-
-lobias.sct$mycontrast<-lobias.sct$group8level
-lobias.sct$mycontrast[lobias.sct$mycontrast<4]<-1
-
-rm_ids<-filter(lobias.sct, mycontrast == 1, Age < 72)$record_id
-rm_ids2<-filter(lobias.sct, mycontrast == 1, Age > 144)$record_id
-
-lobias.sct2<-lobias.sct[!lobias.sct$record_id %in% c(rm_ids,rm_ids2),]
-
-gp2.matrix <- as.matrix(lobias.sct2[,nurange])
-gp2A.fit <- manova(gp2.matrix ~ lobias.sct2$mycontrast+lobias.sct2$mo_educ)
-mymanova2A<-summary(gp2.fit, test="Pillai")
-print('Manova on the 14 language measures for the SCT vs twin (language disordered) group')
-mymanova2A
-
-
-gp4.matrix <- as.matrix(lobias.sct2[,nurange])
-gp4A.fit <- manova(gp4.matrix ~ lobias.sct2$group8level)
-mymanova4A<-summary(gp4A.fit, test="Pillai")
-print('Manova on the 14 language measures for the 3 SCT vs twin(language disordered)  group')
-mymanova4A
-
-#######
-library(reshape2)
-library(ggpubr)
-
-# Get lower triangle of the correlation matrix
-  get_lower_tri<-function(cormat){
-    cormat[upper.tri(cormat)] <- NA
-    return(cormat)
-  }
-  # Get upper triangle of the correlation matrix
-  get_upper_tri <- function(cormat){
-    cormat[lower.tri(cormat)]<- NA
-    return(cormat)
-  }
-
-cormat_SCT <- round(cor(lobias.sct2[lobias.sct2$mycontrast==1,nurange],use="na.or.complete"),2)
-#head(cormat_SCT)
-
-melted_cormat_SCT <- melt(get_upper_tri(cormat_SCT), na.rm = TRUE)
-#head(melted_cormat_SCT)
-
-hm1<-ggplot(melted_cormat_SCT, aes(Var2, Var1, fill = value))+
- geom_tile(color = "white")+
- scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-   midpoint = 0, limit = c(-1,1), space = "Lab", 
-    name="Pearson\nCorrelation") +
-  theme_minimal()+ # minimal theme
- theme(axis.text.x = element_text(angle = 45, vjust = 1, 
-    size = 12, hjust = 1))+
- coord_fixed() + 
-geom_text(aes(Var2, Var1, label = value), color = "black", size = 4) +
-theme(
-  axis.title.x = element_text("SCT"),
-  axis.title.y = element_blank(),
-  panel.grid.major = element_blank(),
-  panel.border = element_blank(),
-  panel.background = element_blank(),
-  axis.ticks = element_blank(),
-  legend.justification = c(1, 0),
-  legend.position = c(0.6, 0.7),
-  legend.direction = "horizontal")+
-  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
-                title.position = "top", title.hjust = 0.5))
-
-#########
-
-cormat_TWIN <- round(cor(lobias.sct2[lobias.sct2$mycontrast==8,nurange],use="na.or.complete"),2)
-#head(cormat_TWIN)
-
-melted_cormat_TWIN <- melt(get_upper_tri(cormat_TWIN), na.rm = TRUE)
-#head(melted_cormat_TWIN)
-
-hm2<-ggplot(melted_cormat_TWIN, aes(Var2, Var1, fill = value))+
- geom_tile(color = "white")+
- scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-   midpoint = 0, limit = c(-1,1), space = "Lab", 
-    name="Pearson\nCorrelation") +
-  theme_minimal()+ # minimal theme
- theme(axis.text.x = element_text(angle = 45, vjust = 1, 
-    size = 12, hjust = 1))+
- coord_fixed() + 
-geom_text(aes(Var2, Var1, label = value), color = "black", size = 4) +
-theme(
-  axis.title.x = element_text("TWIN"),
-  axis.title.y = element_blank(),
-  panel.grid.major = element_blank(),
-  panel.border = element_blank(),
-  panel.background = element_blank(),
-  axis.ticks = element_blank(),
-  legend.justification = c(1, 0),
-  legend.position = c(0.6, 0.7),
-  legend.direction = "horizontal")+
-  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
-                title.position = "top", title.hjust = 0.5))
-
-png_heat<-'heat_plot.png'
-png(png_heat,width=1000,height=1000)
-print(ggarrange(hm1, hm2,  common.legend = TRUE))
 dev.off()
 
-#######
-#car::scatterplotMatrix(~Matrices+Blocks+Vocab+Comprehnsn+SentRep+Oromotor+NwdRep+ReadAcc+ReadComp+ReadRate+TOWREwd+TOWREnwd+PicName+DigitName|mycontrast, data=lobias.sct[,c(nurange,87)])
+```
+##Inspect correlations with heat map
+Problems combining heatmaps into same plot?
+These plots no longer needed, given that no group effect - previously, before excluding older SCT cases, there was a group effect, which seemed driven by different associations between reading/language measures. Can still see a suggestion of this - lighter red for lang/read correlations in twins. But as NS, not worth exploring further.
 
+```{r heatmapcorr}
+ png_heat<-'heat_plot_sct.png'
+ png(png_heat,width=1000,height=500)
+cormat_SCT <- round(cor(lobias.sct2[lobias.sct2$mycontrast==1,nurange],use="na.or.complete"),2)
+ggcorrplot(cormat_SCT,title='SCT')
+dev.off()
+ png_heat<-'heat_plot_twin.png'
+ png(png_heat,width=1000,height=500)
+cormat_twin <- round(cor(lobias.sct2[lobias.sct2$mycontrast==8,nurange],use="na.or.complete"),2)
+ggcorrplot(cormat_twin,title='Twin')
+dev.off()
+```
+![Correlations: SCT age 6-11;11](heat_plot_sct.png)
 
+![Correlations: Twin with lang dis](heat_plot_twin.png)
+##Comparison of low and high bias groups
 
+```{r lowhi.sct}
+#Use trisomy.only group for this
+
+png_lang_bees<-'beeswarm_lang_bias.png' #name to save png file
+png(png_lang_bees,width=1000,height=1000)
+par(mfrow=c(5,3)) #5 row and 3 columns
+par(mar=c(5.1,4.1,4.1,0.2))
+#beeswarm jittered values (last value in jitter statement determines amount of jitter)
+
+pointcol<-c(1,16,10) #use open circle, filled circle, circle +, for ageband 1-3
+agebit<-pointcol[trisomy.only$ageband]
+#alldatabit<-pointcol[(1+lobias.sct$langdatacomplete)] #orig values are 0 and 1, so add 1
+for (i in 1:14){
+  mytitle<-longname[i]
+  beeswarm(jitter(trisomy.only[,nurange[i]],3)~group8level , data = trisomy.only, xlab='Group',ylab='Scaled score',spacing=.8,labels='',
+           pch = 16,pwpch=agebit,cex=1.7,col=c(2,2,2,1,1,1),main=mytitle,
+           ylim=c(55,140))
+  bxplot(trisomy.only[,nurange[i]]~group8, data = trisomy.only, probs = 0.5, 
+         col = 1,lty=1,add=TRUE) #adds medians for all cases with dotted line
+   abline(a=100,b=0,col='darkgray',lty=1)
+  abline(a=85,b=0,col='darkgray',lty=2)
+  abline(a=70,b=0,col='darkgray',lty=2)
+  #same settings for polygon as before: shows TD twin range
+  polygon(c(0,0,7,7), c(up.lim, low.lim, low.lim, up.lim),
+          col=adjustcolor("yellow",alpha.f=0.3), border = NA)
+  text(1,133,'XXX',cex=1)
+text(2,133,'XXY',cex=1)
+text(3,133,'XYY',cex=1)
+text(4,133,'XXX',cex=1)
+text(5,133,'XXY',cex=1)
+text(6,133,'XYY',cex=1)
+text(2,140,'<---------Low bias--------->')
+text(5,140,'<---------High bias--------->')
+
+}
+dev.off()
+```
+
+```{r manova2}
+
+sct2.matrix <- as.matrix(trisomy.only[,nurange])
+gp6.fit <- manova(sct2.matrix ~ trisomy.only$bias*trisomy.only$group8+trisomy.only$mo_educ+trisomy.only$deprivz)
+mymanova6<-summary(gp6.fit, test="Pillai")
+print('Manova on the 14 language measures for the 3 Low Bias SCT groups vs 3 High Bias')
+mytab<-table(trisomy.only$bias)
+
+print('Ns for analysis:')
+print(mytab)
+mymanova6
+summary.aov(gp6.fit) #- if you want to inspect individual language measures
 
 ```
-![](heat_plot.png)
 
-
-## Multigroup Confirmatory Factor Analysis
-
-```{r lavaan,echo=TRUE}
-
-#fit inital CFA per group (TWIN model)
-model2A <- ' lang =~ Vocab+Comprehnsn+SentRep+NwdRep+Matrices+Blocks
-            Read =~ ReadComp+ReadRate+PicName+DigitName+Oromotor
- PicName ~~  DigitName
-NwdRep ~~   ReadRate
-Matrices ~~ Blocks
-'
-fit2A <- cfa(model2A, 
-           data = lobias.sct2[lobias.sct2$mycontrast==8,c(nurange)])
-summary(fit2A,fit.measures=TRUE)
-#modindices(fit2A)
-
-#fit inital CFA per group (SCT model)
-model2B <- ' lang =~ Vocab+Comprehnsn+SentRep+NwdRep+Matrices+Blocks
-            Read =~ ReadComp+ReadRate+PicName+DigitName+Oromotor
- PicName ~~  DigitName
-NwdRep ~~   ReadRate
-Matrices ~~ Blocks
-'
-fit2B <- cfa(model2B, 
-           data = lobias.sct2[lobias.sct2$mycontrast==1,c(nurange)])
-summary(fit2B,fit.measures=TRUE)
-#modindices(fit2B)
-
-##########
-
-#Next fit the multigroup CFA model and check for invariance: configural, weak/loading invariance, strong/scalar invariance, strict invariance.
-
-model3 <- ' lang =~ Vocab+Comprehnsn+SentRep+NwdRep+Matrices+Blocks
-            Read =~ ReadComp+ReadRate+PicName+DigitName+Oromotor
- PicName ~~  DigitName
-NwdRep ~~   ReadRate
-Matrices ~~ Blocks
-'
-fit3 <- cfa(model3, 
-           data = lobias.sct2[,c(nurange,87)], 
-           group = "mycontrast")
-summary(fit3,fit.measures=TRUE)
-
-#overall invariance check, see http://users.ugent.be/~yrosseel/lavaan/multiplegroup6Dec2012.pdf for interpretation.
-library(semTools)
-measurementInvariance(model=model3, 
-           data = lobias.sct2[,c(nurange,87)], 
-           group = "mycontrast")
-
-#Step-by-step invariance tests
-
-fit4 <- cfa(model3, 
-           data = lobias.sct2[,c(nurange,87)], 
-           group = "mycontrast",group.equal=c("loadings"))
-summary(fit4,fit.measures=TRUE)
-#modindices(fit4)
-
-anova(fit3,fit4) #non significant = pass
-
-fit5 <- cfa(model3, 
-           data = lobias.sct2[,c(nurange,87)], 
-           group = "mycontrast",group.equal=c("loadings","intercepts"))
-summary(fit5,fit.measures=TRUE)
-
-anova(fit4,fit5) #significant = partial invariance possible but need to identify which to allow to estimate freely.
-
-fit6 <- cfa(model3, 
-           data = lobias.sct2[,c(nurange,87)], 
-           group = "mycontrast",group.equal=c("loadings","intercepts"), group.partial=c("Matrices~1","Comprehnsn~1"))
-summary(fit6,fit.measures=TRUE)
-
-anova(fit4,fit6) # now non-significant = pass. Looks like groups have no differences after allowing for invariance.
-
-fit7 <- cfa(model3, 
-           data = lobias.sct2[,c(nurange,87)], 
-           group = "mycontrast",group.equal=c("loadings","intercepts","residuals"), group.partial=c("Matrices~1","Comprehnsn~1"))
-summary(fit7,fit.measures=TRUE)
-
-anova(fit6,fit7) #pass
-
-fit8 <- cfa(model3, 
-           data = lobias.sct2[,c(nurange,87)], 
-           group = "mycontrast",group.equal=c("loadings","intercepts","residuals", "lv.variances",
-"lv.covariances"), group.partial=c("Matrices~1","Comprehnsn~1"))
-summary(fit8,fit.measures=TRUE)
-
-anova(fit7,fit8)#pass
-
-```
 ##CCC-2 analysis
-Consider how CCC-2 profiles for SCTs compare with those in our previous paper. Also include twins with or without concerns as comparison group.  Show both subscales and the GCC and SIDC.
+Consider how CCC-2 profiles for SCTs compare with those in our previous paper. Also include twins with concerns as comparison group.  Plot subscales; also analyse the GCC and SIDC.
 
 ```{r ccc2}
 w<-which(colnames(all.short)=='ccc_a')
 x<-which(colnames(all.short)=='group8')
 y<-which(colnames(all.short)=='group8level')
-cccbit<-all.short[,c(1,(w-2):(w+10),x,y)]#2 before ccc_a is GCC and SIDC
+#make file with ID,  and CCC results, as well as group8; gender, age added at end
+cccbit<-all.short[,c(1,(w-2):(w+10),x,y,2,3)]#2 before ccc_a is GCC and SIDC
+
 w<-which(is.na(cccbit$ccc2_consistent))
 cccbit$ccc2_consistent[w]<--1 #we need a count of missing data, so convert NA to -1
 consistent.ccc<-table(cccbit$group8,cccbit$ccc2_consistent)
@@ -712,7 +750,7 @@ print(paste('Twin: no concerns:',sum(consistent.ccc[7,1])/sum(consistent.ccc[7,]
 print(paste('Twin: language concerns:',sum(consistent.ccc[8,1])/sum(consistent.ccc[8,])))
 
 #total responses
-
+print('Overall response rates:')
 print(paste('All SCT:',1-sum(consistent.ccc[1:6,1])/sum(consistent.ccc[1:6,])))
 print(paste('Twin:',1-sum(consistent.ccc[7:8,1])/sum(consistent.ccc[7:8,])))
 
@@ -722,8 +760,9 @@ print(paste('Twin:',1-sum(consistent.ccc[7:8,1])/sum(consistent.ccc[7:8,])))
 ```{r ccc.analyse}
 #First remove the cases with no response or inconsistent
 ccc.data<-filter(cccbit,ccc2_consistent>0)
-#create dataframe for results
-ccc.df<-data.frame(matrix(NA,nrow=8,ncol=30))
+
+#create dataframe for summary results
+ccc.df<-data.frame(matrix(NA,nrow=8,ncol=26))
 ccc.df[,1]<-levels(ccc.data$group8)
 ccc.df[,2]<- table(ccc.data$group8)
 thiscol<- 1
@@ -776,22 +815,31 @@ cccplot+geom_errorbar(width=.1, aes(ymin=mean-se, ymax=mean+se))
 Follow https://www.statmethods.net/stats/anova.html
 
 ```{r ccc2.manova}
-#First just do groups 1-3
+#First just do groups 1-3 on the 10 subscales
 ccc.gp3<-filter(ccc.data,group8level<4)
 colA<-which(colnames(ccc.gp3)=='ccc_a')
 
 Y <- as.matrix(ccc.gp3[,colA:(colA+9)])
-fit3 <- manova(Y ~ ccc.gp3$group8)
-summary(fit3, test="Pillai")
+fit.cccsct <- manova(Y ~ ccc.gp3$group8)
+summary(fit.cccsct, test="Pillai")
 
-#Now add group 8
+#Now add twin ld group
 temp<-filter(ccc.data,group8level==8)
-ccc.gp4<-rbind(ccc.gp3,temp)
-Y <- as.matrix(ccc.gp4[,colA:(colA+9)])
-fit4 <- manova(Y ~ ccc.gp4$group8)
-summary(fit4, test="Pillai")
+nsct<-nrow(ccc.gp3)
+ccc.gp2<-rbind(ccc.gp3,temp)
+ccc.gp2$group2<-1
+ccc.gp2$group2[1:nsct]<-2
+#remove those out of age range
+ccc.gp2<-filter(ccc.gp2,Age>71)
+ccc.gp2<-filter(ccc.gp2,Age<144)
+Y <- as.matrix(ccc.gp2[,colA:(colA+9)])
+fitccc2 <- manova(Y ~ ccc.gp2$group2)
+summary(fitccc2, test="Pillai")
 ```
+#Proportions meeting criteria for DLD
 
+
+#Comparisons of high bias vs remainder
 
 
 ##Session information
