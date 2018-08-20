@@ -4,7 +4,7 @@ author: Dorothy Bishop
 date: started August 2018
 output: html_document
 ---
-
+NB Need to remove ASD/low IQ from language calculations - though could retain in beeswarm
 
 `r Sys.time()`
 
@@ -88,6 +88,8 @@ twin.data$lang_disorder<-round((twin.data$dld_rd-4.5)/10) #first digit is dld co
 sct.data$female<-0
 w<-which(sct.data$trisomy==1)
 sct.data$female[w]<-1
+
+sct.data$fam_id<-NA #dummy column to ensure merges ok
 #########################################################################################
 #----------------------------------------------------------------------------------
 ```
@@ -111,7 +113,7 @@ The original script was tweaked on 19/8/18 to add values of oromotor_ss_2 for th
 #########################################################################################
 #Specify columns to retain that are common to both sct and twin
 #NB we are using oromotor_ss2, which is renormed against the TD twin group
-keepcols <- c('record_id','female','age_at_test','partial_testing','pass_hearing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
+keepcols <- c('record_id','fam_id','female','age_at_test','partial_testing','pass_hearing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
               'sent_rep_ss','oromotor_ss_2','nonword_rep_ss','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
               'hyperkinetic_icd_r1','adhd_comb_dsm_r1','adhd_hyp_dsm_r1','adhd_inatt_dsm_r1',
               'conduct_dsm_r1','asd_dsm_r1','autism_icd_r1','srs_t_score',
@@ -449,14 +451,42 @@ NB as currently defined, not taking into account co-twin status. So a twin_nocon
 
 ```{r groupcreate}
 #####################################################################################
+#first code SLT into 0, 1 or 2;  2 indicates SALT beyond 4 yr, 1 is assessment or preschool only
+all.short$sltcode<-0
+w<-c(which(all.short$slt==1),which(all.short$slt==8))
+all.short$sltcode[w]<-1
+w<-c(which(all.short$slt==2),which(all.short$slt==3))
+all.short$sltcode[w]<-2
+
+
 all.short<-filter(all.short,randomtwininclude<2) #remove twin2
 all.short$group8<-all.short$trisomy
 w<-which(all.short$bias==1)
 all.short$group8[w]<-all.short$group8[w]+3 #convert 1 2 3 to 4 5 6
-w<-which(all.short$randomtwininclude>0)
+w<-which(all.short$randomtwininclude>0) #just focus on twins
 all.short$group8[w]<-7
-w<-which(all.short$parentconc==1)
+w<-which(all.short$parentconc==1) #coded as NA for SCTs, so only twins coded here
 all.short$group8[w]<-8
+
+#add twins with SLT code 2 to group 8, even if no parental concern
+w<-intersect(which(all.short$group8==7),which(all.short$sltcode==2))
+all.short$group8[w]<-8
+
+#now remove from group 7 those who have an affected cotwin: either SLT or concerns
+cotwins<-filter(twin.short,randomtwininclude==2)
+f<-which(all.short$group8==7)
+cotwinremove<-vector()
+for (i in 1:length(f)){
+  thisrow<-f[i]
+  thisfam<-all.short$fam_id[thisrow]
+  g<-which(cotwins$fam_id==thisfam)
+  thisslt<-cotwins$slt[g]
+  thislangconcern<-cotwins$splang_conc[g]
+  if(thisslt==2 || thisslt==3 || thislangconcern==2 ||thislangconcern==3)
+  {cotwinremove<-c(cotwinremove,thisrow)}
+}
+all.short<-all.short[-cotwinremove,]
+
 all.short$group8level<-all.short$group8#useful to retain numeric code before converting to factor
 all.short$group8<-as.factor(all.short$group8)
 levels(all.short$group8)<-c('XXX.lowbias','XXY.lowbias','XYY.lowbias',
@@ -646,9 +676,9 @@ par(mfrow=c(4,4)) #4 row and 4 columns
 par(mar=c(5.1,4.1,4.1,0.2))
 for (i in 1:14){
   mytitle<-longname[i]
-  beeswarm(jitter(lobias.sct2[,nurange[i]],3)~mycontrast , data = lobias.sct2, xlab='Group',ylab='Scaled score',
-           pch = 16,cex=1,col=c(2,4),main=mytitle,ylim=c(50,140),spacing=.8)
-  bxplot(lobias.sct2[,nurange[i]]~mycontrast , data = lobias.sct2, probs = 0.5, col = 1,add=TRUE) #adds medians
+  beeswarm(jitter(lobias.sct2[,nurange[i]],3)~trisomyvstwin , data = lobias.sct2, xlab='Group',ylab='Scaled score',
+           pch = 16,cex=1,col=c(2,4),main=mytitle,ylim=c(50,140))
+  bxplot(lobias.sct2[,nurange[i]]~trisomyvstwin , data = lobias.sct2, probs = 0.5, col = 1,add=TRUE) #adds medians
 }
 dev.off()
 
@@ -734,8 +764,10 @@ Consider how CCC-2 profiles for SCTs compare with those in our previous paper. A
 w<-which(colnames(all.short)=='ccc_a')
 x<-which(colnames(all.short)=='group8')
 y<-which(colnames(all.short)=='group8level')
+z<-which(colnames(all.short)=='trisomy')
+z1<-which(colnames(all.short)=='bias')
 #make file with ID,  and CCC results, as well as group8; gender, age added at end
-cccbit<-all.short[,c(1,(w-2):(w+10),x,y,2,3)]#2 before ccc_a is GCC and SIDC
+cccbit<-all.short[,c(1,(w-2):(w+10),x,y,z,z1,2,3)]#2 before ccc_a is GCC and SIDC
 
 w<-which(is.na(cccbit$ccc2_consistent))
 cccbit$ccc2_consistent[w]<--1 #we need a count of missing data, so convert NA to -1
@@ -755,8 +787,33 @@ print(paste('All SCT:',1-sum(consistent.ccc[1:6,1])/sum(consistent.ccc[1:6,])))
 print(paste('Twin:',1-sum(consistent.ccc[7:8,1])/sum(consistent.ccc[7:8,])))
 
 ```
-##Now analyse CCC-2 for 8 groups
+##Analysis to explore factor affecting response rates
+```{r logreg.cccresponse}
+all.short2<-all.short
+for(i in 1:length(all.short2[,1]))
+{
+all.short2$response[i]<-ifelse(is.na(all.short2$gcc[i]),0,1)
+all.short2$SCT[i]<-ifelse(is.na(all.short2$trisomy[i]),0,1)
+}
 
+#Make factor scores for predicting based on severity
+model.f5a <- ' f1 =~ wasi_vocab_ss + wdck_jhsn_ss + sent_rep_ss + oromotor_ss_2 
+              wasi_vocab_ss ~~ wdck_jhsn_ss'     
+fit.mod.E2 <- cfa(model.f5a, data = all.short2,estimator = "ML",missing = "ML")
+lbls<-c("Vocabulary", "Woodcock\nJohnson", "Sentence\nRepetition", "Oromotor","Language")
+
+#adjust scores to make suitable for logistic regression
+all.short2$lang_severity <- as.numeric( predict(fit.mod.E2)) #factor scores
+
+all.short2$mo_educ<-car::recode(all.short2$mo_educ,"0=1") #recode 0 as 1.
+
+all.short2$mo_educ<-as.factor(all.short2$mo_educ) #make factor for GLM
+#run logistic regression
+NR1 <- glm(response ~ lang_severity + mo_educ + singlepar + SCT,family=binomial(link='logit'),data=all.short2)
+summary(NR1)
+
+```
+##Now analyse CCC-2 for 8 groups
 ```{r ccc.analyse}
 #First remove the cases with no response or inconsistent
 ccc.data<-filter(cccbit,ccc2_consistent>0)
@@ -829,19 +886,106 @@ nsct<-nrow(ccc.gp3)
 ccc.gp2<-rbind(ccc.gp3,temp)
 ccc.gp2$group2<-1
 ccc.gp2$group2[1:nsct]<-2
-#remove those out of age range
-ccc.gp2<-filter(ccc.gp2,Age>71)
-ccc.gp2<-filter(ccc.gp2,Age<144)
+
+
 Y <- as.matrix(ccc.gp2[,colA:(colA+9)])
 fitccc2 <- manova(Y ~ ccc.gp2$group2)
 summary(fitccc2, test="Pillai")
+
+#Now do full 2 way analysis on hi and low bias trisomies
+temp1<-filter(ccc.data,group8level<7)
+Y6 <- as.matrix(temp1[,colA:(colA+9)])
+fitccc6 <- manova(Y6 ~ temp1$trisomy*temp1$bias)
+summary(fitccc6, test="Pillai")
+summary.aov(fitccc6) #- if you want to inspect individual language measures
+
+#GCC and SIDC - just do anova
+aov.gcc<-aov(temp1$gcc~temp1$trisomy*temp1$bias)
+summary(aov.gcc)
+beeswarm(temp1$gcc~temp1$trisomy*temp1$bias)
+
+aov.scdi<-aov(temp1$scdi~temp1$trisomy*temp1$bias)
+summary(aov.scdi)
+```
+
+```{r beeswarm.gcc}
+png_gcc_bees<-'beeswarm_gcc.png' #name to save png file
+png(png_gcc_bees,width=400,height=300)
+beeswarm(temp1$gcc~temp1$trisomy*temp1$bias, xlab='Group',ylab='GCC' ,
+           pch = 16,cex=.9,col=c(2,2,2,1,1,1),ylim=c(0,120))
+  bxplot(temp1$gcc~temp1$trisomy*temp1$bias, probs = 0.5, col = 1,lty=1,add=TRUE) #adds medians for all cases with dotted line
+  
+    
+  mean_TD<-mean(twin.TD$gcc,na.rm=T)
+  sd_TD<-sd(twin.TD$gcc,na.rm=T)
+  
+  up.lim<-mean_TD+sd_TD
+  low.lim<-mean_TD-sd_TD
+  
+  polygon(c(0,0,8,8), c(up.lim, low.lim, low.lim, up.lim),
+          col=adjustcolor("yellow",alpha.f=0.3), border = NA)
+abline(h=55,lty=3)
+dev.off()
 ```
 #Proportions meeting criteria for DLD
+And proportions having SALT
+Coded as: 
+0 never
+1 preschool
+2 beyond 4 yr
+3 ongoing
+8 assessed only
+9 no info
+
+```{r DLDcategories}
+#now recode according N language tests low
+#use the language tests scaled to 100 (cutoff 85), exclude reading, include GCC (cutoff 55)
+v<-which(colnames(all.short)=='Vocab')
+g<-which(colnames(all.short)=='gcc')
+all.short$Ntestlow<-0
+all.short$Ntestdone<-6
+for(i in 1:5){
+  thiscol<-i+v-1
+  w<-which(all.short[,thiscol]<85)
+  all.short$Ntestlow[w]<-all.short$Ntestlow[w]+1
+  w<-which(is.na(all.short[,thiscol]))
+  all.short$Ntestdone[w]<-all.short$Ntestdone[w]-1
+}
+#now add gcc
+  w<-which(all.short[,g]<55)
+  all.short$Ntestlow[w]<-all.short$Ntestlow[w]+1
+  w<-which(is.na(all.short[,g]))
+  all.short$Ntestdone[w]<-all.short$Ntestdone[w]-1
+
+  #table of whole range of low test
+ lowtab<- table(all.short$group8,all.short$Ntestlow)
+ round(prop.table(lowtab,1),2)
+ 
+   #binarise Ntestlow into 0/1 and 2+
+ all.short$dldcat<-0
+ w<-which(all.short$Ntestlow>1)
+ all.short$dldcat[w]<-1
+ #need to also add exclusionary categories: lowIQ,Autism,Hearing
+ w<-which(all.short$pass_hearing==0)
+ all.short$dldcat[w]<-4
+ 
+ #asd use rater 1 dsm5, DAWBA gives 1 unsure, 2 ASD, 3 Asperger and 4 other. We have used the 4 = other for cases such as SCD where only 2 domains are met
+  w<-c(which(all.short$asd_dsm_r1==2),which(all.short$asd_dsm_r1==3)) #categories 2-3 treated as Asd
+ all.short$dldcat[w]<-3
+ #lowIQ
+ w<-which(all.short$piq<70)
+ all.short$dldcat[w]<-2
 
 
-#Comparisons of high bias vs remainder
-
-
+ all.short$dldcat<-as.factor(all.short$dldcat)
+ levels(all.short$dldcat)<-c('TD','DLD','lowIQ','ASD','hearing')
+ dldcat<-table(all.short$dldcat,all.short$group8)
+ round(prop.table(dldcat,2),2)
+ 
+ 
+round(table(all.short$dldcat,all.short$sltcode),2)
+ 
+```
 ##Session information
 ```{r sessinfo}
 sessionInfo()
