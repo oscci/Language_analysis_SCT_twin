@@ -4,7 +4,8 @@ author: Dorothy Bishop
 date: started August 2018
 output: html_document
 ---
-NB Need to remove ASD/low IQ from language calculations - though could retain in beeswarm
+NB Need to remove ASD/low IQ from language calculations - though could retain in beeswarm?
+
 
 `r Sys.time()`
 
@@ -114,11 +115,12 @@ The original script was tweaked on 19/8/18 to add values of oromotor_ss_2 for th
 #Specify columns to retain that are common to both sct and twin
 #NB we are using oromotor_ss2, which is renormed against the TD twin group
 keepcols <- c('record_id','fam_id','female','age_at_test','partial_testing','pass_hearing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
-              'sent_rep_ss','oromotor_ss_2','nonword_rep_ss','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
+              'sent_rep_ss','nonword_rep_ss','oromotor_ss_2','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
               'hyperkinetic_icd_r1','adhd_comb_dsm_r1','adhd_hyp_dsm_r1','adhd_inatt_dsm_r1',
               'conduct_dsm_r1','asd_dsm_r1','autism_icd_r1','srs_t_score',
               'gcc','scdi','ccc_a','ccc_b','ccc_c','ccc_d','ccc_e','ccc_f',
-              'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent','mo_educ','fa_educ','deprivation_index','fam_structure','fam_position','wordcode','sentcode','walkcode','drycode')
+              'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent','mo_educ','fa_educ','deprivation_index','fam_structure','fam_position','wordcode','sentcode','walkcode','drycode',
+              'nepsy_oromotor_seq_raw')
 
 twin.short <- select(twin.data,keepcols)
 sct.short <- select(sct.data,keepcols) #NB 'select' is ambiguous between packages but should work ok if we use formr (otherwise need dplyr::select)
@@ -276,14 +278,14 @@ all.short$fa_educ[w]<-NA
 Rescale all variables to mean 100 and SD 15 and save in new columns
 
 ```{r rescalelang}
-shortlangnames<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','Oromotor','NwdRep',
+shortlangnames<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','NwdRep','Oromotor',
                   'ReadAcc','ReadComp','ReadRate','TOWREwd','TOWREnwd',
                   'PicName','DigitName')
 
 #convert all variables to same scale: mean 100 and SD 15
 #This has to be hard coded because different tests on different scales
 langcogcols<-c("wasi_matrices_ss" ,"wasi_block_design_ss", "wasi_vocab_ss" ,
-               "wdck_jhsn_ss" , "sent_rep_ss" ,  "oromotor_ss_2","nonword_rep_ss", 
+               "wdck_jhsn_ss" , "sent_rep_ss" , "nonword_rep_ss",  "oromotor_ss_2",
                "nara_acc_ss" ,"nara_comp_ss","nara_rate_ss" ,"towre_words_ss",
                "towre_nonwords_ss","phab_pic_ss","phab_digit_ss")
 #Note we now are using the oromotor_ss_2 variable: normed against TD twins
@@ -302,7 +304,7 @@ for (i in 1:3){
   all.short[,(i+ncol)]<- 100+15*(all.short[,langcols[i]]-oldmean)/oldsd
 }
 
-for (i in c(5,7)){
+for (i in c(5,6)){
   oldmean<-10
   oldsd<-3
   all.short[,(i+ncol)]<- 100+15*(all.short[,langcols[i]]-oldmean)/oldsd
@@ -472,6 +474,10 @@ all.short$group8[w]<-8
 w<-intersect(which(all.short$group8==7),which(all.short$sltcode==2))
 all.short$group8[w]<-8
 
+#Tried removing those with affected cotwin, but it has little effect other than to reduce N.
+#This is therefore not done at present, though code retained.
+remove.by.cotwin<-0
+if(remove.by.cotwin==1){
 #now remove from group 7 those who have an affected cotwin: either SLT or concerns
 cotwins<-filter(twin.short,randomtwininclude==2)
 f<-which(all.short$group8==7)
@@ -486,6 +492,7 @@ for (i in 1:length(f)){
   {cotwinremove<-c(cotwinremove,thisrow)}
 }
 all.short<-all.short[-cotwinremove,]
+}
 
 all.short$group8level<-all.short$group8#useful to retain numeric code before converting to factor
 all.short$group8<-as.factor(all.short$group8)
@@ -572,6 +579,64 @@ round(prop.table(nsib.tab,1),3)
 
 ncol<-length(colnames(all.short)) #we will use this in later block as start column when adding new columns with all scaled on same scale
 ```
+#Proportions meeting criteria for DLD
+And proportions having SALT
+Coded as: 
+0 never
+1 preschool
+2 beyond 4 yr
+3 ongoing
+8 assessed only
+9 no info
+
+```{r DLDcategories}
+#now recode according N language tests low
+#use the language tests scaled to 100 (cutoff 85), exclude reading, include GCC (cutoff 55)
+v<-which(colnames(all.short)=='Vocab')
+g<-which(colnames(all.short)=='gcc')
+all.short$Ntestlow<-0
+all.short$Ntestdone<-6
+for(i in 1:5){
+  thiscol<-i+v-1
+  w<-which(all.short[,thiscol]<85)
+  all.short$Ntestlow[w]<-all.short$Ntestlow[w]+1
+  w<-which(is.na(all.short[,thiscol]))
+  all.short$Ntestdone[w]<-all.short$Ntestdone[w]-1
+}
+#now add gcc
+  w<-which(all.short[,g]<55)
+  all.short$Ntestlow[w]<-all.short$Ntestlow[w]+1
+  w<-which(is.na(all.short[,g]))
+  all.short$Ntestdone[w]<-all.short$Ntestdone[w]-1
+
+  #table of whole range of low test
+ lowtab<- table(all.short$group8,all.short$Ntestlow)
+ round(prop.table(lowtab,1),2)
+ 
+   #binarise Ntestlow into 0/1 and 2+
+ all.short$dldcat<-0
+ w<-which(all.short$Ntestlow>1)
+ all.short$dldcat[w]<-1
+ #need to also add exclusionary categories: lowIQ,Autism,Hearing
+ w<-which(all.short$pass_hearing==0)
+ all.short$dldcat[w]<-4
+ 
+ #asd use rater 1 dsm5, DAWBA gives 1 unsure, 2 ASD, 3 Asperger and 4 other. We have used the 4 = other for cases such as SCD where only 2 domains are met
+  w<-c(which(all.short$asd_dsm_r1==2),which(all.short$asd_dsm_r1==3)) #categories 2-3 treated as Asd
+ all.short$dldcat[w]<-3
+ #lowIQ
+ w<-which(all.short$piq<70)
+ all.short$dldcat[w]<-2
+ 
+ all.short$dldlevel<-all.short$dldcat #retain numeric level for easy of filtering later
+ 
+ all.short$dldcat<-as.factor(all.short$dldcat)
+ levels(all.short$dldcat)<-c('TD','DLD','lowIQ','ASD','hearing')
+ dldcat<-table(all.short$dldcat,all.short$group8)
+ round(prop.table(dldcat,2),2)
+ 
+round(table(all.short$dldcat,all.short$sltcode),2) #check how SALT relates to DLD status
+```
 ##Analyse language test and reading data
 First select the data 
 
@@ -579,11 +644,16 @@ Then make shorter sctfile that excludes the high bias group
 
 ```{r make.subfiles}
 lobias.sct<-filter(all.short,group8level%in%c(1:3,8)) #we're using numeric code for factor level to make this easier
+#exclude those with ASD, low IQ or hearing exclusion
+lobias.sct<-filter(lobias.sct,dldlevel<2)
+
 lobias.sct$Group<-as.factor(lobias.sct$group8level)
 levels(lobias.sct$Group)<-c('XXX','XXY','XYY','Twin')
 
 #exclude those with incomplete data as they won't feature in MANOVA
-lobias.sct2<-filter(lobias.sct,langdatacomplete==1)
+lobias.sct2<-filter(lobias.sct,langdatacomplete==1) 
+
+
 
 #exclude those outside twin age band - this is a new file so we can compute medians for those separately
 lobias.sct3<-filter(lobias.sct2,ageband==2)
@@ -766,9 +836,11 @@ x<-which(colnames(all.short)=='group8')
 y<-which(colnames(all.short)=='group8level')
 z<-which(colnames(all.short)=='trisomy')
 z1<-which(colnames(all.short)=='bias')
+z2<-which(colnames(all.short)=='dldlevel')
 #make file with ID,  and CCC results, as well as group8; gender, age added at end
-cccbit<-all.short[,c(1,(w-2):(w+10),x,y,z,z1,2,3)]#2 before ccc_a is GCC and SIDC
+cccbit<-all.short[,c(1,(w-2):(w+10),x,y,z,z1,z2,2,3)]#2 before ccc_a is GCC and SIDC
 
+cccbit<-filter(cccbit,dldlevel<2) #remove ASD, low IQ etc
 w<-which(is.na(cccbit$ccc2_consistent))
 cccbit$ccc2_consistent[w]<--1 #we need a count of missing data, so convert NA to -1
 consistent.ccc<-table(cccbit$group8,cccbit$ccc2_consistent)
@@ -886,8 +958,6 @@ nsct<-nrow(ccc.gp3)
 ccc.gp2<-rbind(ccc.gp3,temp)
 ccc.gp2$group2<-1
 ccc.gp2$group2[1:nsct]<-2
-
-
 Y <- as.matrix(ccc.gp2[,colA:(colA+9)])
 fitccc2 <- manova(Y ~ ccc.gp2$group2)
 summary(fitccc2, test="Pillai")
@@ -897,12 +967,11 @@ temp1<-filter(ccc.data,group8level<7)
 Y6 <- as.matrix(temp1[,colA:(colA+9)])
 fitccc6 <- manova(Y6 ~ temp1$trisomy*temp1$bias)
 summary(fitccc6, test="Pillai")
-summary.aov(fitccc6) #- if you want to inspect individual language measures
+#summary.aov(fitccc6) #- if you want to inspect individual language measures
 
 #GCC and SIDC - just do anova
 aov.gcc<-aov(temp1$gcc~temp1$trisomy*temp1$bias)
 summary(aov.gcc)
-beeswarm(temp1$gcc~temp1$trisomy*temp1$bias)
 
 aov.scdi<-aov(temp1$scdi~temp1$trisomy*temp1$bias)
 summary(aov.scdi)
@@ -927,65 +996,7 @@ beeswarm(temp1$gcc~temp1$trisomy*temp1$bias, xlab='Group',ylab='GCC' ,
 abline(h=55,lty=3)
 dev.off()
 ```
-#Proportions meeting criteria for DLD
-And proportions having SALT
-Coded as: 
-0 never
-1 preschool
-2 beyond 4 yr
-3 ongoing
-8 assessed only
-9 no info
 
-```{r DLDcategories}
-#now recode according N language tests low
-#use the language tests scaled to 100 (cutoff 85), exclude reading, include GCC (cutoff 55)
-v<-which(colnames(all.short)=='Vocab')
-g<-which(colnames(all.short)=='gcc')
-all.short$Ntestlow<-0
-all.short$Ntestdone<-6
-for(i in 1:5){
-  thiscol<-i+v-1
-  w<-which(all.short[,thiscol]<85)
-  all.short$Ntestlow[w]<-all.short$Ntestlow[w]+1
-  w<-which(is.na(all.short[,thiscol]))
-  all.short$Ntestdone[w]<-all.short$Ntestdone[w]-1
-}
-#now add gcc
-  w<-which(all.short[,g]<55)
-  all.short$Ntestlow[w]<-all.short$Ntestlow[w]+1
-  w<-which(is.na(all.short[,g]))
-  all.short$Ntestdone[w]<-all.short$Ntestdone[w]-1
-
-  #table of whole range of low test
- lowtab<- table(all.short$group8,all.short$Ntestlow)
- round(prop.table(lowtab,1),2)
- 
-   #binarise Ntestlow into 0/1 and 2+
- all.short$dldcat<-0
- w<-which(all.short$Ntestlow>1)
- all.short$dldcat[w]<-1
- #need to also add exclusionary categories: lowIQ,Autism,Hearing
- w<-which(all.short$pass_hearing==0)
- all.short$dldcat[w]<-4
- 
- #asd use rater 1 dsm5, DAWBA gives 1 unsure, 2 ASD, 3 Asperger and 4 other. We have used the 4 = other for cases such as SCD where only 2 domains are met
-  w<-c(which(all.short$asd_dsm_r1==2),which(all.short$asd_dsm_r1==3)) #categories 2-3 treated as Asd
- all.short$dldcat[w]<-3
- #lowIQ
- w<-which(all.short$piq<70)
- all.short$dldcat[w]<-2
-
-
- all.short$dldcat<-as.factor(all.short$dldcat)
- levels(all.short$dldcat)<-c('TD','DLD','lowIQ','ASD','hearing')
- dldcat<-table(all.short$dldcat,all.short$group8)
- round(prop.table(dldcat,2),2)
- 
- 
-round(table(all.short$dldcat,all.short$sltcode),2)
- 
-```
 ##Session information
 ```{r sessinfo}
 sessionInfo()
