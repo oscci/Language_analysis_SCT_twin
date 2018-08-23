@@ -34,6 +34,14 @@ library(standardize)
 library(ggpubr)
 library(reshape2)
 library(ggcorrplot)
+library(DiagrammeR)
+library(DiagrammeRsvg)
+library(magrittr)
+library(svglite)
+library(rsvg)
+library(png)
+library(stringr)
+library(car)
 
 #################################################################################
 
@@ -996,7 +1004,219 @@ beeswarm(temp1$gcc~temp1$trisomy*temp1$bias, xlab='Group',ylab='GCC' ,
 abline(h=55,lty=3)
 dev.off()
 ```
+## Flow diagrams
 
+
+```{r flow_sct}
+
+
+all.short$exclude<-car::recode(all.short$dldlevel,"0=0;1=0;2=1;3=1;4=1")
+all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
+
+
+
+  y1<-table(all.short$randomtwininclude)[[1]]
+  
+  biasLow <- table(all.short$bias)[[1]]
+  biasHigh <- table(all.short$bias)[[2]]
+  #--------------------------------------------------------------------------------#
+  
+  mytab<-table(all.short$trisomy,all.short$bias,all.short$exclude)
+  
+  #--------------------------------------------------------------------------------#
+  
+  all.short.age<-all.short[all.short$ageband==2,]
+  
+  mytab2<-table(all.short.age$trisomy,all.short.age$bias,all.short.age$exclude)
+  
+  
+  #--------------------------------------------------------------------------------#
+  
+  all.short.ccc<-all.short[all.short$ccc2_data==1,]
+  
+  mytab3<-table(all.short.ccc$trisomy,all.short.ccc$bias,all.short.ccc$exclude)
+  
+  #--------------------------------------------------------------------------------#
+
+ excl3 <- sum(mytab[1:3,1,2])
+ excl4 <- sum(mytab[1:3,2,2]) 
+ 
+ xxx_a1<-mytab[1,1,1]
+ xxx_a2<-mytab2[1,1,1]
+ xxx_a3<-mytab3[1,1,1]
+ 
+ xxy_a1<-mytab[2,1,1]
+ xxy_a2<-mytab2[2,1,1]
+ xxy_a3<-mytab3[2,1,1]
+   
+ xyy_a1<-mytab[3,1,1]
+ xyy_a2<-mytab2[3,1,1]
+ xyy_a3<-mytab3[3,1,1]
+
+ xxx_b1<-mytab[1,2,1]
+ xxx_b2<-mytab2[1,2,1]
+ xxx_b3<-mytab3[1,2,1]
+   
+ xxy_b1<-mytab[2,2,1]
+ xxy_b2<-mytab2[2,2,1]
+ xxy_b3<-mytab3[2,2,1]
+   
+ xyy_b1<-mytab[3,2,1]
+ xyy_b2<-mytab2[3,2,1]
+ xyy_b3<-mytab3[3,2,1]
+   
+  #now create flow chart ; TB denotes top to bottom
+  #Need to add labels along the side: top row 'Reason for testing or Time of testing'
+  #Then trisomy, then with DAWBA data
+
+  flow1<-DiagrammeR::grViz("
+              digraph a_nice_graph {
+              
+              # node definitions with substituted label text
+              node [shape = plaintext, fontname = Helvetica]
+              X[label='@@1']
+              Y[label= 'BIAS']
+              Z[label = 'Trisomy']
+              
+              node [shape=square]
+              A[label='@@2',fillcolor=lightBlue]
+              
+              C[label='@@3']
+              D[label='@@4']
+
+              E[label='@@5']
+              F[label='@@6']
+              G[label='@@7']
+              H[label='@@8']
+
+              I[label='@@9']
+              J[label='@@10']
+              K[label='@@11']
+              L[label='@@12']
+
+              node [shape = plaintext]
+              Q[label='* full sample, ** 6-11.11 age sample, *** CCC-2 sample']
+              
+ 
+              
+              # edge definitions with the node IDs
+              A -> {C,D}
+              C -> {E,F,G,H}
+              D -> {I,J,K,L}
+             
+              
+              
+              X -> Y [alpha=0,color='white']
+              Y -> Z [alpha=0,color='white']
+              F -> Q [alpha=0,color='white']
+              }
+              
+              [1]: paste0(' ')
+              [2]: paste0('SCT:\\n N = ',y1)
+              [3]: paste0('low bias,\\n N = ',biasLow)
+              [4]: paste0('high bias, \\nN = ',biasHigh)
+              [5]: paste0('XXX','\\n', 'N* = ',xxx_a1,'\\n', 'N** = ',xxx_a2,'\\n', 'N*** = ',xxx_a3)
+              [6]: paste0('XXY',' \\n', 'N* = ',xxy_a1,' \\n', 'N** = ',xxy_a2,' \\n', 'N*** = ',xxy_a3)
+              [7]: paste0('XYY',' \\n', 'N* = ',xyy_a1,' \\n', 'N** = ',xyy_a2,' \\n', 'N*** = ',xyy_a3)
+              [8]: paste0('Excluded',' \\n', 'N = ',excl3)
+              [9]: paste0('XXX',' \\n', 'N* = ',xxx_b1,' \\n', 'N** = ',xxx_b2,' \\n', 'N*** = ',xxx_b3)
+              [10]: paste0('XXY',' \\n', 'N* = ',xxy_b1,' \\n', 'N** = ',xxy_b2,' \\n', 'N*** = ',xxy_b3)
+              [11]: paste0('XYY',' \\n', 'N* = ',xyy_b1,' \\n', 'N** = ',xyy_b2,' \\n', 'N*** = ',xyy_b3)
+              [12]: paste0('Excluded',' \\n', 'N = ',excl4)
+              ")
+  
+  
+
+flow1 %>% export_svg %>% charToRaw %>% rsvg_png("SCT_flow.png")
+
+```
+![](SCT_flow.png)
+
+
+```{r flow_twins}
+
+#Now do plot for twin data
+
+y1<-table(all.short$randomtwininclude)[[2]]
+
+exc1<-table(all.short$exclude[all.short$randomtwininclude==1])[[2]]
+inc1<-table(all.short$exclude[all.short$randomtwininclude==1])[[1]]
+
+all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
+
+all.short.exc<-all.short[all.short$exclude==0 & all.short$randomtwininclude==1,]
+
+noconcernM<-table(all.short.exc$parentconc[all.short.exc$female==0])[[1]]
+concernM<-table(all.short.exc$parentconc[all.short.exc$female==0])[[2]]
+
+noconcernF<-table(all.short.exc$parentconc[all.short.exc$female==1])[[1]]
+concernF<-table(all.short.exc$parentconc[all.short.exc$female==1])[[2]]
+
+CCC_LI_Y <- table(all.short.exc$ccc2_data[all.short.exc$parentconc==1])[[2]]
+CCC_LI_N <- table(all.short.exc$ccc2_data[all.short.exc$parentconc==1])[[1]]
+
+CCC_TD_Y <- table(all.short.exc$ccc2_data[all.short.exc$parentconc==0])[[2]]
+CCC_TD_N <- table(all.short.exc$ccc2_data[all.short.exc$parentconc==0])[[1]]
+
+#now create flow chart ; TB denotes top to bottom
+
+label3<-' '
+
+flow2<-DiagrammeR::grViz("
+            digraph twinflow {
+            
+            # node definitions with substituted label text
+            node [shape = plaintext, fontname = Helvetica]
+            X[label='@@1']
+             Y[label= 'Exclude:\\n ASD, IQ, hearing']
+            Z[label= 'Total N twin children']
+            Q[label='CCC-2 data\\n available']
+            
+            node [shape=square]
+            I[label='@@10']
+            A[label='@@2',fillcolor=lightBlue]
+            B[label='@@3']
+            
+            C[label='@@4']
+            D[label='@@5']
+            E[label='@@6']
+            F[label='@@7']
+            G[label='@@8']
+            H[label='@@9']
+            
+            
+            
+            # edge definitions with the node IDs
+            I -> {A B}
+            B -> {G H}
+            G -> {C D}
+            H -> {E F}
+            
+            
+            
+            X -> Y [alpha=0,color='white']
+            Y -> Z [alpha=0,color='white']
+            Z -> Q [alpha=0,color='white']
+            }
+            
+            [1]: paste0(label3, ':\\n ',' ')
+            [2]: paste0('Excluded:\\n N = ',exc1)
+            [3]: paste0('Included:\\n N = ',inc1)
+            [4]: paste0('with CCC-2:\\nN = ',CCC_LI_Y)
+            [5]: paste0('without CCC-2:\\nN = ',CCC_LI_N)
+            [6]: paste0('with CCC-2:\\nN = ',CCC_TD_Y)
+            [7]:  paste0('without CCC-2:\\nN = ',CCC_TD_N)
+            [8]: paste0('LI: \\n Parental concern \\n or SALT,\\n N (male) = ',concernM,'\\n N (female) = ',concernF)
+            [9]: paste0('TD: \\n No concern \\n No SALT,\\n N (male) = ',noconcernM,'\\n N (female) = ',noconcernF)
+            [10]: paste0(y1,' twin pairs, \\n 1 selected at \\n random')
+            
+            ")
+
+flow2 %>% export_svg %>% charToRaw %>% rsvg_png("twins_flow.png")
+
+```
+
+![](twins_flow.png)
 ##Session information
 ```{r sessinfo}
 sessionInfo()
