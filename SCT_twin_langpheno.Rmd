@@ -46,6 +46,10 @@ library(rsvg)
 library(png)
 library(stringr)
 library(car)
+library(kableExtra)
+library(flextable)
+library(officer)
+testbattery<-read.csv('testbattery.csv')
 
 #################################################################################
 
@@ -695,7 +699,7 @@ lobias.sct3<-filter(lobias.sct2,ageband==2)
 twin.TD<-filter(all.short,group8level==7) #we're using numeric code for factor level to make this easier
 twin.TD$Group<-'TD.twin'
 
-trisomy.only<-filter(all.short,group8level<7) 
+trisomy.only<-filter(all.short,group8xlevel<7)  #NB with 8x we omit the ASD etc exclusionary cases
 
 ```
 
@@ -737,7 +741,7 @@ for (i in 1:14){
 }
 dev.off()
 ```
-![Beeswarm plots](beeswarm_lang.png)
+
 
 
 
@@ -757,7 +761,6 @@ print('Ns for analysis:')
 print(mytab)
 mymanova3
 #summary.aov(gp3.fit) - if you want to inspect individual language measures
-
 
 
 
@@ -1049,6 +1052,10 @@ all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
   mytab<-table(all.short$trisomy,all.short$bias,all.short$exclude)
   
   #--------------------------------------------------------------------------------#
+    mytab1<-table(all.short$langdatacomplete,all.short$group8xlevel)
+    #those with complete language data in row 2
+  
+  #--------------------------------------------------------------------------------#
   
   all.short.age<-all.short[all.short$ageband==2,]
   
@@ -1073,27 +1080,33 @@ all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
  excl4b <- mytab[2,2,2]
  excl4c <- mytab[3,2,2]
  
- xxx_a1<-mytab[1,1,1]
+ xxx_a0<-mytab[1,1,1]
+ xxx_a1<-mytab1[2,1]
  xxx_a2<-mytab2[1,1,1]
  xxx_a3<-mytab3[1,1,1]
  
- xxy_a1<-mytab[2,1,1]
+  xxy_a0<-mytab[2,1,1]
+ xxy_a1<-mytab1[2,2]
  xxy_a2<-mytab2[2,1,1]
  xxy_a3<-mytab3[2,1,1]
    
- xyy_a1<-mytab[3,1,1]
+ xyy_a0<-mytab[3,1,1]
+  xyy_a1<-mytab1[2,3]
  xyy_a2<-mytab2[3,1,1]
  xyy_a3<-mytab3[3,1,1]
 
- xxx_b1<-mytab[1,2,1]
+ xxx_b0<-mytab[1,2,1]
+ xxx_b1<-mytab1[2,4]
  xxx_b2<-mytab2[1,2,1]
  xxx_b3<-mytab3[1,2,1]
    
- xxy_b1<-mytab[2,2,1]
+ xxy_b0<-mytab[2,2,1]
+ xxy_b1<-mytab1[2,5]
  xxy_b2<-mytab2[2,2,1]
  xxy_b3<-mytab3[2,2,1]
    
- xyy_b1<-mytab[3,2,1]
+ xyy_b0<-mytab[3,2,1]
+ xyy_b1<-mytab1[2,6]
  xyy_b2<-mytab2[3,2,1]
  xyy_b3<-mytab3[3,2,1]
    
@@ -1127,7 +1140,7 @@ all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
               L[label='@@12']
 
               node [shape = plaintext]
-              Q[label='* Full sample, ** Aged 6 to 11 yr, *** With useable CCC-2 data']
+              Q[label='* With complete language data, ** Complete language: Aged 6 to 11 yr, *** With useable CCC-2 data']
               
  
               
@@ -1149,13 +1162,13 @@ all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
               [2]: paste0('SCT:\\n N = ',y1)
               [3]: paste0('Low bias,\\n N = ',biasLow)
               [4]: paste0('High bias, \\nN = ',biasHigh)
-              [5]: paste0('XXX','\\n', 'N* = ',xxx_a1,'\\n', 'N** = ',xxx_a2,'\\n', 'N*** = ',xxx_a3)
-              [6]: paste0('XXY',' \\n', 'N* = ',xxy_a1,' \\n', 'N** = ',xxy_a2,' \\n', 'N*** = ',xxy_a3)
-              [7]: paste0('XYY',' \\n', 'N* = ',xyy_a1,' \\n', 'N** = ',xyy_a2,' \\n', 'N*** = ',xyy_a3)
+              [5]: paste0('XXX','\\n', 'N = ',xxx_a0,'\\n','N* = ',xxx_a1,'\\n', 'N** = ',xxx_a2,'\\n', 'N*** = ',xxx_a3)
+              [6]: paste0('XXY',' \\n', 'N = ',xxy_a0,' \\n','N* = ',xxy_a1,' \\n', 'N** = ',xxy_a2,' \\n', 'N*** = ',xxy_a3)
+              [7]: paste0('XYY',' \\n','N = ',xyy_a0,' \\n', 'N* = ',xyy_a1,' \\n', 'N** = ',xyy_a2,' \\n', 'N*** = ',xyy_a3)
               [8]: paste0('Excluded',' \\n', '(N = ',excl3,')\\n',excl3a,' XXX','\\n',excl3b,' XXY','\\n',excl3c,' XYY')
-              [9]: paste0('XXX',' \\n', 'N* = ',xxx_b1,' \\n', 'N** = ',xxx_b2,' \\n', 'N*** = ',xxx_b3)
-              [10]: paste0('XXY',' \\n', 'N* = ',xxy_b1,' \\n', 'N** = ',xxy_b2,' \\n', 'N*** = ',xxy_b3)
-              [11]: paste0('XYY',' \\n', 'N* = ',xyy_b1,' \\n', 'N** = ',xyy_b2,' \\n', 'N*** = ',xyy_b3)
+              [9]: paste0('XXX',' \\n', 'N = ',xxx_b0,' \\n','N* = ',xxx_b1,' \\n', 'N** = ',xxx_b2,' \\n', 'N*** = ',xxx_b3)
+              [10]: paste0('XXY',' \\n', 'N = ',xxy_b0,' \\n','N* = ',xxy_b1,' \\n', 'N** = ',xxy_b2,' \\n', 'N*** = ',xxy_b3)
+              [11]: paste0('XYY',' \\n','N = ',xyy_b0,' \\n', 'N* = ',xyy_b1,' \\n', 'N** = ',xyy_b2,' \\n', 'N*** = ',xyy_b3)
               [12]: paste0('Excluded',' \\n', '(N = ',excl4,')\\n',excl4a,' XXX','\\n',excl4b,' XXY','\\n',excl4c,' XYY')
               ")
   
@@ -1281,10 +1294,67 @@ We recruited `r tab_sct[1,1]+tab_sct[1,2]` girls with XXX, `r tab_sct[2,1]+tab_s
 
 **Exclusionary criteria**. Given our current focus on language disorder, we excluded children who had a nonverbal ability scaled score more than 2 SD below the mean (`r sum(excludetab[3,1,])` Low Bias and `r sum(excludetab[3,2,])` High Bias), those who met criteria for autism spectrum disorder (ASD) (`r sum(excludetab[4,1,])` Low Bias and `r sum(excludetab[4,2,])` High Bias) and those who failed a hearing screen (`r sum(excludetab[5,1,])` Low Bias and `r sum(excludetab[5,2,])` High Bias). This enabled us to make a direct comparison with the twin sample, which also excluded children on this basis, and to see how far language problems were seen in children who did not have accompanying conditions that are likely to affect language function. However, note that this means that our conclusions are based on a selected sample of trisomy cases. ASD and other diagnoses in children with sex chromosome trisomies will be the focus of a companion paper.  
 
-**Missing data**. Where a child had missing data on just one of the language/cognitive tests, that value was prorated from the mean of the other measures. Likewise, when there was just one missing measure on reading-related tests, the value as prorated from other reading measures. `r sum(Nmisslang1,Nmisslang2)` children had more missing data than this, and were excluded from the current analyses. This included `r N5yr1+N5yr2` five-year-olds, for whom standard scores were not computable as they fell below the age range of norms. All but `r Nmisslang1-N5yr1` cases of missing data in children aged over 5 years came from the High Bias group, reflecting refusal or inability to attempt some tests. Norms for the CCC-2 extend across the full age range covered here, but `r Nmissccc+Nbadccc` children had missing data because parents either did not complete the CCC-2 (N = `r Nmissccc`), or because they failed the consistency check (N = `r Nbadccc`), which is suggestive of invalid responses.  
+**Missing data**. Where a child had missing data on just one of the language/cognitive tests, that value was prorated from the mean of that child on the other measures. Likewise, when there was just one missing measure on reading-related tests, the value as prorated from other reading measures. `r sum(Nmisslang1,Nmisslang2)` children had more missing data than this, and were excluded from the current analyses. This included `r N5yr1+N5yr2` five-year-olds, for whom standard scores were not computable as they fell below the age range of norms. All but `r Nmisslang1-N5yr1` cases of missing data in children aged over 5 years came from the High Bias group, reflecting refusal or inability to attempt some tests. Norms for the CCC-2 extend across the full age range covered here, but `r Nmissccc+Nbadccc` children had missing data because parents either did not complete the CCC-2 (N = `r Nmissccc`), or because they failed the consistency check (N = `r Nbadccc`), which is suggestive of invalid responses.  
 
 **Age range**. When comparing test profiles of trisomy cases with those of twins with language concerns, we restricted consideration to children covering the same age range, i.e. 6 yr 0 months to 11 yr 11 months. 
 
 
 The numbers included in different analyses are shown in the flowchart in Figure 1.
+
 ![Figure 1. Numbers of children included in different analyses.](SCT_flow.png)
+
+###Comparison group  
+
+The comparison sample consisted of twins recruited via fliers sent to primary schools around the UK, advertisements on our group's website and via twins' clubs. The age range for this sample was narrower than for the SCT cases. We aimed to recruit families with twin children aged between 6 years 0 months and 11 years 11 months, with over-representation of those where one or both twins had language or literacy problems. Further details are provided in Wilson and Bishop (2018).   
+Our second question involved comparing the language profile of children with trisomies with that of children with language disorders of unknown cause. Usually, language disorder would be diagnosed on the basis of language test scores, but if we took that approach, the result would be a foregone conclusion, in that we would use the same measures to define the independent variable (language status) and the dependent variables. To avoid this circularity, twin children were subdivided according to parental concern about language and history of speech and language therapy (SALT), rather than by language test scores, which were treated as dependent variables. Parental concern was coded from the initial interview, and used to divide the twin sample into a ‘language concerns’ group with ongoing parental concerns about oral language (mild or severe) and the remainder (which included some cases where there had been transient concerns in preschool that had resolved, or where the concern affected only reading).  The latter is referred to as the ‘no concerns’ group. In addition, children who had received speech and language therapy after the age of 4 years were included in the ‘language concerns’ group. 
+We followed the CATALISE criteria for DLD and excluded twin pairs if either twin had a pre-existing diagnosis of autism spectrum disorder (ASD), failed the hearing screen, had a performance IQ score below 70, or had a serious long-term illness; other diagnoses, such as dyslexia, ADHD, or dyspraxia, were not grounds for exclusion (Bishop et al., 2017).   
+One twin from each pair was selected at random to avoid dependencies in the data. The final sample consisted of `r concernM+concernF` children in the language concerns group, and `r noconcernM+noconcernF` children with no concerns.  The latter group were used to derive a normative range against which to evaluate the other groups on language measures. Figure 2 shows the number of twin children included in the study, and the number for whom useable CCC-2 data were available.
+
+![Figure 2. Numbers of twin children with and without language concerns.](twins_flow.png)
+
+##Methods
+
+###Language, literacy and cognitive assessments###
+
+The assessment battery administered to the child is shown in Table 1. 
+
+```{r table1, echo=FALSE}
+#usual problems with getting tables to print in Word. Seems I need pandoc 2.0
+#https://davidgohel.github.io/flextable/articles/overview.html
+#autofit(regulartable(testbattery))
+regulartable(testbattery)
+```
+Parents were asked to complete the Children’s Communication Checklist – 2 (CCC-2: Bishop, 2003) and Social Responsiveness Scales (SRS: Constantino, 2005) and return them by mail; the response rate was 86% for the trisomy families and 83% for the twin families.  The SRS data and results from an online interview covering behavioural and psychiatric characteristics will be described in a companion paper. 
+Results from the assessments in table 1 were converted to age-scaled scores on a common scale with mean 100 and SD 15. All tests had published norms covering the age range of the twin sample (6 to 11 years), but some did not extend outside this range. As explained in Newbury et al. (2018), where feasible norms were extrapolated based on data from other samples encompassing the wider age range. For oromotor skills, however, extrapolated norms gave scaled scores that were well below the range of other tests. For this test, therefore the No Concerns twin group was used to derive norms, using the regression of total correct on age to compute a standardized residual, which was then scaled to mean 100 and SD 15.  
+
+##Covariates
+
+Two measures of socio-economic variables that have been associated with language status were included in the analysis. These were:  
+a)	Educational level of mother, transformed into an ordinal scale based on age at leaving full-time education/qualifications obtained, with points of 0 (prior to age 16 years), 1 (16 years/did GCSE or O-levels), 2 (18 years/ did A-levels), 3 (21 years, degree), 4 (postgraduate study).   
+
+b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank over 32,000 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable, by dividing by 32750 before applying the qnorm function in R.  A value of zero was assigned to 13 SCT cases and 4 twin pairs from Wales, Scotland and Northern Ireland.
+
+
+##Procedure
+
+Children were seen for an individual assessment at home or school. The language, reading and nonverbal ability tests (Table 1) were given in an initial session lasting around 90 minutes, followed by an assessment of laterality, the results of which are described elsewhere (Wilson & Bishop, 2018).  
+
+##Analysis
+
+Characteristics of the samples on the covariates. (to be added)
+
+1.	**Comparison of three trisomy groups** (low risk of bias only)
+**Psychometric tests**
+As a first step, data from the psychometric test variables were plotted to see the range and distribution of scores for the three low bias trisomy groups, as shown in the red points in Figure 3. These plots exclude children with missing data on any test. The continuous horizontal bars show the median for each group.  All data have been scaled to mean of 100 and SD 15. The yellow shaded area shows the range covered by mean +/- 1 SD for the No Concerns twins. The distribution of blue points, corresponding to the Language Concerns twins will be discussed below.  
+
+An initial impression from these plots is that there is variation from test to test in severity of impairment, but on all measures, the most striking feature is a wide spread of scores, with some children scoring above average and others well below. Although the median test scores vary from trisomy to trisomy, the within-group variation is much greater than between group variation. 
+
+![Figure 3: Distributions of scores on psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group](beeswarm_lang.png)
+
+MANOVA was used to test whether there were reliable differences between the three trisomy groups on the 14 test measures, after taking covariates into account.  No effect of trisomy type was found (see Table 2).
+
+
+
+
+
+
