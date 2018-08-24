@@ -1,16 +1,17 @@
 ---
-title: "Logbook for analysis of SCT and twin language data"
+title: "Language and cognitive phenotypes in children with sex chromosome trisomies"
 author: "Dorothy Bishop"
 date: "started August 2018"
 output:
   word_document: default
+  pdf_document: default
   html_document: default
 ---
 
 
 `r Sys.time()`
 
-```{r load_packages, include = FALSE}
+```{r load_packages, include = FALSE, echo=FALSE}
 #################################################################################
 
 #devtools::install_github("rubenarslan/formr")
@@ -55,30 +56,31 @@ testbattery<-read.csv('testbattery.csv')
 
 ```
 
+```{r explan,include=FALSE}
+#Need to create a main analysis file in which we have a code that corresponds to group.
+#Have col for trisomy which corresponds to XXX, XXY, XYY, and NA: NA will be twins
+#Makes sense to use randomtwininclude to select just one from each pair
+#For trisomies, have a col that specifies whether highbias or lowbias
 
-Need to create a main analysis file in which we have a code that corresponds to group.
-Have col for trisomy which corresponds to XXX, XXY, XYY, and NA: NA will be twins
-Makes sense to use randomtwininclude to select just one from each pair
-For trisomies, have a col that specifies whether highbias or lowbias
+#Have a col that determines if meeting criteria for DLD - regardless of whether twin or not.
+#This can be same criterion as for doppler paper : this was:
+#<i>Results from the language/cognitive test battery were used to categorise children as having DLD if they scored more than 1 SD below population norms on two or more out of 13 language/literacy measures, and as TD if they scored below this threshold on no more than one measure. In previous studies, we have excluded children who met this criterion solely on literacy measures (TOWRE and NARA-II); 
+#Children were excluded from the sample if they met any of the following criteria: WASI nonverbal ability (performance IQ) more than two SDs below the population mean; diagnosis of autism spectrum disorder (ASD) in one or both twins; sensorineural hearing loss or failure of a hearing test on the day of testing; and brain injury or a serious medical condition affecting one or both twins.</i>
 
-Have a col that determines if meeting criteria for DLD - regardless of whether twin or not.
-This can be same criterion as for doppler paper : this was:
-<i>Results from the language/cognitive test battery were used to categorise children as having DLD if they scored more than 1 SD below population norms on two or more out of 13 language/literacy measures, and as TD if they scored below this threshold on no more than one measure. In previous studies, we have excluded children who met this criterion solely on literacy measures (TOWRE and NARA-II); 
-Children were excluded from the sample if they met any of the following criteria: WASI nonverbal ability (performance IQ) more than two SDs below the population mean; diagnosis of autism spectrum disorder (ASD) in one or both twins; sensorineural hearing loss or failure of a hearing test on the day of testing; and brain injury or a serious medical condition affecting one or both twins.</i>
+#nb index of multiple deprivation from postcode (English)
+#http://imd-by-postcode.opendatacommunities.org/
 
-nb index of multiple deprivation from postcode (English)
-http://imd-by-postcode.opendatacommunities.org/
-
-Also see re: CCC-2 nonresponse rates - https://www.aapor.org/About-Us/History/Presidential-Addresses/2004-Presidential-Address.aspx
-
-## Step 1
-Read in latest SCT from redcap.
-Do the same for the twins.
-Select variables to be used.
+#Also see re: CCC-2 nonresponse rates - https://www.aapor.org/About-Us/History/Presidential-Addresses/2004-Presidential-Address.aspx
+```
 
 
-```{r readredcap}
+```{r readredcap, include=FALSE}
 #########################################################################################
+## Step 1
+#Read in latest SCT from redcap.
+#Do the same for the twins.
+#Select variables to be used.
+
 #redcap.dir <-"c:/Users/pthompson/Dropbox/project SCT analysis/Data from Redcap/"
 redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
 
@@ -111,23 +113,13 @@ sct.data$fam_id<-NA #dummy column to ensure merges ok
 #----------------------------------------------------------------------------------
 ```
 
-#Select data for short file
-NB see SCT_twin_langpheno_orig.Rmd for script re creation of oromotor_ss_2.
-Basically, we took the TD twins as norms, and used regression of raw score on Age to create residualised scaled scores
-
-myintercept<-summary(mymod)$coefficients[1,1] gave value of 35.754
-myb<-summary(mymod)$coefficients[2,1] gave value of 0.07612
-myse<-summary(mymod)$sigma gave value of 9.1667
-Then formula is:
-
-z.oro<-100+15*(langcog$Oromotor_raw-(myintercept+langcog$Age*myb))/myse
-
-The original script was tweaked on 19/8/18 to add values of oromotor_ss_2 for the 2nd twin.
 
 
 
-```{r colselect}
+```{r colselect, include=FALSE}
 #########################################################################################
+
+
 #Specify columns to retain that are common to both sct and twin
 #NB we are using oromotor_ss2, which is renormed against the TD twin group
 keepcols <- c('record_id','fam_id','female','age_at_test','partial_testing','pass_hearing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
@@ -144,10 +136,25 @@ sct.short <- select(sct.data,keepcols) #NB 'select' is ambiguous between package
 
 ```
 
-```{r wrangledata}
+```{r wrangledata, include=FALSE}
 #----------------------------------------------------------------------------------
+#OROMOTOR SCORES!
+#NB see SCT_twin_langpheno_orig.Rmd for script re creation of oromotor_ss_2.
+#Basically, we took the TD twins as norms, and used regression of raw score on Age to create residualised scaled scores
 
+#myintercept<-summary(mymod)$coefficients[1,1] gave value of 35.754
+#myb<-summary(mymod)$coefficients[2,1] gave value of 0.07612
+#myse<-summary(mymod)$sigma gave value of 9.1667
+#Then formula is:
+
+#z.oro<-100+15*(langcog$Oromotor_raw-(myintercept+langcog$Age*myb))/myse
+
+#The original script was tweaked on 19/8/18 to add values of oromotor_ss_2 for the 2nd twin.
+###################################################################################################
 #Add columns that are specific to twins or SCTs so all aligned
+#Select data for short file
+
+
 sct.short$randomtwininclude <- 0 #this specifies child is not a twin but a trisomy
 sct.short$zygosity <- NA
 twin.short$randomtwininclude <- twin.data$randomtwininclude+1 #twins subdivided
@@ -195,20 +202,17 @@ all.short$ageband[w]<-3
 #########################################################################################
 ```
 
+```{r missingcheck, include=FALSE}
 ##Step 2
 #Deal with missing data
-Codes are
+#Codes are
 
-999 – test not given
+#999 – test not given
+#998 – result not valid (maladministration)
+#997 – result not valid (child refusal etc.)
+#996 – child too old/young for norms
 
-998 – result not valid (maladministration)
-
-997 – result not valid (child refusal etc.)
-
-996 – child too old/young for norms
-
-Check for nonword rep - in some cases OK to substitute low score, if child unable to attempt task. 
-```{r missingcheck}
+#Check for nonword rep - in some cases OK to substitute low score, if child unable to attempt task. 
 
 all.short$pass_hearing[all.short$pass_hearing==9]<-NA #change 9 to NA for pass_hearing
 #NB these include both refusal and equipment failure
@@ -292,9 +296,9 @@ all.short$fa_educ[w]<-NA
 
 
 ```
-Rescale all variables to mean 100 and SD 15 and save in new columns
 
-```{r rescalelang}
+```{r rescalelang, include=FALSE}
+#Rescale all variables to mean 100 and SD 15 and save in new columns
 shortlangnames<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','NwdRep','Oromotor',
                   'ReadAcc','ReadComp','ReadRate','TOWREwd','TOWREnwd',
                   'PicName','DigitName')
@@ -329,7 +333,7 @@ for (i in c(5,6)){
 
 ```
 
-```{r interpolatemissing}
+```{r interpolatemissing, include=FALSE}
 #If just one value is missing in lang or reading groups, substitute the mean for others
 langrange<-(ncol+1):(ncol+7)
 readrange<-(ncol+8):(ncol+13)
@@ -359,31 +363,32 @@ print(paste0('Mean substituted for cases with one missing datapoint: Interpolate
 
 
 ```
+
+
+```{r ncheck, include=FALSE}
 ## Step 3
 
-#Check that Ns match those in the protocol
-Should have three groups with N = 142 SCT, 194 twin1 and 194 twin2 (these are randomly assigned twin 1 and 2), - but Ns less for twins because of exclusions
-Numbers are greater than for Newbury et al, as some children did not feature in that study because of lack of DNA.
-
-Twins recruited in relation to splang_conc, which is coded as
-0, never
-1, preschool only
-2, continuing, mild
-3, continuing, severe
-4, reading concerns only
-9, unclear
-We will be using this categorisation to subdivide twins; categories 2 and 3 distinguished.
-
-Trisomies - divided according to reason for diagnosis
-why tested used to make bias column: coded as: 
-0, maternal age
-1, medical concerns
-2, behavioural concerns
-3, neurodevelopmental concerns
-4, family history of genetic problems
-9, no information
-
-```{r ncheck}
+# #Check that Ns match those in the protocol
+# Should have three groups with N = 142 SCT, 194 twin1 and 194 twin2 (these are randomly assigned twin 1 and 2), - but Ns less for twins because of exclusions
+# Numbers are greater than for Newbury et al, as some children did not feature in that study because of lack of DNA.
+# 
+# Twins recruited in relation to splang_conc, which is coded as
+# 0, never
+# 1, preschool only
+# 2, continuing, mild
+# 3, continuing, severe
+# 4, reading concerns only
+# 9, unclear
+# We will be using this categorisation to subdivide twins; categories 2 and 3 distinguished.
+# 
+# Trisomies - divided according to reason for diagnosis
+# why tested used to make bias column: coded as: 
+# 0, maternal age
+# 1, medical concerns
+# 2, behavioural concerns
+# 3, neurodevelopmental concerns
+# 4, family history of genetic problems
+# 9, no information
 ###################################################################################
 twintab <- table(all.short$randomtwininclude)
 names(twintab)<-c('SCT','twin1','twin2')
@@ -458,18 +463,19 @@ rowSums(scttab2)
 ```
 
 
-##Create 8 groups:
-1. XXX-nobias
-2. XXY-nobias
-3. XYY-nobias
-4. XXX-hibias
-5. XXY-hibias
-6. XYY-hibias
-7. twin_noconcern
-8. twin_concern
-NB as currently defined, not taking into account co-twin status. So a twin_noconcern could have cotwin with concern, ie have family risk.
 
-```{r groupcreate}
+```{r groupcreate, include=FALSE}
+##Create 8 groups:
+# 1. XXX-nobias
+# 2. XXY-nobias
+# 3. XYY-nobias
+# 4. XXX-hibias
+# 5. XXY-hibias
+# 6. XYY-hibias
+# 7. twin_noconcern
+# 8. twin_concern
+# NB as currently defined, not taking into account co-twin status. So a twin_noconcern could have cotwin with concern, ie have family risk.
+
 #####################################################################################
 #first code SLT into 0, 1 or 2;  2 indicates SALT beyond 4 yr, 1 is assessment or preschool only
 all.short$sltcode<-0
@@ -535,18 +541,19 @@ all.short$trisomyvstwin<-1
 all.short$trisomyvstwin[all.short$group8level<7]<-2
 
 ```
+
+```{r get.covariates, include=FALSE}
 ##Covariates
-a)	Educational level of mother and father, transformed into an ordinal scale based on age at leaving full-time education/qualifications obtained, with points of 0 (prior to age 16 years), 1 (16 years/did GCSE or O-levels), 2 (18 years/ did A-levels), 3 (21 years, degree), 4 (postgraduate study). 
+# a)	Educational level of mother and father, transformed into an ordinal scale based on age at leaving full-time education/qualifications obtained, with points of 0 (prior to age 16 years), 1 (16 years/did GCSE or O-levels), 2 (18 years/ did A-levels), 3 (21 years, degree), 4 (postgraduate study). 
+# 
+# b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank over 32,000 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable.  
+# 
+# c)	Living with single parent, coded as a binary variable (0 or 1), based on status at the time of the initial interview.
+# 
+# d)	Number of older siblings. For twins, the co-twin was not counted.
+# 
+# N.B. The finding that the lowbias SCT children are more likely to have older sibs is probably related to the fact that pre-natal testing is associated with older parents. We do have data on parental ages and could look at that, but not sure it's necessary. It does, though, make me concerned that there may be problems in using N older sibs as a covariate, as it could look causal when it is not. It might be reasonable to use it just within the twin group.
 
-b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank over 32,000 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable.  
-
-c)	Living with single parent, coded as a binary variable (0 or 1), based on status at the time of the initial interview.
-
-d)	Number of older siblings. For twins, the co-twin was not counted.
-
-N.B. The finding that the lowbias SCT children are more likely to have older sibs is probably related to the fact that pre-natal testing is associated with older parents. We do have data on parental ages and could look at that, but not sure it's necessary. It does, though, make me concerned that there may be problems in using N older sibs as a covariate, as it could look causal when it is not. It might be reasonable to use it just within the twin group.
-
-```{r get.covariates}
 #Parental educational level
 par.ed <-aggregate(all.short$mo_educ, by=list(all.short$group8),
                    FUN=mean, na.rm=TRUE)
@@ -573,6 +580,8 @@ all.short$deprivz[w]<-0
 print(paste('N SCT with missing dep index (assigned 0) = ',length(which(w<143))))
 print(paste('N twin with missing dep index (assigned 0) = ',length(which(w>142))))
 all.short$deprivz[w]<-0
+dopirate<-0 #toggle to 1 to see pirateplot (not really needed here, but useful as eg of plot labeling)
+if (dopirate==1){
 pirateplot(deprivz~group8,data=all.short,xaxt='n')
 text(1,3.2,'XXX',cex=.8)
 text(2,3.2,'XXY',cex=.8)
@@ -584,6 +593,7 @@ text(7,3.4,'Twin\nno concerns',cex=.8)
 text(8,3.2,'Twin\nlanguage\nproblems ',cex=.8)
 text(2,-3,'<-------Low bias------->')
 text(5,-3,'<-------High bias------->')
+}
 all.short$singlepar<-0
 all.short$singlepar[all.short$fam_structure<3]<-1
 singlepar.tab<-table(all.short$group8,all.short$singlepar)
@@ -597,17 +607,19 @@ round(prop.table(nsib.tab,1),3)
 
 ncol<-length(colnames(all.short)) #we will use this in later block as start column when adding new columns with all scaled on same scale
 ```
-#Proportions meeting criteria for DLD
-And proportions having SALT
-Coded as: 
-0 never
-1 preschool
-2 beyond 4 yr
-3 ongoing
-8 assessed only
-9 no info
 
-```{r DLDcategories}
+
+```{r DLDcategories, include=FALSE}
+#Proportions meeting criteria for DLD
+# And proportions having SALT
+# Coded as: 
+# 0 never
+# 1 preschool
+# 2 beyond 4 yr
+# 3 ongoing
+# 8 assessed only
+# 9 no info
+
 #now recode according N language tests low
 #use the language tests scaled to 100 (cutoff 85), exclude reading, include GCC (cutoff 55)
 v<-which(colnames(all.short)=='Vocab')
@@ -656,12 +668,13 @@ for(i in 1:5){
  
 round(table(all.short$dldcat,all.short$sltcode),2) #check how SALT relates to DLD status
 ```
+
+```{r make.subfiles, include=FALSE}
 ##Analyse language test and reading data
-First select the data 
+# First select the data 
+# 
+# Then make shorter sctfile that excludes the high bias group
 
-Then make shorter sctfile that excludes the high bias group
-
-```{r make.subfiles}
 # Make table for creating sums for Participants section
 excludetab<-table(all.short$dldcat,all.short$bias,all.short$trisomy) #can index cells as DLDcat,bias,trisomy
 
@@ -703,9 +716,10 @@ trisomy.only<-filter(all.short,group8xlevel<7)  #NB with 8x we omit the ASD etc 
 
 ```
 
-#Now do a grid of beeswarm plots
 
-```{r beeswarmgrid}
+
+```{r beeswarmgrid, include=FALSE}
+#Now do a grid of beeswarm plots
 longname<-c('Matrices','Block Design','Vocabulary','Comprehension','Sentence Repetition','Nonword Repetition','Oromotor',
             'Reading Accuracy','Reading Comprehension','Reading Rate','Speeded word reading','Speeded nonword reading',
             'Rapid Naming: Pictures','Rapid Naming: Digits')
@@ -746,7 +760,7 @@ dev.off()
 
 
 
-```{r lang.manova}
+```{r lang.manova, include=FALSE}
 #First just do groups 1-3
 #NB cases with missing data are excluded, so doesn't matter if you use lobias.sct or lobias.sct2
 #Result will be the same, but use lobias.sct2 to get numbers to report
@@ -790,11 +804,12 @@ for (i in 1:14){
 dev.off()
 
 ```
-##Inspect correlations with heat map
-Problems combining heatmaps into same plot?
-These plots no longer needed, given that no group effect - previously, before excluding older SCT cases, there was a group effect, which seemed driven by different associations between reading/language measures. Can still see a suggestion of this - lighter red for lang/read correlations in twins. But as NS, not worth exploring further.
 
-```{r heatmapcorr}
+
+```{r heatmapcorr, include=FALSE}
+##Inspect correlations with heat map
+# Problems combining heatmaps into same plot?
+# These plots no longer needed, given that no group effect - previously, before excluding older SCT cases, there was a group effect, which seemed driven by different associations between reading/language measures. Can still see a suggestion of this - lighter red for lang/read correlations in twins. But as NS, not worth exploring further.
  png_heat<-'heat_plot_sct.png'
  png(png_heat,width=1000,height=500)
 cormat_SCT <- round(cor(lobias.sct2[lobias.sct2$mycontrast==1,nurange],use="na.or.complete"),2)
@@ -806,12 +821,10 @@ cormat_twin <- round(cor(lobias.sct2[lobias.sct2$mycontrast==8,nurange],use="na.
 ggcorrplot(cormat_twin,title='Twin')
 dev.off()
 ```
-![Correlations: SCT age 6-11;11](heat_plot_sct.png)
 
-![Correlations: Twin with lang dis](heat_plot_twin.png)
+
+```{r lowhi.sct, include=FALSE}
 ##Comparison of low and high bias groups
-
-```{r lowhi.sct}
 #Use trisomy.only group for this
 
 png_lang_bees<-'beeswarm_lang_bias.png' #name to save png file
@@ -849,7 +862,7 @@ text(5,140,'<---------High bias--------->')
 dev.off()
 ```
 
-```{r manova2}
+```{r manova2, include=FALSE}
 
 sct2.matrix <- as.matrix(trisomy.only[,nurange])
 gp6.fit <- manova(sct2.matrix ~ trisomy.only$bias*trisomy.only$group8+trisomy.only$mo_educ+trisomy.only$deprivz)
@@ -864,10 +877,11 @@ summary.aov(gp6.fit) #- if you want to inspect individual language measures
 
 ```
 
-##CCC-2 analysis
-Consider how CCC-2 profiles for SCTs compare with those in our previous paper. Also include twins with concerns as comparison group.  Plot subscales; also analyse the GCC and SIDC.
 
-```{r ccc2}
+```{r ccc2, include=FALSE}
+##CCC-2 analysis
+# Consider how CCC-2 profiles for SCTs compare with those in our previous paper. Also include twins with concerns as comparison group.  Plot subscales; also analyse the GCC and SIDC.
+
 w<-which(colnames(all.short)=='ccc_a')
 x<-which(colnames(all.short)=='group8')
 y<-which(colnames(all.short)=='group8level')
@@ -896,8 +910,9 @@ print(paste('All SCT:',1-sum(consistent.ccc[1:6,1])/sum(consistent.ccc[1:6,])))
 print(paste('Twin:',1-sum(consistent.ccc[7:8,1])/sum(consistent.ccc[7:8,])))
 
 ```
+```{r logreg.cccresponse, include=FALSE}
 ##Analysis to explore factor affecting response rates
-```{r logreg.cccresponse}
+
 all.short2<-all.short
 for(i in 1:length(all.short2[,1]))
 {
@@ -922,8 +937,9 @@ NR1 <- glm(response ~ lang_severity + mo_educ + singlepar + SCT,family=binomial(
 summary(NR1)
 
 ```
+```{r ccc.analyse, include=FALSE}
 ##Now analyse CCC-2 for 8 groups
-```{r ccc.analyse}
+
 #First remove the cases with no response or inconsistent
 ccc.data<-filter(cccbit,ccc2_consistent>0)
 
@@ -943,7 +959,7 @@ colnames(ccc.df)<-c('Group','N','GCC.mean','GCC.se','SIDC.mean','SIDC.se','A.mea
                     'I.mean','I.se','J.mean','J.se')
 ```
 
-```{r cccplot}
+```{r cccplot, include=FALSE}
 #Need data in long form for ggplot2
 #set up the long form df with data from scale A
 ccc.dflong<-ccc.df[1:8,c(1,2,2,7:8)]
@@ -977,10 +993,10 @@ cccplot<-ggplot(ccc.dflong, aes(x=scale, y=mean, colour=plotgroup,group=Group)) 
   ylim(ymin,ymax)
 cccplot+geom_errorbar(width=.1, aes(ymin=mean-se, ymax=mean+se))
 ```
-##Manova for CCC-2
-Follow https://www.statmethods.net/stats/anova.html
 
-```{r ccc2.manova}
+```{r ccc2.manova, include=FALSE}
+##Manova for CCC-2
+#Follow https://www.statmethods.net/stats/anova.html
 #First just do groups 1-3 on the 10 subscales
 ccc.gp3<-filter(ccc.data,group8level<4)
 colA<-which(colnames(ccc.gp3)=='ccc_a')
@@ -1014,7 +1030,7 @@ aov.scdi<-aov(temp1$scdi~temp1$trisomy*temp1$bias)
 summary(aov.scdi)
 ```
 
-```{r beeswarm.gcc}
+```{r beeswarm.gcc, include=FALSE}
 png_gcc_bees<-'beeswarm_gcc.png' #name to save png file
 png(png_gcc_bees,width=400,height=300)
 beeswarm(temp1$gcc~temp1$trisomy*temp1$bias, xlab='Group',ylab='GCC' ,
@@ -1033,11 +1049,11 @@ beeswarm(temp1$gcc~temp1$trisomy*temp1$bias, xlab='Group',ylab='GCC' ,
 abline(h=55,lty=3)
 dev.off()
 ```
+
+
+
+```{r flow_sct, include=FALSE}
 ## Flow diagrams
-
-
-```{r flow_sct}
-
 
 all.short$exclude<-car::recode(all.short$dldlevel,"0=0;1=0;2=1;3=1;4=1")
 all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
@@ -1177,10 +1193,10 @@ all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
 flow1 %>% export_svg %>% charToRaw %>% rsvg_png("SCT_flow.png")
 
 ```
-![](SCT_flow.png)
 
 
-```{r flow_twins}
+
+```{r flow_twins, include=FALSE}
 
 #Now do plot for twin data
 
@@ -1263,15 +1279,14 @@ flow2 %>% export_svg %>% charToRaw %>% rsvg_png("twins_flow.png")
 
 ```
 
-![](twins_flow.png)
+
 ##Session information
-```{r sessinfo}
+```{r sessinfo, include=FALSE}
 sessionInfo()
 ```
 
-#Start write-up document here!
 
-##Language and cognitive phenotypes in children with sex chromosome trisomies
+
 
 Chromosome trisomies arise when an error of cell division leads to an egg or sperm that contains two rather than one copy of the chromosome. Trisomies that affect one of the autosomes are usually lethal, and in survivors they lead to marked physical and mental abnormalities. Trisomies of the sex chromosomes, however, have milder impacts, and often go undetected.  This complicates the study of the consequences of sex chromosome trisomies in two ways; first, it can be difficult to recruit large samples of cases, and second, those that are studied may not be representative of the population. In particular, there is a danger of overestimating the severity of impairment if we include cases where discovery of the trisomy was prompted by genetic testing to investigate developmental abnormalities.  
 In the 1960s, a multicentre project was initiated with the aim of evaluating the impact of sex chromosome trisomies in samples identified on newborn screening that were free from ascertainment bias (Robinson et al., 1979). The three kinds of trisomy - trisomy X (47,XXX), Klinefelter’s syndrome (47,XXY) and 47,XYY karotypes were all found to be associated with neurodevelopmental problems, particularly affecting language and motor functions (Leggett et al, 2010).  
