@@ -1,8 +1,10 @@
 ---
-title: Logbook for analysis of SCT and twin language data
-author: Dorothy Bishop
-date: started August 2018
-output: html_document
+title: "Logbook for analysis of SCT and twin language data"
+author: "Dorothy Bishop"
+date: "started August 2018"
+output:
+  word_document: default
+  html_document: default
 ---
 
 
@@ -10,8 +12,11 @@ output: html_document
 
 ```{r load_packages, include = FALSE}
 #################################################################################
+
 #devtools::install_github("rubenarslan/formr")
 require(formr) #to handle conflicts with 'select' function in dplyr (may not be needed)
+require(here) #for reproducible pathnames: see https://www.tidyverse.org/articles/2017/12/workflow-vs-script/
+
 library(tidyverse)
 library(reshape2)  #for melt
 library(knitr) #for kable - allows nice tables in Word output - but can be temperamental
@@ -179,6 +184,7 @@ colnames(all.short)[w]<-'Age'
 all.short$ageband<-2
 w<-which(all.short$Age<72)
 all.short$ageband[w]<-1
+
 w<-which(all.short$Age>143)
 all.short$ageband[w]<-3
 
@@ -332,8 +338,8 @@ for(s in 1:length(w)){
   all.short[thisrow,langrange[v]]<-round(rowMeans(all.short[thisrow,langrange],na.rm=TRUE),0) #mean of other values substituted
 }
 
-print(paste0('Interpolated ', length(w),' missing values from ',nrow(all.short)*length(langrange),
-             ' datapoints in ',length(langrange),' nonverbal and language tests; cases with one missing datapoint, mean substituted'))
+print(paste0('Mean substituted for cases with one missing datapoint: Interpolated ', length(w),' missing values from ',nrow(all.short)*length(langrange),
+             ' datapoints in ',length(langrange),' nonverbal and language tests'))
 
 w<-which(all.short$nmissingread==1) #find those rows with just one missing value
 for(s in 1:length(w)){
@@ -342,8 +348,8 @@ for(s in 1:length(w)){
   mycol<-readrange[v]
   all.short[thisrow,readrange[v]]<-round(rowMeans(all.short[thisrow,readrange],na.rm=TRUE),0) #mean of other values substituted
 }
-print(paste0('Interpolated ', length(w),' missing values from ',nrow(all.short)*length(readrange),
-             ' datapoints in ',length(readrange),' reading and rapidnaming tests; cases with one missing datapoint, mean substituted'))
+print(paste0('Mean substituted for cases with one missing datapoint: Interpolated ', length(w),' missing values from ',nrow(all.short)*length(readrange),
+             ' datapoints in ',length(readrange),' reading and rapidnaming tests'))
 
 
 
@@ -388,6 +394,7 @@ rownames(scttab)<-c('XXX','XXY','XYY')
 colnames(scttab)<-c('low bias','high bias','NA')
 #Show tables
 twintab
+tab_sct<-scttab
 scttab
 rowSums(scttab)
 
@@ -424,25 +431,25 @@ origstudy
 #Must have full data on lang or reading (5 yr olds excluded on this basis)
 w<-which(all.short$nmissinglang<2) #we have retained those with one missing value
 tempshort<-all.short[w,]
-scttab <- table(tempshort$trisomy,tempshort$bias)
-rownames(scttab)<-c('XXX','XXY','XYY')
-colnames(scttab)<-c('low bias','high bias','NA')
+scttab1 <- table(tempshort$trisomy,tempshort$bias)
+rownames(scttab1)<-c('XXX','XXY','XYY')
+colnames(scttab1)<-c('low bias','high bias','NA')
 #Show tables
 print('Cases with full data for nv/lang analysis')
 
-scttab
-rowSums(scttab)
+scttab1
+rowSums(scttab1)
 
 w<-which(all.short$nmissingread<2) #we have retained those with one missing value
 tempshort<-all.short[w,]
-scttab <- table(tempshort$trisomy,tempshort$bias)
-rownames(scttab)<-c('XXX','XXY','XYY')
-colnames(scttab)<-c('low bias','high bias','NA')
+scttab2 <- table(tempshort$trisomy,tempshort$bias)
+rownames(scttab2)<-c('XXX','XXY','XYY')
+colnames(scttab2)<-c('low bias','high bias','NA')
 #Show tables
 print('Cases with full data for reading/naming analysis')
 
-scttab
-rowSums(scttab)
+scttab2
+rowSums(scttab2)
 ###################################################################################
 ```
 
@@ -640,6 +647,7 @@ for(i in 1:5){
  all.short$dldcat<-as.factor(all.short$dldcat)
  levels(all.short$dldcat)<-c('TD','DLD','lowIQ','ASD','hearing')
  dldcat<-table(all.short$dldcat,all.short$group8)
+ 
  round(prop.table(dldcat,2),2)
  
 round(table(all.short$dldcat,all.short$sltcode),2) #check how SALT relates to DLD status
@@ -650,12 +658,31 @@ First select the data
 Then make shorter sctfile that excludes the high bias group
 
 ```{r make.subfiles}
-lobias.sct<-filter(all.short,group8level%in%c(1:3,8)) #we're using numeric code for factor level to make this easier
-#exclude those with ASD, low IQ or hearing exclusion
-lobias.sct<-filter(lobias.sct,dldlevel<2)
+# Make table for creating sums for Participants section
+excludetab<-table(all.short$dldcat,all.short$bias,all.short$trisomy) #can index cells as DLDcat,bias,trisomy
 
-lobias.sct$Group<-as.factor(lobias.sct$group8level)
+#######################################################
+# exclude those with ASD, low IQ or hearing exclusion #
+#######################################################
+all.short$group8xlevel<-all.short$group8level #easiest to make new grouping variable that has NA for excluded
+w<-which(all.short$dldlevel>1)
+all.short$group8xlevel[w]<-NA
+
+#assign some values needed for participant report
+ageband.group.tab<-table(all.short$ageband,all.short$group8xlevel)
+N5yr1<-sum(ageband.group.tab[1,1:3]) #N 5 yr olds after exclusions - lobias
+N5yr2<-sum(ageband.group.tab[1,4:6]) #N 5 yr olds after exclusions - hibias
+missing.tab<-table(all.short$langdatacomplete,all.short$group8xlevel)
+Nmisslang1<-sum(missing.tab[1,1:3]) #N all missing - lobias
+Nmisslang2<-sum(missing.tab[1,4:6])#N all missing - hibias
+cccNtab<-table(all.short$ccc2_consistent,all.short$group8xlevel,useNA='ifany')
+Nmissccc<-sum(cccNtab[3,1:6])
+Nbadccc<-sum(cccNtab[1,1:6])
+lobias.sct<-filter(all.short,group8xlevel%in%c(1:3,8)) #we're using numeric code for factor level to make this easier
+
+lobias.sct$Group<-as.factor(lobias.sct$group8xlevel)
 levels(lobias.sct$Group)<-c('XXX','XXY','XYY','Twin')
+
 
 #exclude those with incomplete data as they won't feature in MANOVA
 lobias.sct2<-filter(lobias.sct,langdatacomplete==1) 
@@ -1013,7 +1040,6 @@ all.short$exclude<-car::recode(all.short$dldlevel,"0=0;1=0;2=1;3=1;4=1")
 all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
 
 
-
   y1<-table(all.short$randomtwininclude)[[1]]
   
   biasLow <- table(all.short$bias)[[1]]
@@ -1038,7 +1064,14 @@ all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
   #--------------------------------------------------------------------------------#
 
  excl3 <- sum(mytab[1:3,1,2])
- excl4 <- sum(mytab[1:3,2,2]) 
+ excl3a <- mytab[1,1,2]
+ excl3b <- mytab[2,1,2]
+ excl3c <- mytab[3,1,2]
+ 
+ excl4 <- sum(mytab[1:3,2,2])
+ excl4a <- mytab[1,2,2]
+ excl4b <- mytab[2,2,2]
+ excl4c <- mytab[3,2,2]
  
  xxx_a1<-mytab[1,1,1]
  xxx_a2<-mytab2[1,1,1]
@@ -1074,7 +1107,7 @@ all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
               # node definitions with substituted label text
               node [shape = plaintext, fontname = Helvetica]
               X[label='@@1']
-              Y[label= 'BIAS']
+              Y[label= 'Ascertainment\\nbias']
               Z[label = 'Trisomy']
               
               node [shape=square]
@@ -1094,14 +1127,16 @@ all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
               L[label='@@12']
 
               node [shape = plaintext]
-              Q[label='* full sample, ** 6-11.11 age sample, *** CCC-2 sample']
+              Q[label='* Full sample, ** Aged 6 to 11 yr, *** With useable CCC-2 data']
               
  
               
               # edge definitions with the node IDs
               A -> {C,D}
-              C -> {E,F,G,H}
-              D -> {I,J,K,L}
+              {rank=same ;C -> H}
+              C -> {rank=same ;E,F,G}
+              {rank=same ;D -> L}
+              D -> {rank=same ;I,J,K}
              
               
               
@@ -1112,16 +1147,16 @@ all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
               
               [1]: paste0(' ')
               [2]: paste0('SCT:\\n N = ',y1)
-              [3]: paste0('low bias,\\n N = ',biasLow)
-              [4]: paste0('high bias, \\nN = ',biasHigh)
+              [3]: paste0('Low bias,\\n N = ',biasLow)
+              [4]: paste0('High bias, \\nN = ',biasHigh)
               [5]: paste0('XXX','\\n', 'N* = ',xxx_a1,'\\n', 'N** = ',xxx_a2,'\\n', 'N*** = ',xxx_a3)
               [6]: paste0('XXY',' \\n', 'N* = ',xxy_a1,' \\n', 'N** = ',xxy_a2,' \\n', 'N*** = ',xxy_a3)
               [7]: paste0('XYY',' \\n', 'N* = ',xyy_a1,' \\n', 'N** = ',xyy_a2,' \\n', 'N*** = ',xyy_a3)
-              [8]: paste0('Excluded',' \\n', 'N = ',excl3)
+              [8]: paste0('Excluded',' \\n', '(N = ',excl3,')\\n',excl3a,' XXX','\\n',excl3b,' XXY','\\n',excl3c,' XYY')
               [9]: paste0('XXX',' \\n', 'N* = ',xxx_b1,' \\n', 'N** = ',xxx_b2,' \\n', 'N*** = ',xxx_b3)
               [10]: paste0('XXY',' \\n', 'N* = ',xxy_b1,' \\n', 'N** = ',xxy_b2,' \\n', 'N*** = ',xxy_b3)
               [11]: paste0('XYY',' \\n', 'N* = ',xyy_b1,' \\n', 'N** = ',xyy_b2,' \\n', 'N*** = ',xyy_b3)
-              [12]: paste0('Excluded',' \\n', 'N = ',excl4)
+              [12]: paste0('Excluded',' \\n', '(N = ',excl4,')\\n',excl4a,' XXX','\\n',excl4b,' XXY','\\n',excl4c,' XYY')
               ")
   
   
@@ -1237,7 +1272,19 @@ The specific questions we considered were:
 1.	Is there a distinctive language profile for each of the three types of trisomy?  
 2.	Is the cognitive profile of children with sex chromosome trisomies similar to that of children with language problems who have the usual XY or XX karyotype?  
 3.	How far does ascertainment bias affect the language and cognitive profiles of children with sex chromosome trisomies?  
-###Participants
 
-We recruited `r scttab[1,1]+scttab[1,2]` girls with XXX, `r scttab[2,1]+scttab[2,2]` boys with XXY and `r scttab[3,1]+scttab[3,2]` boys with XYY to the study, in the age range from 5 years 0 months to 15 years 11 months. `r round(100*sum(origstudy)/sum(scttab),0)`% of the children had participated in the Bishop et al (2011) study. Recruitment was via NHS Clinical Genetics centres, two support groups (Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association) and self-referral through social media. To be included in the study, the child had to be aware of their trisomy status. During the initial telephone interviews, caregivers were asked how their child was diagnosed, in particular whether this followed postnatal testing motivated by neurodevelopmental/behavioural problems. The phenotype of such children may be more severe, potentially biasing the sample, and so we grouped them prospectively as a high-risk-of-bias (‘High Bias’) subgroup, comprised of 13 XXX, 26 XXY and 32 XYY cases. All other children formed the low-risk-of-bias (‘Low Bias’) subgroup, with 32 XXX, 20 XXY and 19 XYY cases. Our original lower age limit for the study was 6 years 0 months, but we included eleven 5-year-olds (3 low bias XXX, 2 low bias XYY, 2 high bias XXX and 4 high bias XYY) whose families volunteered for the study. Note, however, these children are excluded from our main analysis of language test data, because test norms did not extend this young for most of the measures. In addition, four cases had missing data that precluded inclusion in MANOVA. These cases are, however, included in the analysis of CCC-2 data. Thus, the Low Bias subgroups with psychometric test data consisted of 26 XXX, 20 XXY and 16 XYY cases.
+##Participants  
+###Sex chromosome trisomy cases  
+We recruited `r tab_sct[1,1]+tab_sct[1,2]` girls with XXX, `r tab_sct[2,1]+tab_sct[2,2]` boys with XXY and `r tab_sct[3,1]+tab_sct[3,2]` boys with XYY to the study, in the age range from 5 years 0 months to 15 years 11 months. `r round(100*sum(origstudy)/sum(tab_sct),0)`% of the children had participated in the Bishop et al (2011) study. Recruitment was via NHS Clinical Genetics centres, two support groups (Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association) and self-referral through social media. To be included in the study, the child had to be aware of their trisomy status.  
 
+**Ascertainment bias**. During the initial telephone interviews, caregivers were asked how their child was diagnosed, in particular whether this followed postnatal testing motivated by neurodevelopmental/behavioural problems. The phenotype of such children may be more severe, potentially biasing the sample, and so, as shown in Figure 1, we grouped them prospectively as a high-risk-of-bias (‘High Bias’) subgroup, comprised of `r sum(excludetab[,2,1])` XXX, `r sum(excludetab[,2,2])` XXY and `r sum(excludetab[,2,3])` XYY cases. All other children formed the low-risk-of-bias (‘Low Bias’) subgroup, with `r sum(excludetab[,1,1])` XXX, `r sum(excludetab[,1,2])` XXY and `r sum(excludetab[,1,3])` XYY cases.  
+
+**Exclusionary criteria**. Given our current focus on language disorder, we excluded children who had a nonverbal ability scaled score more than 2 SD below the mean (`r sum(excludetab[3,1,])` Low Bias and `r sum(excludetab[3,2,])` High Bias), those who met criteria for autism spectrum disorder (ASD) (`r sum(excludetab[4,1,])` Low Bias and `r sum(excludetab[4,2,])` High Bias) and those who failed a hearing screen (`r sum(excludetab[5,1,])` Low Bias and `r sum(excludetab[5,2,])` High Bias). This enabled us to make a direct comparison with the twin sample, which also excluded children on this basis, and to see how far language problems were seen in children who did not have accompanying conditions that are likely to affect language function. However, note that this means that our conclusions are based on a selected sample of trisomy cases. ASD and other diagnoses in children with sex chromosome trisomies will be the focus of a companion paper.  
+
+**Missing data**. Where a child had missing data on just one of the language/cognitive tests, that value was prorated from the mean of the other measures. Likewise, when there was just one missing measure on reading-related tests, the value as prorated from other reading measures. `r sum(Nmisslang1,Nmisslang2)` children had more missing data than this, and were excluded from the current analyses. This included `r N5yr1+N5yr2` five-year-olds, for whom standard scores were not computable as they fell below the age range of norms. All but `r Nmisslang1-N5yr1` cases of missing data in children aged over 5 years came from the High Bias group, reflecting refusal or inability to attempt some tests. Norms for the CCC-2 extend across the full age range covered here, but `r Nmissccc+Nbadccc` children had missing data because parents either did not complete the CCC-2 (N = `r Nmissccc`), or because they failed the consistency check (N = `r Nbadccc`), which is suggestive of invalid responses.  
+
+**Age range**. When comparing test profiles of trisomy cases with those of twins with language concerns, we restricted consideration to children covering the same age range, i.e. 6 yr 0 months to 11 yr 11 months. 
+
+
+The numbers included in different analyses are shown in the flowchart in Figure 1.
+![Figure 1. Numbers of children included in different analyses.](SCT_flow.png)
