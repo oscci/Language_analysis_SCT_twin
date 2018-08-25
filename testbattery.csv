@@ -1,0 +1,13 @@
+﻿Instrument,Measure
+"Audiometry: screen at 25 dB (HL) for frequencies 500, 1000, 2000 and 4000 Hz. ",Passed if average threshold in better ear was 30 dB or less
+"Wechsler Abbreviated Scale of Intelligence (WASI) (Wechsler, 1999)",Matrices (nonverbal reasoning)
+,Block Design (visuospatial skills)
+,Vocabulary
+"Woodcock Johnson III Tests of Cognitive Abilities (Woodcock, McGrew, & Mather, 2007)",Verbal Comprehension
+"NEPSY: A Developmental Neuropsychological Assessment (Korkman, Kirk, & Kemp, 1998)",Sentence Repetition
+,Repetition of Nonsense Words
+,Oromotor Sequences
+"Neale Analysis of Reading Ability – 2nd British edition  (NARA-II) (Neale, 1999)","Passage reading, giving measures of accuracy, comprehension and rate"
+"Test of Word Reading Efficiency (TOWRE) (Torgesen, Wagner, & Rashotte, 1999)",Speeded reading of words (Sight Word Efficiency) and nonwords (Phonetic Decoding Efficiency)
+"Phonological Assessment Battery (PhAB) (Frederickson, Frith, & Reason, 1997)",Picture Naming Test
+,Digit Naming Test
