@@ -1,15 +1,15 @@
 ---
 title: "Language and cognitive phenotypes in children with sex chromosome trisomies"
 author: "Dorothy Bishop"
-date: "started August 2018"
+date: 
 output:
   word_document: default
   pdf_document: default
   html_document: default
 ---
 
-
 `r Sys.time()`
+
 
 ```{r load_packages, include = FALSE, echo=FALSE}
 #################################################################################
@@ -50,7 +50,8 @@ library(car)
 library(kableExtra)
 library(flextable)
 library(officer)
-testbattery<-read.csv('testbattery.csv')
+library(stargazer)
+testbattery<-read.csv('testbattery.csv') #used for Table in word doc
 
 #################################################################################
 
@@ -606,6 +607,8 @@ nsib.tab<-table(all.short$group8,all.short$oldersibs)
 round(prop.table(nsib.tab,1),3)
 
 ncol<-length(colnames(all.short)) #we will use this in later block as start column when adding new columns with all scaled on same scale
+
+
 ```
 
 
@@ -714,6 +717,36 @@ twin.TD$Group<-'TD.twin'
 
 trisomy.only<-filter(all.short,group8xlevel<7)  #NB with 8x we omit the ASD etc exclusionary cases
 
+#create table for reporting demographics
+#age done using aggregate because something odd happens when using summarise!
+agemean.tab <-aggregate(all.short$Age, by=list(all.short$group8xlevel),
+                   FUN=mean, na.rm=TRUE)
+agesd.tab <-aggregate(all.short$Age, by=list(all.short$group8xlevel),
+                   FUN=sd, na.rm=TRUE)
+
+mybkgtab <- data.frame(all.short %>%
+  group_by(group8xlevel) %>%
+  summarise(N = length(Age),
+            Age   = mean(Age),
+            Age.SD   = sd(Age),
+              MotherEd   = mean(mo_educ, na.rm = TRUE),
+            MotherEd.SD   = sd(mo_educ, na.rm = TRUE),
+            Deprivation = mean(deprivz, na.rm = TRUE),
+             Depriv.SD = sd(deprivz, na.rm = TRUE)))
+mybkgtab2<-mybkgtab[1:8,c(1,2,3,5,7)]
+mybkgtab2[,1]<-c('XXX: Low bias',
+                'XXY: Low bias',
+                 'XYY: Low bias',
+                  'XXX: High bias',
+                'XXY: High bias',
+                 'XYY: High bias',
+                 'Twin: No concerns',
+                 'Twin: Language concerns')
+mybkgtab2[,3]<-paste0(round(mybkgtab[1:8,3],0),' (',round(agesd.tab[,2],1),')')
+mybkgtab2[,4]<-paste0(round(mybkgtab[1:8,5],1),' (',round(mybkgtab[1:8,6],2),')')
+mybkgtab2[,5]<-paste0(round(mybkgtab[1:8,7],1),' (',round(mybkgtab[1:8,8],2),')')
+colnames(mybkgtab2)<-c('Group','N','Age (mo)','Mo. educ.','Depriv. index')
+
 ```
 
 
@@ -730,15 +763,29 @@ par(mfrow=c(5,3)) #5 row and 3 columns
 par(mar=c(5.1,4.1,4.1,0.2))
 #beeswarm jittered values (last value in jitter statement determines amount of jitter)
 
-pointcol<-c(1,16,10) #use open circle, filled circle, circle +, for ageband 1-3
+pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3
 agebit<-pointcol[lobias.sct2$ageband]
 #alldatabit<-pointcol[(1+lobias.sct$langdatacomplete)] #orig values are 0 and 1, so add 1
 for (i in 1:14){
   mytitle<-longname[i]
   beeswarm(jitter(lobias.sct2[,nurange[i]],3)~Group , data = lobias.sct2, xlab='Group',ylab='Scaled score',spacing=.8,
-           pch = 16,pwpch=agebit,cex=1.7,col=c(2,2,2,4),main=mytitle,ylim=c(55,135))
-  bxplot(lobias.sct2[,nurange[i]]~Group , data = lobias.sct2, probs = 0.5, col = 1,lty=3,add=TRUE) #adds medians for all cases with dotted line
-   bxplot(lobias.sct3[,nurange[i]]~Group , data = lobias.sct3, probs = 0.5, col = 1,add=TRUE) #adds medians just for those in Twin age range, with continuous line
+           pch = 16,pwpch=agebit,cex=1.7,col=c(2,2,2,4),main=mytitle,ylim=c(55,135)) 
+#can use bxplot to add medians (probs=.5), but as we are analysing means, use segments instead to add means
+  
+  #bxplot(lobias.sct2[,nurange[i]]~Group , data = lobias.sct2, probs = 0.5, col = 1,lty=3,add=TRUE) #adds medians for all cases with dotted line
+#   bxplot(lobias.sct3[,nurange[i]]~Group , data = lobias.sct3, probs = 0.5, col = 1,add=TRUE) #adds medians just for those in Twin age range, with continuous line
+  
+  #add means
+  for (g in 1:4){
+    myg<-g
+    if (g==4){myg<-8}
+  mm<-mean(lobias.sct2[lobias.sct2$group8xlevel==myg,nurange[i]],na.rm=TRUE)
+  segments(g-.4,mm,g+.4,mm,col = 1,lty=2,lwd=2)
+  shortrange<-intersect(which(lobias.sct$group8xlevel==myg),which(lobias.sct$ageband==2))
+  mm2<-mean(lobias.sct2[shortrange,nurange[i]],na.rm=TRUE)
+  segments(g-.4,mm2,g+.4,mm2,col = 1,lty=1,lwd=2)
+ 
+  }
   abline(a=100,b=0,col='darkgray',lty=1)
   abline(a=85,b=0,col='darkgray',lty=2)
   abline(a=70,b=0,col='darkgray',lty=2)
@@ -761,19 +808,50 @@ dev.off()
 
 
 ```{r lang.manova, include=FALSE}
+#create dataframe to hold results from all Manovas
+manova.df<-data.frame(matrix(NA,nrow=4,ncol=7))
+colnames(manova.df)<-c('Comparison','Effect','Wilks','F','df1','df2','p')
+manova.ccc.df<-manova.df #just copying basic file
 #First just do groups 1-3
 #NB cases with missing data are excluded, so doesn't matter if you use lobias.sct or lobias.sct2
 #Result will be the same, but use lobias.sct2 to get numbers to report
 gp3<-filter(lobias.sct2,group8level<4)
 sct.matrix <- as.matrix(gp3[,nurange])
 gp3.fit <- manova(sct.matrix ~ gp3$Group+gp3$mo_educ+gp3$deprivz)
-mymanova3<-summary(gp3.fit, test="Pillai")
+mymanova3<-summary(gp3.fit, test="Wilks")
 print('Manova on the 14 language measures for the 3 Low Bias SCT groups only')
 mytab<-table(gp3$trisomy)
 names(mytab)<-c('XXX','XXY','XYY')
 print('Ns for analysis:')
 print(mytab)
-mymanova3
+######################################################################################
+#define function for populating manova.df here
+manova.function <- function(mycomparison,effectnames,offset,manova.stats,manova.df){
+  for (i in 1:length(effectnames)){
+      j<-i+offset
+    if(i==1){
+      manova.df[j,1]<-mycomparison
+    }
+ 
+  manova.df[j,2]<-effectnames[i]
+  manova.df[j,3]<-round(manova.stats[i,2],3)
+  manova.df[j,4]<-round(manova.stats[i,3],2)
+    manova.df[j,5]<-round(manova.stats[i,4],0)
+    manova.df[j,6]<-round(manova.stats[i,5],0)
+    manova.df[j,7]<-round(manova.stats[i,6],3)
+}
+return(manova.df)
+}
+######################################################################################
+
+mycomparison<-paste0('Low bias: XXX (',mytab[1],
+                      ') vs XXY (',mytab[2],
+                       ') vs XYY (',mytab[3],')')
+
+manova.stats<-mymanova3$stats
+effectnames<-c('Group','Mo. education','Depriv. index')
+offset<-0
+manova.df<-manova.function(mycomparison,effectnames,offset,manova.stats,manova.df)
 #summary.aov(gp3.fit) - if you want to inspect individual language measures
 
 
@@ -783,13 +861,19 @@ w<-c(which(lobias.sct2$ageband==2))
 lobias.agematch<-lobias.sct2[w,]
 gp2.matrix <- as.matrix(lobias.agematch[,nurange])
 gp2.fit <- manova(gp2.matrix ~ lobias.agematch$trisomyvstwin+lobias.agematch$mo_educ+lobias.agematch$deprivz)
-mymanova2<-summary(gp2.fit, test="Pillai")
+mymanova2<-summary(gp2.fit, test="Wilks")
 mytab<-table(lobias.agematch$trisomyvstwin)
 names(mytab)<-c('Trisomy','Twin')
 print('Ns for analysis:')
 print(mytab)
 print('Manova on the 14 language measures for the SCT vs twin (language disordered) group, aged 6-11;11')
 mymanova2
+
+mycomparison<-paste0('Trisomies (',mytab[1],') vs. Lang concern twins (',mytab[2],'): aged 6-11')
+manova.stats<-mymanova2$stats
+offset<-nrow(manova.df)
+manova.df<-manova.function(mycomparison,effectnames,offset,manova.stats,manova.df)
+#summary.aov(gp3.fit) - if you want to inspect individual language measures
 
 #This plot not really adding anything, now we have coded age in the other beeswarm
 png('png_2gp_bees.png',width=1000,height=1000)
@@ -865,15 +949,23 @@ dev.off()
 ```{r manova2, include=FALSE}
 
 sct2.matrix <- as.matrix(trisomy.only[,nurange])
-gp6.fit <- manova(sct2.matrix ~ trisomy.only$bias*trisomy.only$group8+trisomy.only$mo_educ+trisomy.only$deprivz)
-mymanova6<-summary(gp6.fit, test="Pillai")
+gp6.fit <- manova(sct2.matrix ~ trisomy.only$bias*trisomy.only$group8xlevel+trisomy.only$mo_educ+trisomy.only$deprivz)
+mymanova6<-summary(gp6.fit, test="Wilks")
 print('Manova on the 14 language measures for the 3 Low Bias SCT groups vs 3 High Bias')
-mytab<-table(trisomy.only$bias)
+mytab<-table(trisomy.only$group8xlevel)
 
 print('Ns for analysis:')
 print(mytab)
 mymanova6
-summary.aov(gp6.fit) #- if you want to inspect individual language measures
+
+mycomparison<-'3 trisomy x 2 bias group'
+effectnames<-c('Bias','Trisomy','Mo. education','Depriv. index','Bias x Trisomy')
+offset<-nrow(manova.df)
+manova.stats<-mymanova6$stats
+manova.df<-manova.function(mycomparison,effectnames,offset,manova.stats,manova.df)
+manova.df[(2+offset),1]<-paste0(' Ns Low bias: XXX (',mytab[1],'), XXY (',mytab[2],'), XYY (',mytab[3],')')
+manova.df[(3+offset),1]<-paste0(' Ns High bias: XXX (',mytab[4],'), XXY (',mytab[5],'), XYY (',mytab[6],')')  
+#summary.aov(gp6.fit) #- if you want to inspect individual language measures
 
 ```
 
@@ -888,8 +980,10 @@ y<-which(colnames(all.short)=='group8level')
 z<-which(colnames(all.short)=='trisomy')
 z1<-which(colnames(all.short)=='bias')
 z2<-which(colnames(all.short)=='dldlevel')
+z3<-which(colnames(all.short)=='mo_educ')
+z4<-which(colnames(all.short)=='deprivz')
 #make file with ID,  and CCC results, as well as group8; gender, age added at end
-cccbit<-all.short[,c(1,(w-2):(w+10),x,y,z,z1,z2,2,3)]#2 before ccc_a is GCC and SIDC
+cccbit<-all.short[,c(1,(w-2):(w+10),x,y,z,z1,z2,z3,z4,2,3)]#2 before ccc_a is GCC and SIDC
 
 cccbit<-filter(cccbit,dldlevel<2) #remove ASD, low IQ etc
 w<-which(is.na(cccbit$ccc2_consistent))
@@ -1002,8 +1096,16 @@ ccc.gp3<-filter(ccc.data,group8level<4)
 colA<-which(colnames(ccc.gp3)=='ccc_a')
 
 Y <- as.matrix(ccc.gp3[,colA:(colA+9)])
-fit.cccsct <- manova(Y ~ ccc.gp3$group8)
-summary(fit.cccsct, test="Pillai")
+fit.cccsct <- manova(Y ~ ccc.gp3$group8+ccc.gp3$mo_educ+ccc.gp3$deprivz)
+summary(fit.cccsct, test="Wilks")
+mytab<-table(ccc.gp3$group8)
+mycomparison<-paste0('XXX (',mytab[1],'), XXY (',mytab[2],'),XYY (',mytab[3],')')
+manova.stats<-summary(fit.cccsct, test="Wilks")$stats
+offset<-0
+effectnames<-c('Group','Mo. education','Depriv. index')
+manova.ccc.df<-manova.function(mycomparison,effectnames,offset,manova.stats,manova.ccc.df)
+
+
 
 #Now add twin ld group
 temp<-filter(ccc.data,group8level==8)
@@ -1012,15 +1114,28 @@ ccc.gp2<-rbind(ccc.gp3,temp)
 ccc.gp2$group2<-1
 ccc.gp2$group2[1:nsct]<-2
 Y <- as.matrix(ccc.gp2[,colA:(colA+9)])
-fitccc2 <- manova(Y ~ ccc.gp2$group2)
-summary(fitccc2, test="Pillai")
+fitccc2 <- manova(Y ~ ccc.gp2$group2+ccc.gp2$mo_educ+ccc.gp2$deprivz)
+summary(fitccc2, test="Wilks")
+manova.stats<-summary(fitccc2, test="Wilks")$stats
+offset<-nrow(manova.ccc.df)
+mycomparison<-'All SCT vs Lang concern twins'
+effectnames<-c('Group','Mo. education','Depriv. index')
+manova.ccc.df<-manova.function(mycomparison,effectnames,offset,manova.stats,manova.ccc.df)
+
 
 #Now do full 2 way analysis on hi and low bias trisomies
 temp1<-filter(ccc.data,group8level<7)
 Y6 <- as.matrix(temp1[,colA:(colA+9)])
-fitccc6 <- manova(Y6 ~ temp1$trisomy*temp1$bias)
-summary(fitccc6, test="Pillai")
+fitccc6 <- manova(Y6 ~ temp1$trisomy*temp1$bias+temp1$mo_educ+temp1$deprivz)
+summary(fitccc6, test="Wilks")
 #summary.aov(fitccc6) #- if you want to inspect individual language measures
+manova.stats<-summary(fitccc6, test="Wilks")$stats
+offset<-nrow(manova.ccc.df)
+mycomparison<-'Bias x Trisomy'
+effectnames<-c('Bias','Trisomy','Mo. education','Depriv. index','Bias x Trisomy')
+manova.ccc.df<-manova.function(mycomparison,effectnames,offset,manova.stats,manova.ccc.df)
+
+
 
 #GCC and SIDC - just do anova
 aov.gcc<-aov(temp1$gcc~temp1$trisomy*temp1$bias)
@@ -1280,7 +1395,7 @@ flow2 %>% export_svg %>% charToRaw %>% rsvg_png("twins_flow.png")
 ```
 
 
-##Session information
+
 ```{r sessinfo, include=FALSE}
 sessionInfo()
 ```
@@ -1301,8 +1416,8 @@ The specific questions we considered were:
 2.	Is the cognitive profile of children with sex chromosome trisomies similar to that of children with language problems who have the usual XY or XX karyotype?  
 3.	How far does ascertainment bias affect the language and cognitive profiles of children with sex chromosome trisomies?  
 
-##Participants  
-###Sex chromosome trisomy cases  
+## Participants  
+### Sex chromosome trisomy cases  
 We recruited `r tab_sct[1,1]+tab_sct[1,2]` girls with XXX, `r tab_sct[2,1]+tab_sct[2,2]` boys with XXY and `r tab_sct[3,1]+tab_sct[3,2]` boys with XYY to the study, in the age range from 5 years 0 months to 15 years 11 months. `r round(100*sum(origstudy)/sum(tab_sct),0)`% of the children had participated in the Bishop et al (2011) study. Recruitment was via NHS Clinical Genetics centres, two support groups (Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association) and self-referral through social media. To be included in the study, the child had to be aware of their trisomy status.  
 
 **Ascertainment bias**. During the initial telephone interviews, caregivers were asked how their child was diagnosed, in particular whether this followed postnatal testing motivated by neurodevelopmental/behavioural problems. The phenotype of such children may be more severe, potentially biasing the sample, and so, as shown in Figure 1, we grouped them prospectively as a high-risk-of-bias (‘High Bias’) subgroup, comprised of `r sum(excludetab[,2,1])` XXX, `r sum(excludetab[,2,2])` XXY and `r sum(excludetab[,2,3])` XYY cases. All other children formed the low-risk-of-bias (‘Low Bias’) subgroup, with `r sum(excludetab[,1,1])` XXX, `r sum(excludetab[,1,2])` XXY and `r sum(excludetab[,1,3])` XYY cases.  
@@ -1316,9 +1431,9 @@ We recruited `r tab_sct[1,1]+tab_sct[1,2]` girls with XXX, `r tab_sct[2,1]+tab_s
 
 The numbers included in different analyses are shown in the flowchart in Figure 1.
 
-![Figure 1. Numbers of children included in different analyses.](SCT_flow.png)
+![Figure 1. Numbers of children with sex chromosome trisomies included in different analyses.](SCT_flow.png)
 
-###Comparison group  
+### Comparison group  
 
 The comparison sample consisted of twins recruited via fliers sent to primary schools around the UK, advertisements on our group's website and via twins' clubs. The age range for this sample was narrower than for the SCT cases. We aimed to recruit families with twin children aged between 6 years 0 months and 11 years 11 months, with over-representation of those where one or both twins had language or literacy problems. Further details are provided in Wilson and Bishop (2018).   
 Our second question involved comparing the language profile of children with trisomies with that of children with language disorders of unknown cause. Usually, language disorder would be diagnosed on the basis of language test scores, but if we took that approach, the result would be a foregone conclusion, in that we would use the same measures to define the independent variable (language status) and the dependent variables. To avoid this circularity, twin children were subdivided according to parental concern about language and history of speech and language therapy (SALT), rather than by language test scores, which were treated as dependent variables. Parental concern was coded from the initial interview, and used to divide the twin sample into a ‘language concerns’ group with ongoing parental concerns about oral language (mild or severe) and the remainder (which included some cases where there had been transient concerns in preschool that had resolved, or where the concern affected only reading).  The latter is referred to as the ‘no concerns’ group. In addition, children who had received speech and language therapy after the age of 4 years were included in the ‘language concerns’ group. 
@@ -1327,22 +1442,24 @@ One twin from each pair was selected at random to avoid dependencies in the data
 
 ![Figure 2. Numbers of twin children with and without language concerns.](twins_flow.png)
 
-##Methods
+## Methods
 
-###Language, literacy and cognitive assessments###
+### Language, literacy and cognitive assessments###
 
 The assessment battery administered to the child is shown in Table 1. 
 
 ```{r table1, echo=FALSE}
-#usual problems with getting tables to print in Word. Seems I need pandoc 2.0
+#usual problems with getting tables to print in Word. OK with updated pandoc 2.0
 #https://davidgohel.github.io/flextable/articles/overview.html
 #autofit(regulartable(testbattery))
-regulartable(testbattery)
+ft<-regulartable(testbattery)
+ft <- width(ft, width = 3)
+ft
 ```
 Parents were asked to complete the Children’s Communication Checklist – 2 (CCC-2: Bishop, 2003) and Social Responsiveness Scales (SRS: Constantino, 2005) and return them by mail; the response rate was 86% for the trisomy families and 83% for the twin families.  The SRS data and results from an online interview covering behavioural and psychiatric characteristics will be described in a companion paper. 
 Results from the assessments in table 1 were converted to age-scaled scores on a common scale with mean 100 and SD 15. All tests had published norms covering the age range of the twin sample (6 to 11 years), but some did not extend outside this range. As explained in Newbury et al. (2018), where feasible norms were extrapolated based on data from other samples encompassing the wider age range. For oromotor skills, however, extrapolated norms gave scaled scores that were well below the range of other tests. For this test, therefore the No Concerns twin group was used to derive norms, using the regression of total correct on age to compute a standardized residual, which was then scaled to mean 100 and SD 15.  
 
-##Covariates
+## Covariates
 
 Two measures of socio-economic variables that have been associated with language status were included in the analysis. These were:  
 a)	Educational level of mother, transformed into an ordinal scale based on age at leaving full-time education/qualifications obtained, with points of 0 (prior to age 16 years), 1 (16 years/did GCSE or O-levels), 2 (18 years/ did A-levels), 3 (21 years, degree), 4 (postgraduate study).   
@@ -1350,15 +1467,22 @@ a)	Educational level of mother, transformed into an ordinal scale based on age a
 b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank over 32,000 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable, by dividing by 32750 before applying the qnorm function in R.  A value of zero was assigned to 13 SCT cases and 4 twin pairs from Wales, Scotland and Northern Ireland.
 
 
-##Procedure
+## Procedure
 
 Children were seen for an individual assessment at home or school. The language, reading and nonverbal ability tests (Table 1) were given in an initial session lasting around 90 minutes, followed by an assessment of laterality, the results of which are described elsewhere (Wilson & Bishop, 2018).  
 
-##Analysis
+## Analysis
 
-Characteristics of the samples on the covariates. (to be added)
+Table 2 shows the characteristics of the trisomy and twin groups on background variables: age, maternal educational level and standardized deprivation index.
 
-1.	**Comparison of three trisomy groups** (low risk of bias only)
+```{r table2, echo=FALSE}
+
+ft2<-regulartable(mybkgtab2)
+ft2 <- width(ft2, width = c(2,1,1,1,1))
+ft2
+```
+1.	**Comparison of three trisomy groups** (low risk of bias only)  
+
 **Psychometric tests**
 As a first step, data from the psychometric test variables were plotted to see the range and distribution of scores for the three low bias trisomy groups, as shown in the red points in Figure 3. These plots exclude children with missing data on any test. The continuous horizontal bars show the median for each group.  All data have been scaled to mean of 100 and SD 15. The yellow shaded area shows the range covered by mean +/- 1 SD for the No Concerns twins. The distribution of blue points, corresponding to the Language Concerns twins will be discussed below.  
 
@@ -1368,6 +1492,10 @@ An initial impression from these plots is that there is variation from test to t
 
 MANOVA was used to test whether there were reliable differences between the three trisomy groups on the 14 test measures, after taking covariates into account.  No effect of trisomy type was found (see Table 2).
 
+```{r table3, echo=FALSE}
+
+regulartable(manova.df)
+```
 
 
 
