@@ -782,10 +782,9 @@ do.manova <- function(mydata,mycolrange,gpcolumn,gpvalues,covcolumns){
   mycov1<-mydata[  ,covcolumns[1]]
   mycov2<-mydata[  ,covcolumns[2]]
   mymanova.fit <- manova(my.matrix ~ as.factor(mydata[,gpcolumn])+mycov1+mycov2)
-  mymanova.out<-summary(mymanova.fit, test="Wilks")
   
   
-  return(mymanova.out)
+  return(mymanova.fit)
 }
 ######################################################################################
 
@@ -811,67 +810,6 @@ manova.write <- function(mycomparison,effectnames,offset,manova.stats,manova.dat
 
 ```
 
-```{r beeswarm.function, include=FALSE}
-make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,
-                          groupcolor,mylims,dodiffmean){
-#Now do a grid of beeswarm plots
-
-png_bees<-paste0(pngname,'.png')#name to save png file
-png(png_bees,width=600,height=600)
-par(mfrow=pngdim) #5 row and 3 columns
-par(mar=c(5.1,4.1,4.1,0.2))
-#beeswarm jittered values (last value in jitter statement determines amount of jitter)
-
-grouplevel<-sort(unique(mydata[,groupcol])) #list of group values in numeric order
-ngroup<-length(grouplevel)
-pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3
-agebit<-pointcol[mydata[,subgroupcol]]
-testrange<-which(colnames(mydata)%in%varlist)
-for (i in 1:length(varlist)){
-  mytitle<-namelist[i]
-  mylabel<-'' #default is to not label y axis unless it is left-most column
-  if((i-1)%%pngdim[2]==0){ #heh! gets modulus of i-1 relative to n columns, which is zero if leftmost!
-    mylabel<-'Scaled score'
-  }
-  
-  beeswarm(jitter(mydata[,testrange[i]],3)~mydata[,groupcol] , xlab='Group',ylab=mylabel,spacing=.8,
-           pch = 16,pwpch=agebit,cex=1.5,col=groupcolor,main=mytitle,ylim=mylims[1:2],
-           cex.axis=1.5,cex.lab=1.5,cex.main=1.5) 
-
-  #add means
-  for (g in 1:ngroup){
-    myg<-grouplevel[g]
-    mm<-mean(mydata[mydata[,groupcol]==myg,testrange[i]],na.rm=TRUE) #means for whole sample by group
-    segments(g-.4,mm,g+.4,mm,col = 1,lty=2,lwd=2) #plot straight dotted lines at mean for each group
-    
-    #plot full lines for means for age-matched groups, i.e ageband2
-    if(dodiffmean==1){
-      #identify cases for each group in ageband2
-      w1<-which(mydata[,groupcol]==myg)
-      w2<-which(mydata$ageband==2)
-    shortrange<-intersect(w1,w2)
-    mm2<-mean(mydata[shortrange,testrange[i]],na.rm=TRUE)
-    segments(g-.4,mm2,g+.4,mm2,col = 1,lty=1,lwd=2)
-    }
-  }
-  abline(a=mylims[3],b=0,col='darkgray',lty=1)
-  abline(a=mylims[4],b=0,col='darkgray',lty=2)
-  abline(a=mylims[5],b=0,col='darkgray',lty=2)
-  
-  mean_TD<-mean(meanfile[,testrange[i]],na.rm=T)
-  sd_TD<-sd(meanfile[,testrange[i]],na.rm=T)
-  
-  up.lim<-mean_TD+sd_TD
-  low.lim<-mean_TD-sd_TD
-  
-  polygon(c(0,0,5,5), c(up.lim, low.lim, low.lim, up.lim),
-          col=adjustcolor("yellow",alpha.f=0.3), border = NA)
-  
-}
-dev.off()
-}
-
-```
 
 
 ```{r lang.manova, include=FALSE}
@@ -891,7 +829,9 @@ psychrange<-which(colnames(gp.sctlow) %in% c('piq','genlang','verbmem','literacy
 gpcolumn<-which(colnames(gp.sctlow)=='group8level')
 gpvalues<-c(1,2,3)
 covcolumns<-which(colnames(gp.sctlow) %in% c('mo_educ','deprivz'))
-mymanova.sum<-do.manova(gp.sctlow,psychrange,gpcolumn,gpvalues,covcolumns)
+mymanova.fit<-do.manova(gp.sctlow,psychrange,gpcolumn,gpvalues,covcolumns)
+  mymanova.sum<-summary(mymanova.fit, test="Wilks")
+
 print('Manova on the psychometric measures for the 3 Low Bias SCT groups only')
 mymanova.sum
 mytab<-table(gp.sctlow$trisomy)
@@ -925,7 +865,8 @@ psychrange<-which(colnames(gp.sctlow) %in% c('piq','genlang','verbmem','literacy
 gpcolumn<-which(colnames(gp.sctlow)=='is_twin')
 gpvalues<-c(0,1)
 covcolumns<-which(colnames(gp.sctlow) %in% c('mo_educ','deprivz'))
-mymanova.sum<-do.manova(lobias.agematch,psychrange,gpcolumn,gpvalues,covcolumns)
+mymanova.fit<-do.manova(lobias.agematch,psychrange,gpcolumn,gpvalues,covcolumns)
+mymanova.sum<-summary(mymanova.fit, test="Wilks")
 print('Manova on the psychometric measures for the SCT vs DLD groups age matched')
 mymanova.sum
 
@@ -961,97 +902,38 @@ moedregt<-lm(psych.vars[wt]~lobias.sct2$mo_educ[wt])
 
 ```
 
-```{r beeswarm1}
-#call the make.beeswarm function - this creates a png file
-groupcol<-which(colnames(lobias.sct2)=='Group')
-subgroupcol<-which(colnames(lobias.sct2)=='ageband')
-varlist<-c('piq','genlang','verbmem','literacy')
-namelist<-c('PIQ','Language','Verbal memory','Reading')
-meanfile<-twin.TD
-pngname<-'beeswarm_lowbias4gp'
-pngdim<-c(2,2)
-groupcolor<-c(2,2,2,4) #specify colours for each group - 3 trisomies the same, then twinLD
-mylims<-c(55,135,100,85,70) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
-dodiffmean<-1
-mydata<-lobias.sct2
-make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,
-                          groupcolor,mylims,dodiffmean)
-```
-
-
-```{r lowhi.sct, include=FALSE}
-##Comparison of low and high bias groups
-#Use trisomy.only group for this
-
-png_lang_bees<-'beeswarm_lang_bias.png' #name to save png file
-png(png_lang_bees,width=1000,height=1000)
-par(mfrow=c(5,3)) #5 row and 3 columns
-par(mar=c(5.1,4.1,4.1,0.2))
-#beeswarm jittered values (last value in jitter statement determines amount of jitter)
-
-trisomy.only<-filter(trisomy.only,ageband>1) #remove youngest bcs missing data
-trisomy.only<-filter(trisomy.only,langdata_complete==1)
-pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3
-agebit<-pointcol[trisomy.only$ageband]
-#alldatabit<-pointcol[(1+lobias.sct$langdata_complete)] #orig values are 0 and 1, so add 1
-
-for (i in 1:length(longname)){
-  mytitle<-longname[i]
-  beeswarm(jitter(trisomy.only[,nurange[i]],3)~group8level , data = trisomy.only, xlab='Group',ylab='Scaled score',spacing=.8,labels='',
-           pch = 16,pwpch=agebit,cex=1.7,col=c(2,2,2,1,1,1),main=mytitle,
-           ylim=c(55,140))
-  bxplot(trisomy.only[,nurange[i]]~group8level, data = trisomy.only, probs = 0.5, 
-         col = 1,lty=1,add=TRUE) #adds medians for all cases with dotted line
-  abline(a=100,b=0,col='darkgray',lty=1)
-  abline(a=85,b=0,col='darkgray',lty=2)
-  abline(a=70,b=0,col='darkgray',lty=2)
-  #same settings for polygon as before: shows TD twin range
-  polygon(c(0,0,7,7), c(up.lim, low.lim, low.lim, up.lim),
-          col=adjustcolor("yellow",alpha.f=0.3), border = NA)
-  text(1,133,'XXX',cex=1)
-  text(2,133,'XXY',cex=1)
-  text(3,133,'XYY',cex=1)
-  text(4,133,'XXX',cex=1)
-  text(5,133,'XXY',cex=1)
-  text(6,133,'XYY',cex=1)
-  text(2,140,'<---------Low bias--------->')
-  text(5,140,'<---------High bias--------->')
-  
-}
-dev.off()
-```
 
 ```{r manova.bias, include=FALSE}
-
-#check that each bias group is multivariate normal
-for (i in 1:2){
-  sctbias.matrix <- as.matrix(trisomy.only[trisomy.only$bias==(i-1),psychrange])
-  #transpose cols and rows for mshapiro.test !
-  print(paste('Bias group =',(i-1)))
-  print(mshapiro.test(t(sctbias.matrix)))
-}
+trisomy.only<-filter(trisomy.only,ageband>1) #remove youngest bcs missing data
+trisomy.only<-filter(trisomy.only,langdata_complete==1)
 
 
-sctbias.matrix <- as.matrix(trisomy.only[,psychrange])
-gpbias.fit <- manova(sctbias.matrix ~ trisomy.only$bias+trisomy.only$mo_educ+trisomy.only$deprivz)
-mymanova.bias<-summary(gpbias.fit, test="Wilks")
-print('Manova on the psychometric measures for the Low Bias SCT groups vs High Bias')
+psychrange<-which(colnames(trisomy.only) %in% c('piq','genlang','verbmem','literacy'))
+gpcolumn<-which(colnames(trisomy.only)=='bias')
+gpvalues<-c(0,1)
+covcolumns<-which(colnames(trisomy.only) %in% c('mo_educ','deprivz'))
+mymanova.fit<-do.manova(trisomy.only,psychrange,gpcolumn,gpvalues,covcolumns)
+mymanova.sum<-summary(mymanova.fit, test="Wilks")
+print('Manova on the psychometric measures for the high vs low bias groups')
+mymanova.sum
+
 mytab<-table(trisomy.only$bias)
-
+names(mytab)<-c('Low','High')
 print('Ns for analysis:')
 print(mytab)
-mymanova.bias 
+print('Manova on the summary psychometric measures for the low vs high bias SCT')
+mymanova.sum
 
-mycomparison<-'C.2 bias groups'
-effectnames<-c('Bias','Mo. education','Depriv. index')
+mycomparison<-paste0('C. Low bias (',mytab[1],') vs. High bias (',mytab[2],')')
+manova.stats<-mymanova.sum$stats
 offset<-nrow(manova.dataframe)
-manova.stats<-mymanova.bias$stats
 manova.dataframe<-manova.write(mycomparison,effectnames,offset,manova.stats,manova.dataframe)
-manova.dataframe[(2+offset),1]<-paste0('- Ns Low bias: XXX (',mytab[1],'), XXY (',mytab[2],'), XYY (',mytab[3],')')
-manova.dataframe[(3+offset),1]<-paste0('- Ns High bias: XXX (',mytab[4],'), XXY (',mytab[5],'), XYY (',mytab[6],')')  
-summary.aov(mymanova.bias.fit) #- if you want to inspect individual language measures
 
+summary.aov(mymanova.fit) #- if you want to inspect individual language measures
+```
 
+```{r lowlangtests}
+#Optional extra: count how many language tests are low
 print('ANOVA on N tests low: Vocab, Comp, Sent Rep, Nwrep, Oromotor + GCC')
 lowtest6.aov<-aov(trisomy.only$Ntestlow~trisomy.only$trisomy*trisomy.only$bias)
 summary(lowtest6.aov)
@@ -1062,10 +944,144 @@ cutofflang.tab
 
 ```
 
+```{r beeswarm.function, include=FALSE}
+make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,
+                          pngwidth,pngheight,groupcolor,mylims,dodiffmean,addtext){
+#Now do a grid of beeswarm plots
 
-```{r ccc2, include=FALSE}
+png_bees<-paste0(pngname,'.png')#name to save png file
+png(png_bees,width=pngwidth,height=pngheight)
+par(mfrow=pngdim) #5 row and 3 columns
+par(mar=c(5.5,5.1,4.1,1),mgp=c(4, 2, 0)) #mar sets the bottom, left, top and right margins
+#mgp – sets  axis label locations relative to the edge of the inner plot window. The first value represents the location the labels (i.e. xlab and ylab in plot), the second the tick-mark labels, and third the tick marks. The default is c(3, 1, 0). Here need 4,2,0 to avoid 2-line label colliding with frame.
+
+#beeswarm jittered values (last value in jitter statement determines amount of jitter)
+
+grouplevel<-sort(unique(mydata[,groupcol]))
+#list of group values in numeric order
+
+ngroup<-length(grouplevel)
+
+pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3
+agebit<-pointcol[mydata[,subgroupcol]]
+testrange<-which(colnames(mydata)%in%varlist)
+for (i in 1:length(varlist)){
+  mytitle<-namelist[i]
+  mylabel<-'' #default is to not label y axis unless it is left-most column
+  if((i-1)%%pngdim[2]==0){ #heh! gets modulus of i-1 relative to n columns, which is zero if leftmost!
+    mylabel<-'Scaled score'
+  }
+  
+  beeswarm(jitter(mydata[,testrange[i]],3)~mydata[,groupcol] , xlab='Group',ylab=mylabel,spacing=.8,
+           pch = 16,pwpch=agebit,cex=1.5,col=groupcolor,main=mytitle,ylim=mylims[1:2],
+           cex.axis=1.21,cex.lab=1.5,cex.main=1.5) 
+
+  #add means
+  for (g in 1:ngroup){
+    myg<-grouplevel[g]
+    mm<-mean(mydata[mydata[,groupcol]==myg,testrange[i]],na.rm=TRUE) #means for whole sample by group
+    segments(g-.4,mm,g+.4,mm,col = 1,lty=2,lwd=2) #plot straight dotted lines at mean for each group
+    
+    #plot full lines for means for age-matched groups, i.e ageband2
+    if(dodiffmean==1){
+      #identify cases for each group in ageband2
+      w1<-which(mydata[,groupcol]==myg)
+      w2<-which(mydata$ageband==2)
+    shortrange<-intersect(w1,w2)
+    mm2<-mean(mydata[shortrange,testrange[i]],na.rm=TRUE)
+    segments(g-.4,mm2,g+.4,mm2,col = 1,lty=1,lwd=2)
+    }
+  }
+  abline(a=mylims[3],b=0,col='darkgray',lty=1)
+  abline(a=mylims[4],b=0,col='darkgray',lty=2)
+  abline(a=mylims[5],b=0,col='darkgray',lty=2)
+  
+  mean_TD<-mean(meanfile[,testrange[i]],na.rm=T)
+  sd_TD<-sd(meanfile[,testrange[i]],na.rm=T)
+  
+  up.lim<-mean_TD+sd_TD
+  low.lim<-mean_TD-sd_TD
+  
+  polygon(c(0,0,(ngroup+1),(ngroup+1)), c(up.lim, low.lim, low.lim, up.lim),
+          col=adjustcolor("yellow",alpha.f=0.3), border = NA)
+  if(addtext==1){
+  text(2,135,'<---------Low bias--------->')
+  text(5,135,'<---------High bias--------->')
+  }
+}
+dev.off()
+}
+
+```
+
+```{r beeswarm1}
+#call the make.beeswarm function - this creates a png file
+groupcol<-which(colnames(lobias.sct2)=='Group')
+subgroupcol<-which(colnames(lobias.sct2)=='ageband')
+varlist<-c('piq','genlang','verbmem','literacy')
+namelist<-c('Nonverbal Ability','Core Language','Verbal production/memory','Literacy skills')
+meanfile<-twin.TD
+pngname<-'beeswarm_lowbias4gp'
+pngdim<-c(2,2)
+pngwidth<-600
+pngheight<-600
+groupcolor<-c(2,2,2,4) #specify colours for each group - 3 trisomies the same, then twinLD
+mylims<-c(55,135,100,85,70) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
+dodiffmean<-1
+addtext<-0
+mydata<-lobias.sct2
+levels(mydata$Group)[4]<-'Twin +\nConcerns'
+make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+                          groupcolor,mylims,dodiffmean,addtext)
+
+#Also do beeswarm for all 14 measures for supplementary table
+
+varlist<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','NwdRep','Oromotor',
+                   'ReadAcc','ReadComp','ReadRate','TOWREwd','TOWREnwd', 'PicName','DigitName')
+ namelist<-c('Matrices','Block Design','Vocabulary','Comprehension','Sentence Rep','Nonword Rep','Oromotor Skills',
+                   'Reading Acc.','Reading Comp.','Reading Rate','TOWRE words','TOWRE nonwords',
+                   'Picture Naming','Digit Naming')  
+pngname<-'beeswarm14_lowbias4gp'
+pngdim<-c(4,4)
+pngwidth<-1000
+pngheight<-1000
+make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+                          groupcolor,mylims,dodiffmean,addtext)
+ 
+```
+
+
+
+
+```{r bias.beeswarm, include=FALSE}
+##Comparison of low and high bias groups
+#Use trisomy.only group for this
+
+
+groupcol<-which(colnames(trisomy.only)=='group8level')
+subgroupcol<-which(colnames(trisomy.only)=='ageband')
+varlist<-c('piq','genlang','verbmem','literacy')
+namelist<-c('Nonverbal Ability','Core Language','Verbal production/memory','Literacy skills')
+meanfile<-twin.TD
+pngname<-'beeswarm_bias.gp'
+pngdim<-c(2,2)
+pngwidth<-700
+pngheight<-600
+groupcolor<-c(2,2,2,1,1,1) #specify colours for each group 
+mylims<-c(55,135,100,85,70) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
+dodiffmean<-0
+addtext<-1
+mydata<-trisomy.only
+mydata$group8level<-as.factor(mydata$group8level)
+
+levels(mydata$group8level)<-c('XXX','XXY','XYY','XXX*','XXY*','XYY*')
+make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+                          groupcolor,mylims,dodiffmean,addtext)
+
+```
+```{r ccc2filemake, include=FALSE}
 ##CCC-2 analysis
-# Consider how CCC-2 profiles for SCTs compare with those in our previous paper. Also include twins with concerns as comparison group.  Plot subscales; also analyse the GCC and SIDC.
+# Consider CCC-2 profiles for SCTs. Also include twins with concerns as comparison group.  Plot subscales; also analyse the GCC and SIDC.
 
 w<-which(colnames(all.short)=='ccc_a')
 x<-which(colnames(all.short)=='group8')
@@ -1098,7 +1114,7 @@ print(paste('Twin:',1-sum(consistent.ccc[7:8,1])/sum(consistent.ccc[7:8,])))
 
 ```
 ```{r logreg.cccresponse, include=FALSE}
-##Analysis to explore factor affecting response rates
+##Analysis to explore factors affecting response rates on CCC-2
 
 all.short2<-all.short
 for(i in 1:length(all.short2[,1]))
@@ -1124,6 +1140,7 @@ NR1 <- glm(response ~ lang_severity + mo_educ + singlepar + SCT,family=binomial(
 summary(NR1)
 
 ```
+
 ```{r ccc.analyse, include=FALSE}
 ##Now analyse CCC-2 for 8 groups
 
@@ -1146,7 +1163,7 @@ colnames(ccc.df)<-c('Group','N','GCC.mean','GCC.se','SIDC.mean','SIDC.se','A.mea
                     'I.mean','I.se','J.mean','J.se')
 ```
 
-```{r makedata.cccplot, include=FALSE}
+```{r makelongcccdata, include=FALSE}
 #Need data in long form for ggplot2
 #set up the long form df with data from scale A
 ccc.dflong<-ccc.df[1:8,c(1,2,2,7:8)]
@@ -1196,8 +1213,8 @@ colA<-which(colnames(ccc.gp.sctlow)=='ccc_a')
 cccrange<-colA:(colA+9)
 #Not multivariate normal. Take avgs of A-D,E-H and I-J to make more normal
 ccc.data$ccc_struct<-rowMeans(ccc.data[,cccrange[1:4]],na.rm=TRUE)
-ccc.data$ccc_prag<-rowMeans(ccc.data[,cccrange[5:8]],na.rm=TRUE)
-ccc.data$ccc_autfeat<-rowMeans(ccc.data[,cccrange[9:10]],na.rm=TRUE)
+ccc.data$ccc_prag<-rowMeans(ccc.data[,cccrange[5:7]],na.rm=TRUE)
+ccc.data$ccc_autfeat<-rowMeans(ccc.data[,cccrange[8:10]],na.rm=TRUE)
 cccnurange<-(ncol(ccc.data)-2):ncol(ccc.data)
 
 ccc.gp.sctlow<-filter(ccc.data,group8level<4)
@@ -1595,7 +1612,8 @@ ft <- width(ft, width = 3)
 ft
 ```
 Parents were asked to complete the Children’s Communication Checklist – 2 (CCC-2: Bishop, 2003) and Social Responsiveness Scales (SRS: Constantino, 2005) and return them by mail; the response rate was 86% for the trisomy families and 83% for the twin families.  The SRS data and results from an online interview covering behavioural and psychiatric characteristics will be described in a companion paper. 
-Results from the assessments in table 1 were converted to age-scaled scores on a common scale with mean 100 and SD 15. All tests had published norms covering the age range of the twin sample (6 to 11 years), but some did not extend outside this range. As explained in Newbury et al. (2018), where feasible norms were extrapolated based on data from other samples encompassing the wider age range. For oromotor skills, however, extrapolated norms gave scaled scores that were well below the range of other tests. For this test, therefore the No Concerns twin group was used to derive norms, using the regression of total correct on age to compute a standardized residual, which was then scaled to mean 100 and SD 15.  
+Results from the assessments in table 1 were converted to age-scaled scores on a common scale with mean 100 and SD 15. All tests had published norms covering the age range of the twin sample (6 to 11 years), but some did not extend outside this range. As explained in Newbury et al. (2018), where feasible norms were extrapolated based on data from other samples encompassing the wider age range. For oromotor skills, however, extrapolated norms gave scaled scores that were well below the range of other tests. For this test, therefore the No Concerns twin group was used to derive norms, using the regression of total correct on age to compute a standardized residual, which was then scaled to mean 100 and SD 15. 
+Our original intention was to use MANOVAs to test group differences that related to the three research questions, but preliminary analysis showed that the MANOVA assumption of multivariate normality was not met when all 14 measures were entered into the analysis. Accordingly, we created four composites for the psychometric tests, by averaging scores as follows: Nonverbal ability (Matrices and Block Design), Core language (Vocabulary and Woodcock-Johnson Comprehension), Verbal production/memory (Sentence repetition, Nonword repetition, Oromotor sequences) and Literacy skills (all subtests from Neale Analysis of Reading Ability, Test of Word Reading Efficiency, and PhAB Rapid Naming). These composites mostly met criteria for multivariate normality within subgroups. Distributions of scores on the component tests for the different groups are shown in Supplementary Materials. Multivariate normality was again an issue for the CCC-2 test data, so composites were formed based on three sets of scales, identified as Structural Language (scales A-D), Pragmatics (scales E-G), and Autistic Features (scales H-J). The means and SEs for the original 10 subscales are shown in Supplementary Materials, Table x.
 
 ## Covariates
 
@@ -1628,13 +1646,13 @@ For each type of variable (Psychometric tests and parent report on CCC-2) three 
 **Psychometric tests**  
 A.	**Comparison of three trisomy groups** (Low Bias group only)  
 
-As a first step, data from the psychometric test variables were plotted to see the range and distribution of scores for the three Low Bias trisomy groups, as shown in the red points in Figure 3. These plots exclude children with missing data on any test. The continuous horizontal bars show the median for each group.  All data have been scaled to mean of 100 and SD 15. The yellow shaded area shows the range covered by mean +/- 1 SD for the No Concerns twins. The distribution of blue points, corresponding to the Language Concerns twins will be discussed below (analysis B).  
+As a first step, data from the psychometric composites were plotted to see the range and distribution of scores for the three Low Bias trisomy groups, as shown in the red points in Figure 3. These plots exclude children with missing data on any test. The continuous horizontal bars show the median for each group.  All data have been scaled to mean of 100 and SD 15. The yellow shaded area shows the range covered by mean +/- 1 SD for the No Concerns twins. The distribution of blue points, corresponding to the Language Concerns twins will be discussed below (analysis B).  
 
-An initial impression from these plots is that there is variation from test to test in severity of impairment, but on all measures, the most striking feature is a wide spread of scores, with some children scoring above average and others well below. Although the median test scores vary from trisomy to trisomy, the within-group variation is much greater than between group variation. 
+An initial impression from these plots is that there is variation from test to test in severity of impairment, but on all measures, the most striking feature is a wide spread of scores, with some children scoring above average and others well below. Although the median test scores vary from trisomy to trisomy, the within-group variation is much greater than between group variation. This pattern is also evident in data from the individual tests making up the composites (Supplementary Material, Figure S1).  
 
-![Figure 3: Distributions of scores on psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group. Filled circles show cases in age range 6 to 11 yr. Continous line is mean for 6-11 yr olds, dotted line is mean for whole sample. Yellow band is mean +/- 1 SD for No Concern comparison group.](beeswarm_lang.png)
+![Figure 3: Distributions of scores on four clusters of psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group. Filled circles show cases in age range 6 to 11 yr. Continous line is mean for 6-11 yr olds, dotted line is mean for whole sample. Yellow band is mean +/- 1 SD for No Concern comparison group.](beeswarm_lowbias4gp.png)
 
-MANOVA was used to test whether there were reliable differences between the three trisomy groups on the 14 test measures, after taking covariates (Mother's educational level and normalised deprivation index) into account.  No effect of trisomy type was found (see Table 3).  
+MANOVA was used to test whether there were reliable differences between the three trisomy groups on the four composite measures, after taking covariates (Mother's educational level and normalised deprivation index) into account.  No effect of trisomy type was found (see Table 3).  
 
 **Table 3. Results of MANOVA comparisons on psychometric tests**
 ```{r table3, echo=FALSE}
@@ -1647,10 +1665,10 @@ ft3
 B.	**Comparison of combined trisomy cases aged 6-11 yr (Low Bias) with Language Concern comparison group**  
 Table 3 also shows the MANOVA result for this comparison, again revealing no overall group effect of group. The only factor affecting scores was mother's education, with each additional point on the scale associated with an increase of `r my.moedregb` points in average score on psychometric tests.
 
-C.	**Comparison of effect of trisomy type and bias group: trisomy cases only**  
-For this analysis, we considered two main effects: trisomy type and bias group, as well as the interaction between them. As shown in table 3 also shows the MANOVA result for this comparison, again revealing no overall group effect. The effect of bias group showed a nonsignificant trend for poorer scores to be associated with high ascertainment bias.
+C.	**Comparison of effect of bias group: trisomy cases only**  
+For this analysis, we considered the effect of bias group. As shown in table 3, poorer scores were associated with high ascertainment.
 
-![Figure 4: Distributions of scores on psychometric tests for the Low Bias vs High Bias trisomy groups. Filled circles show cases in age range 6 to 11 yr, unfilled circles show older children. Continous lines are group means. Yellow band is mean +/- 1 SD for No Concern comparison group. ](beeswarm_lang_bias.png)
+![Figure 4: Distributions of scores on psychometric composites for the Low Bias vs High Bias trisomy groups. Filled circles show cases in age range 6 to 11 yr, unfilled circles show older children. Continous lines are group means. Yellow band is mean +/- 1 SD for No Concern comparison group. ](beeswarm_bias.gp.png)
 
 **Children's Communication Checklist-2**  
 
@@ -1682,8 +1700,12 @@ We offer warmest thanks to the families who took part in the study, and school s
 
 
 <w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>
-# Appendix
+# Supplementary Material
 
+## Distribution of scores on individual psychometric measures.  
+Figure S1 shows beeswarm plots for individual test scores: low bias trisomy groups and Language Concern twin group. Note that on some tests there is a minimum scaled score that leads to a skewed distribution. 
+
+![Figure S1: Distributions of scores on the fourteen measures from psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group. Filled circles show cases in age range 6 to 11 yr. Continous line is mean for 6-11 yr olds, dotted line is mean for whole sample. Yellow band is mean +/- 1 SD for No Concern comparison group.](beeswarm14_lowbias4gp.png)
 
 
 
