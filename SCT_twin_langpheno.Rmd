@@ -234,6 +234,8 @@ all.short$ageband[w]<-3
 all.short$pass_hearing[all.short$pass_hearing==9]<-NA #change 9 to NA for pass_hearing
 #NB these include both refusal and equipment failure
 
+all.short$piq[all.short$piq==999]<-NA
+
 #missing data has codes of 996-999 for language tests
 w <- which(all.short$nonword_rep_ss>900)
 print('Cases with missing nonword rep data: ')
@@ -697,27 +699,23 @@ round(table(all.short$dldcat,all.short$slt.code),2) #check how SALT relates to D
 # Make table for creating sums for Participants section
 exclude.tab<-table(all.short$dldcat,all.short$bias,all.short$trisomy) #can index cells as DLDcat,bias,trisomy
 
-#######################################################
-# exclude those with ASD, low IQ or hearing exclusion #
-#######################################################
-#? already achieved with pheno_include?
-all.short$group8xlevel<-all.short$group8level #easiest to make new grouping variable that has NA for excluded
-w<-which(all.short$dldlevel>1)
-all.short$group8xlevel[w]<-NA
+
+# NB those with ASD, low IQ or hearing exclusion already excluded from group8level#
+# (had created another variable group8xlevel, but this was identical, so now removed)
 
 #assign some values needed for participant report
-ageband.group.tab<-table(all.short$ageband,all.short$group8xlevel)
+ageband.group.tab<-table(all.short$ageband,all.short$group8level)
 n.5yr1<-sum(ageband.group.tab[1,1:3]) #N 5 yr olds after exclusions - lobias
 n.5yr2<-sum(ageband.group.tab[1,4:6]) #N 5 yr olds after exclusions - hibias
-missing.tab<-table(all.short$langdata_complete,all.short$group8xlevel)
+missing.tab<-table(all.short$langdata_complete,all.short$group8level)
 n.misslang1<-sum(missing.tab[1,1:3]) #N all missing - lobias
 n.misslang2<-sum(missing.tab[1,4:6])#N all missing - hibias
-cccNtab<-table(all.short$ccc2_consistent,all.short$group8xlevel,useNA='ifany')
+cccNtab<-table(all.short$ccc2_consistent,all.short$group8level,useNA='ifany')
 n.missccc<-sum(cccNtab[3,1:6])
 n.badccc<-sum(cccNtab[1,1:6])
-lobias.sct<-filter(all.short,group8xlevel%in%c(1:3,8)) #we're using numeric code for factor level to make this easier
+lobias.sct<-filter(all.short,group8level%in%c(1:3,8)) #we're using numeric code for factor level to make this easier
 
-lobias.sct$Group<-as.factor(lobias.sct$group8xlevel)
+lobias.sct$Group<-as.factor(lobias.sct$group8level)
 levels(lobias.sct$Group)<-c('XXX','XXY','XYY','Twin')
 
 
@@ -730,17 +728,17 @@ lobias.sct3<-filter(lobias.sct2,ageband==2)
 twin.TD<-filter(all.short,group8level==7) #we're using numeric code for factor level to make this easier
 twin.TD$Group<-'TD.twin'
 
-trisomy.only<-filter(all.short,group8xlevel<7)  #NB with 8x we omit the ASD etc exclusionary cases
+trisomy.only<-filter(all.short,group8level<7)  #NB with 8x we omit the ASD etc exclusionary cases
 
 #create table for reporting demographics
 #age done using aggregate because something odd happens when using summarise!
-agemean.tab <-aggregate(all.short$Age, by=list(all.short$group8xlevel),
+agemean.tab <-aggregate(all.short$Age, by=list(all.short$group8level),
                         FUN=mean, na.rm=TRUE)
-agesd.tab <-aggregate(all.short$Age, by=list(all.short$group8xlevel),
+agesd.tab <-aggregate(all.short$Age, by=list(all.short$group8level),
                       FUN=sd, na.rm=TRUE)
 
 mybkg.tab <- data.frame(all.short %>%
-                          group_by(group8xlevel) %>%
+                          group_by(group8level) %>%
                           summarise(N = length(Age),
                                     Age   = mean(Age),
                                     Age.SD   = sd(Age),
@@ -766,57 +764,7 @@ colnames(mybkg.tab2)<-c('Group','N','Age (mo)','Mo. educ.','Depriv. index')
 
 
 
-```{r beeswarmgrid, include=FALSE}
-#Now do a grid of beeswarm plots
-longname<-c('Matrices','Block Design','Vocabulary','Comprehension','Sentence Repetition','Nonword Repetition','Oromotor',
-            'Reading Accuracy','Reading Comprehension','Reading Rate','Speeded word reading','Speeded nonword reading',
-            'Rapid Naming: Pictures','Rapid Naming: Digits')
 
-png_lang_bees<-'beeswarm_lang.png' #name to save png file
-png(png_lang_bees,width=1000,height=1000)
-par(mfrow=c(5,3)) #5 row and 3 columns
-par(mar=c(5.1,4.1,4.1,0.2))
-#beeswarm jittered values (last value in jitter statement determines amount of jitter)
-
-pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3
-agebit<-pointcol[lobias.sct2$ageband]
-#alldatabit<-pointcol[(1+lobias.sct$langdata_complete)] #orig values are 0 and 1, so add 1
-for (i in 1:length(longname)){
-  mytitle<-longname[i]
-  beeswarm(jitter(lobias.sct2[,nurange[i]],3)~Group , data = lobias.sct2, xlab='Group',ylab='Scaled score',spacing=.8,
-           pch = 16,pwpch=agebit,cex=1.7,col=c(2,2,2,4),main=mytitle,ylim=c(55,135)) 
-  #can use bxplot to add medians (probs=.5), but as we are analysing means, use segments instead to add means
-  
-  #bxplot(lobias.sct2[,nurange[i]]~Group , data = lobias.sct2, probs = 0.5, col = 1,lty=3,add=TRUE) #adds medians for all cases with dotted line
-  #   bxplot(lobias.sct3[,nurange[i]]~Group , data = lobias.sct3, probs = 0.5, col = 1,add=TRUE) #adds medians just for those in Twin age range, with continuous line
-  
-  #add means
-  for (g in 1:4){
-    myg<-g
-    if (g==4){myg<-8}
-    mm<-mean(lobias.sct2[lobias.sct2$group8xlevel==myg,nurange[i]],na.rm=TRUE)
-    segments(g-.4,mm,g+.4,mm,col = 1,lty=2,lwd=2)
-    shortrange<-intersect(which(lobias.sct$group8xlevel==myg),which(lobias.sct$ageband==2))
-    mm2<-mean(lobias.sct2[shortrange,nurange[i]],na.rm=TRUE)
-    segments(g-.4,mm2,g+.4,mm2,col = 1,lty=1,lwd=2)
-    
-  }
-  abline(a=100,b=0,col='darkgray',lty=1)
-  abline(a=85,b=0,col='darkgray',lty=2)
-  abline(a=70,b=0,col='darkgray',lty=2)
-  
-  mean_TD<-mean(twin.TD[,nurange[i]],na.rm=T)
-  sd_TD<-sd(twin.TD[,nurange[i]],na.rm=T)
-  
-  up.lim<-mean_TD+sd_TD
-  low.lim<-mean_TD-sd_TD
-  
-  polygon(c(0,0,5,5), c(up.lim, low.lim, low.lim, up.lim),
-          col=adjustcolor("yellow",alpha.f=0.3), border = NA)
-  
-}
-dev.off()
-```
 
 ```{r MANOVAfunctions}
 ######################################################################################
@@ -863,8 +811,71 @@ manova.write <- function(mycomparison,effectnames,offset,manova.stats,manova.dat
 
 ```
 
-```{r lang.manova, include=FALSE}
+```{r beeswarm.function, include=FALSE}
+make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,
+                          groupcolor,mylims,dodiffmean){
+#Now do a grid of beeswarm plots
 
+png_bees<-paste0(pngname,'.png')#name to save png file
+png(png_bees,width=600,height=600)
+par(mfrow=pngdim) #5 row and 3 columns
+par(mar=c(5.1,4.1,4.1,0.2))
+#beeswarm jittered values (last value in jitter statement determines amount of jitter)
+
+grouplevel<-sort(unique(mydata[,groupcol])) #list of group values in numeric order
+ngroup<-length(grouplevel)
+pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3
+agebit<-pointcol[mydata[,subgroupcol]]
+testrange<-which(colnames(mydata)%in%varlist)
+for (i in 1:length(varlist)){
+  mytitle<-namelist[i]
+  mylabel<-'' #default is to not label y axis unless it is left-most column
+  if((i-1)%%pngdim[2]==0){ #heh! gets modulus of i-1 relative to n columns, which is zero if leftmost!
+    mylabel<-'Scaled score'
+  }
+  
+  beeswarm(jitter(mydata[,testrange[i]],3)~mydata[,groupcol] , xlab='Group',ylab=mylabel,spacing=.8,
+           pch = 16,pwpch=agebit,cex=1.5,col=groupcolor,main=mytitle,ylim=mylims[1:2],
+           cex.axis=1.5,cex.lab=1.5,cex.main=1.5) 
+
+  #add means
+  for (g in 1:ngroup){
+    myg<-grouplevel[g]
+    mm<-mean(mydata[mydata[,groupcol]==myg,testrange[i]],na.rm=TRUE) #means for whole sample by group
+    segments(g-.4,mm,g+.4,mm,col = 1,lty=2,lwd=2) #plot straight dotted lines at mean for each group
+    
+    #plot full lines for means for age-matched groups, i.e ageband2
+    if(dodiffmean==1){
+      #identify cases for each group in ageband2
+      w1<-which(mydata[,groupcol]==myg)
+      w2<-which(mydata$ageband==2)
+    shortrange<-intersect(w1,w2)
+    mm2<-mean(mydata[shortrange,testrange[i]],na.rm=TRUE)
+    segments(g-.4,mm2,g+.4,mm2,col = 1,lty=1,lwd=2)
+    }
+  }
+  abline(a=mylims[3],b=0,col='darkgray',lty=1)
+  abline(a=mylims[4],b=0,col='darkgray',lty=2)
+  abline(a=mylims[5],b=0,col='darkgray',lty=2)
+  
+  mean_TD<-mean(meanfile[,testrange[i]],na.rm=T)
+  sd_TD<-sd(meanfile[,testrange[i]],na.rm=T)
+  
+  up.lim<-mean_TD+sd_TD
+  low.lim<-mean_TD-sd_TD
+  
+  polygon(c(0,0,5,5), c(up.lim, low.lim, low.lim, up.lim),
+          col=adjustcolor("yellow",alpha.f=0.3), border = NA)
+  
+}
+dev.off()
+}
+
+```
+
+
+```{r lang.manova, include=FALSE}
+## Now run manovas - use the functions defined above
 #create dataframe to hold results from all Manovas
 manova.dataframe<-data.frame(matrix(NA,nrow=3,ncol=7))
 colnames(manova.dataframe)<-c('Comparison','Effect','Wilks','F','df1','df2','p')
@@ -904,6 +915,7 @@ lowtest.aov<-aov(gp.sctlow$Ntestlow~gp.sctlow$Group)
 summary(lowtest.aov)
 ```
 
+
 ```{r sct.vs.dld, include=FALSE}
 #for comparison with twin group, need to restrict to those aged 6-11
 w<-c(which(lobias.sct2$ageband==2))
@@ -921,7 +933,7 @@ mytab<-table(lobias.agematch$is_twin)
 names(mytab)<-c('Trisomy','Twin')
 print('Ns for analysis:')
 print(mytab)
-print('Manova on the 14 language measures for the SCT vs twin (language disordered) group, aged 6-11;11')
+print('Manova on the summary psychometric measures for the SCT vs twin (language disordered) group, aged 6-11;11')
 mymanova.sum
 
 mycomparison<-paste0('B. Trisomies (',mytab[1],') vs. Lang concern twins (',mytab[2],'): aged 6-11')
@@ -934,21 +946,7 @@ print('ANOVA on N tests low')
 lowtest2.aov<-aov(lobias.agematch$Ntestlow~lobias.agematch$Group)
 summary(lowtest2.aov)
 
-#This plot not really adding anything, now we have coded age in the other beeswarm
-png('png_2gp_bees.png',width=1000,height=1000)
-psychname<-c('PIQ','Language','Verbal memory','Reading')
-par(mfrow=c(2,2)) #2 row and 2 columns
-par(mar=c(5.1,4.1,4.1,0.2))
-for (i in 1:length(psychrange)){
-  mytitle<-psychname[i]
-  beeswarm(jitter(lobias.sct2[,psychrange[i]],3)~is_twin , data = lobias.sct2, xlab='Group',ylab='Scaled score',
-           pch = 16,cex=1,col=c(2,4),main=mytitle,ylim=c(50,140))
-  bxplot(lobias.sct2[,psychrange[i]]~is_twin , data = lobias.sct2, probs = 0.5, col = 1,add=TRUE) #adds medians
-}
-dev.off()
-
 #NB correlation with mother's education, so compute this to check direction of effect
-
 
 psych.vars<-rowMeans(lobias.sct2[psychrange])
 cor(lobias.sct2$mo_educ,psych.vars)
@@ -958,11 +956,27 @@ mymoedreg<-summary(moedreg)
 my.moedregb<-round(mymoedreg$coefficients[2],1)
 
 #lang concern twin only
-wt<-which(lobias.sct2$group8xlevel==8)
+wt<-which(lobias.sct2$group8level==8)
 moedregt<-lm(psych.vars[wt]~lobias.sct2$mo_educ[wt])
 
 ```
 
+```{r beeswarm1}
+#call the make.beeswarm function - this creates a png file
+groupcol<-which(colnames(lobias.sct2)=='Group')
+subgroupcol<-which(colnames(lobias.sct2)=='ageband')
+varlist<-c('piq','genlang','verbmem','literacy')
+namelist<-c('PIQ','Language','Verbal memory','Reading')
+meanfile<-twin.TD
+pngname<-'beeswarm_lowbias4gp'
+pngdim<-c(2,2)
+groupcolor<-c(2,2,2,4) #specify colours for each group - 3 trisomies the same, then twinLD
+mylims<-c(55,135,100,85,70) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
+dodiffmean<-1
+mydata<-lobias.sct2
+make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,
+                          groupcolor,mylims,dodiffmean)
+```
 
 
 ```{r lowhi.sct, include=FALSE}
@@ -983,10 +997,10 @@ agebit<-pointcol[trisomy.only$ageband]
 
 for (i in 1:length(longname)){
   mytitle<-longname[i]
-  beeswarm(jitter(trisomy.only[,nurange[i]],3)~group8xlevel , data = trisomy.only, xlab='Group',ylab='Scaled score',spacing=.8,labels='',
+  beeswarm(jitter(trisomy.only[,nurange[i]],3)~group8level , data = trisomy.only, xlab='Group',ylab='Scaled score',spacing=.8,labels='',
            pch = 16,pwpch=agebit,cex=1.7,col=c(2,2,2,1,1,1),main=mytitle,
            ylim=c(55,140))
-  bxplot(trisomy.only[,nurange[i]]~group8xlevel, data = trisomy.only, probs = 0.5, 
+  bxplot(trisomy.only[,nurange[i]]~group8level, data = trisomy.only, probs = 0.5, 
          col = 1,lty=1,add=TRUE) #adds medians for all cases with dotted line
   abline(a=100,b=0,col='darkgray',lty=1)
   abline(a=85,b=0,col='darkgray',lty=2)
@@ -1043,7 +1057,7 @@ lowtest6.aov<-aov(trisomy.only$Ntestlow~trisomy.only$trisomy*trisomy.only$bias)
 summary(lowtest6.aov)
 lowdld6.aov<-aov(trisomy.only$dldlevel~trisomy.only$trisomy*trisomy.only$bias)
 summary(lowdld6.aov)
-cutofflang.tab<-table(trisomy.only$Ntestlow,trisomy.only$group8xlevel)
+cutofflang.tab<-table(trisomy.only$Ntestlow,trisomy.only$group8level)
 cutofflang.tab
 
 ```
@@ -1055,7 +1069,7 @@ cutofflang.tab
 
 w<-which(colnames(all.short)=='ccc_a')
 x<-which(colnames(all.short)=='group8')
-y<-which(colnames(all.short)=='group8xlevel')
+y<-which(colnames(all.short)=='group8level')
 z<-which(colnames(all.short)=='trisomy')
 z1<-which(colnames(all.short)=='bias')
 z2<-which(colnames(all.short)=='dldlevel')
@@ -1186,11 +1200,11 @@ ccc.data$ccc_prag<-rowMeans(ccc.data[,cccrange[5:8]],na.rm=TRUE)
 ccc.data$ccc_autfeat<-rowMeans(ccc.data[,cccrange[9:10]],na.rm=TRUE)
 cccnurange<-(ncol(ccc.data)-2):ncol(ccc.data)
 
-ccc.gp.sctlow<-filter(ccc.data,group8xlevel<4)
+ccc.gp.sctlow<-filter(ccc.data,group8level<4)
 
 #check multivariate normality for each group
 for (i in 1:3){
-  ccc.matrix <- as.matrix(ccc.gp.sctlow[ccc.gp.sctlow$group8xlevel==i,cccnurange])
+  ccc.matrix <- as.matrix(ccc.gp.sctlow[ccc.gp.sctlow$group8level==i,cccnurange])
   print(paste('Check multivariate normality: group',i))
   print(mshapiro.test(t(ccc.matrix)))
 }
@@ -1209,7 +1223,7 @@ manova.ccc.df<-manova.write(mycomparison,effectnames,offset,manova.stats,manova.
 
 
 #Now add twin ld group
-temp<-filter(ccc.data,group8xlevel==8)
+temp<-filter(ccc.data,group8level==8)
 nsct<-nrow(ccc.gp.sctlow)
 ccc.sct.dld<-rbind(ccc.gp.sctlow,temp)
 ccc.sct.dld$group2<-1
@@ -1233,7 +1247,7 @@ manova.ccc.df<-manova.write(mycomparison,effectnames,offset,manova.stats,manova.
 
 
 #Now compare hi and low bias trisomies
-biasgp.ccc<-filter(ccc.data,group8xlevel<7)
+biasgp.ccc<-filter(ccc.data,group8level<7)
 #check multivariate normality for each group
 for (i in 1:2){
   ccc.matrix <- as.matrix(biasgp.ccc[biasgp.ccc$bias==(i-1),cccnurange])
@@ -1299,7 +1313,7 @@ biasHigh <- table(all.short$bias)[[2]]
 mytab<-table(all.short$trisomy,all.short$bias,all.short$exclude)
 
 #--------------------------------------------------------------------------------#
-mytab1<-table(all.short$langdata_complete,all.short$group8xlevel)
+mytab1<-table(all.short$langdata_complete,all.short$group8level)
 #those with complete language data in row 2
 
 #--------------------------------------------------------------------------------#
