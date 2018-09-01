@@ -1,9 +1,9 @@
 ---
 title: "Language and cognitive phenotypes in children with sex chromosome trisomies"
 author: "Dorothy V M Bishop, Annie Brookman-Byrne,  Nicola Gratton, Elaine Gray, Georgina Holt, Louise Morgan, Sarah Morris, Eleanor Paine, Holly Thornton, and Paul A. Thompson"
-date: 
-output:
-word_document: default
+date: "01/09/2018"
+output: word_document
+
 html_document: default
 ---
 
@@ -19,7 +19,7 @@ knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
 #################################################################################
 
 #devtools::install_github("rubenarslan/formr")
-require(formr) #to handle conflicts with 'select' function in dplyr (may not be needed)
+#require(formr) #to handle conflicts with 'select' function in dplyr (may not be needed)
 require(here) #for reproducible pathnames: see https://www.tidyverse.org/articles/2017/12/workflow-vs-script/
 
 library(tidyverse)
@@ -591,9 +591,9 @@ pirateplot(fa_educ~group8,data=all.short)
 #Use ranks to convert to normal distribution
 #Rw deprivation index is a rank out of 32750
 w<-which(is.na(all.short$deprivation_index))
-all.short$deprivation_index[w]<-32750/2
+all.short$deprivation_index[w]<-32850/2
 #Assign avg score to those outside england where no dep index
-all.short$deprivz<-qnorm(all.short$deprivation_index/32750)
+all.short$deprivz<-qnorm(all.short$deprivation_index/32850)
 
 firsttwin<-min(which(all.short$is_twin==TRUE))
 print(paste('N SCT with missing dep index (assigned 0) = ',length(which(w<firsttwin))))
@@ -889,16 +889,16 @@ summary(lowtest2.aov)
 
 #NB correlation with mother's education, so compute this to check direction of effect
 
-psych.vars<-rowMeans(lobias.sct2[psychrange])
-cor(lobias.sct2$mo_educ,psych.vars)
-moedreg<-lm(psych.vars~lobias.sct2$mo_educ)
-plot(lobias.sct2$mo_educ,psych.vars)
+psych.vars<-rowMeans(lobias.agematch[psychrange])
+cor(lobias.agematch$mo_educ,psych.vars)
+moedreg<-lm(psych.vars~lobias.agematch$mo_educ)
+plot(lobias.agematch$mo_educ,psych.vars)
 mymoedreg<-summary(moedreg)
-my.moedregb<-round(mymoedreg$coefficients[2],1)
+my.moedregb<-mymoedreg$coefficients[2]
 
 #lang concern twin only
-wt<-which(lobias.sct2$group8level==8)
-moedregt<-lm(psych.vars[wt]~lobias.sct2$mo_educ[wt])
+wt<-which(lobias.agematch$group8level==8)
+moedregt<-lm(psych.vars[wt]~lobias.agematch$mo_educ[wt])
 
 ```
 
@@ -1110,7 +1110,8 @@ ccc.no[1]<-sum(consistent.ccc[1:3,1])/sum(consistent.ccc[1:3,])
 ccc.no[2]<-sum(consistent.ccc[4:6,1])/sum(consistent.ccc[1:3,])
 ccc.no[3]<-sum(consistent.ccc[7,1])/sum(consistent.ccc[1:3,])
 ccc.no[4]<-sum(consistent.ccc[8,1])/sum(consistent.ccc[1:3,])
-ccc.yes<-round(100*(1-ccc.no),1)
+ccc.yes<-100*(1-ccc.no)
+ccc.yes<-round(ccc.yes,1)
 
 print('Proportions of non-response to CCC-2')
 print(paste('All low bias SCT:',ccc.no[1]))
@@ -1607,51 +1608,63 @@ sessionInfo()
 
 
 Chromosome trisomies arise when an error of cell division leads to an egg or sperm that contains two rather than one copy of the chromosome. Trisomies that affect one of the autosomes are usually lethal, and in survivors they lead to marked physical and mental abnormalities. Trisomies of the sex chromosomes, however, have milder impacts, and often go undetected.  This complicates the study of the consequences of sex chromosome trisomies in two ways; first, it can be difficult to recruit large samples of cases, and second, those that are studied may not be representative of the population. In particular, there is a danger of overestimating the severity of impairment if we include cases where discovery of the trisomy was prompted by genetic testing to investigate developmental abnormalities.  
+  
 In the 1960s, a multicentre project was initiated with the aim of evaluating the impact of sex chromosome trisomies in samples identified on newborn screening that were free from ascertainment bias (Robinson et al., 1979). The three kinds of trisomy - trisomy X (47,XXX), Klinefelter’s syndrome (47,XXY) and 47,XYY karotypes were all found to be associated with neurodevelopmental problems, particularly affecting language and motor functions (Leggett et al, 2010).  
+  
 To our knowledge, there have been no more newborn screening studies initiated in the past 50 years. One reason is practical: each of the three trisomy types has a prevalence ranging from 1 in 600 to 1 in 1000, so many thousands of cases need to be screened to identify even a small sample. Second, ethical issues are raised when a screening procedure identifies a trisomy in a newborn: while knowledge of the trisomy could be useful in helping parents take steps to ensure early intervention, it can also be damaging by creating anxiety (Valentine, 1979).  
+  
 It is now possible to detect sex chromosome trisomies prenatally, in the course of prenatal screening. Prenatal screening for Down syndrome was developed in the 1980s and led to cases of sex chromosome trisomy being detected as an incidental finding (Cuckle & Maymon, 2016). Because prenatal screening is offered to older mothers, there is some bias in samples identified this way, but detection of the trisomy is not dependent on the child’s developmental outcome.   
+  
 A study of neurodevelopmental of outcomes of prenatally-identified children was reported by Bishop et al (2011). Outcome measures were based on standardized parental report, as it was deemed unethical to conduct direct testing of children who might not be aware of their trisomy. This study was consistent with the earlier newborn screening studies in finding a high rate of language difficulties in all three trisomies, but in addition, there was an elevated risk of autism spectrum disorder diagnosis in boys with both XXY and XYY karyotypes. This had not been reported in the earlier prospective studies of newborns, but it seems likely that this was because diagnostic criteria for autism were far more stringent in the 20th century. A second group of children with trisomies detected postnatally was found to have a similar profile, but levels of all neurodevelopmental problems were higher, as would be expected in a group where there was ascertainment bias. In the course of this study, we established that 43% of children had been told about the trisomy. This suggested that a study that involved direct neurodevelopmental assessment of children would be feasible.  
+  
 The association with language problems is of interest because there are few genetic aetiologies that selectively impair language development. There are two reasons why it is of interest to compare the language phenotype of children with sex chromosome trisomies with that seen in children with developmental language disorder (DLD) of unknown origin. First, a comparative study could also help determine whether interventions that have been devised for children with DLD are also likely to be effective for children with a sex chromosome trisomy (see Bishop et al., 2017). Second, if the similarities are not just superficial, then studying how an extra chromosome affects language development could help us understand aetiology of DLD (Bishop & Scerif, 2011).  Studies to date have suggested that there may be different profiles of impairment in the three types of trisomy, which could be related to the different genetic and hormonal impacts of an extra X or Y chromosome, but we still have only a very limited body of data from samples free from ascertainment bias.   
+  
 In 2011 we embarked on data collection for a new study of children with sex chromosome trisomies, including both pre- and post-natally identified cases. The goals were, first, to document the nature and range of language and behavioural difficulties in the three types of trisomy, and second, to test whether individual variation in outcomes could be predicted by variation in specific genetic variants. Here we report descriptive data relating to the first question, with a particular emphasis on language characteristics.  Behavioural and psychiatric findings will be covered in a companion paper. To date we have not found any associations of phenotypes with variants in CNTNAP2 and NRXN1 genes; these analyses are reported elsewhere (Newbury et al, 2018).  
+  
 Our focus here is both on documenting whether there are reliable differences in language and cognitive outcomes for the three types of trisomy, and how far the pattern of language problems resembles that seen in children with developmental language disorder (DLD) who do not have any known genetic abnormalities. To minimize ascertainment bias, these analyses were restricted to children whose trisomy was either detected prenatally, or as an incidental finding during other medical investigations (referred to as a ‘low bias’ group). To address the latter question, we compared the results of trisomic children with those of children who had participated in a twin study of language development and disorders, and who had been given the same test battery. Finally, we considered how far trisomy outcomes are influenced by ascertainment bias, by comparing the low bias group with a high bias group whose trisomies were discovered in the course of investigation of behavioural or neurodevelopmental problems.  
+  
 The specific questions we considered were:  
+  
 1.	Is there a distinctive language profile for each of the three types of trisomy?  
 2.	Is the cognitive profile of children with sex chromosome trisomies similar to that of children with language problems who have the usual XY or XX karyotype?  
 3.	How far does ascertainment bias affect the language and cognitive profiles of children with sex chromosome trisomies?  
 
 ## Participants  
+
 ### Sex chromosome trisomy cases  
+
 We recruited `r tab_sct[1,1]+tab_sct[1,2]` girls with XXX, `r tab_sct[2,1]+tab_sct[2,2]` boys with XXY and `r tab_sct[3,1]+tab_sct[3,2]` boys with XYY to the study, in the age range from 5 years 0 months to 15 years 11 months. `r round(100*sum(origstudy)/sum(tab_sct),0)`% of the children had participated in the Bishop et al (2011) study. Recruitment was via NHS Clinical Genetics centres, two support groups (Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association) and self-referral through social media. To be included in the study, the child had to be aware of their trisomy status.  
-
+  
 **Ascertainment bias**. During the initial telephone interviews, caregivers were asked how their child was diagnosed, in particular whether this followed postnatal testing motivated by neurodevelopmental/behavioural problems. The phenotype of such children may be more severe, potentially biasing the sample, and so, as shown in Figure 1, we grouped them prospectively as a high-risk-of-bias (‘High Bias’) subgroup, comprised of `r sum(exclude.tab[,2,1])` XXX, `r sum(exclude.tab[,2,2])` XXY and `r sum(exclude.tab[,2,3])` XYY cases. All other children formed the low-risk-of-bias (‘Low Bias’) subgroup, with `r sum(exclude.tab[,1,1])` XXX, `r sum(exclude.tab[,1,2])` XXY and `r sum(exclude.tab[,1,3])` XYY cases.  
-
+  
 **Exclusionary criteria**. Given our current focus on language disorder, we excluded children who had a nonverbal ability scaled score more than 2 SD below the mean (`r sum(exclude.tab[3,1,])` Low Bias and `r sum(exclude.tab[3,2,])` High Bias), those who met criteria for autism spectrum disorder (ASD) (`r sum(exclude.tab[4,1,])` Low Bias and `r sum(exclude.tab[4,2,])` High Bias) and those who failed a hearing screen (`r sum(exclude.tab[5,1,])` Low Bias and `r sum(exclude.tab[5,2,])` High Bias). This enabled us to make a direct comparison with the twin sample, which also excluded children on this basis, and to see how far language problems were seen in children who did not have accompanying conditions that are likely to affect language function. However, note that this means that our conclusions are based on a selected sample of trisomy cases. ASD and other diagnoses in children with sex chromosome trisomies will be the focus of a companion paper.  
-
+  
 **Missing data**. Where a child had missing data on just one of the language/cognitive tests, that value was prorated from the mean of that child on the other measures. Likewise, when there was just one missing measure on reading-related tests, the value as prorated from other reading measures. `r sum(n.misslang1,n.misslang2)` children had more missing data than this, and were excluded from the current analyses. This included `r n.5yr1+n.5yr2` five-year-olds, for whom standard scores were not computable as they fell below the age range of norms. All but `r n.misslang1-n.5yr1` cases of missing data in children aged over 5 years came from the High Bias group, reflecting refusal or inability to attempt some tests. Norms for the CCC-2 extend across the full age range covered here, but `r n.missccc+n.badccc` children had missing data because parents either did not complete the CCC-2 (N = `r n.missccc`), or because they failed the consistency check (N = `r n.badccc`), which is suggestive of invalid responses.  
-
+  
 **Age range**. When comparing test profiles of trisomy cases with those of twins with language concerns, we restricted consideration to children covering the same age range, i.e. 6 yr 0 months to 11 yr 11 months. 
-
-
+  
 The numbers included in different analyses are shown in the flowchart in Figure 1.
-
+  
 ![Figure 1. Numbers of children with sex chromosome trisomies included in different analyses.](SCT_flow.png)
 
 ### Comparison group  
-
-The comparison sample consisted of twins recruited via fliers sent to primary schools around the UK, advertisements on our group's website and via twins' clubs. The age range for this sample was narrower than for the SCT cases. We aimed to recruit families with twin children aged between 6 years 0 months and 11 years 11 months, with over-representation of those where one or both twins had language or literacy problems. Further details are provided in Wilson and Bishop (2018).   
-Our second question involved comparing the language profile of children with trisomies with that of children with language disorders of unknown cause. Usually, language disorder would be diagnosed on the basis of language test scores, but if we took that approach, the result would be a foregone conclusion, in that we would use the same measures to define the independent variable (language status) and the dependent variables. To avoid this circularity, twin children were subdivided according to parental concern about language and history of speech and language therapy (SALT), rather than by language test scores, which were treated as dependent variables. Parental concern was coded from the initial interview, and used to divide the twin sample into a ‘language concerns’ group with ongoing parental concerns about oral language (mild or severe) and the remainder (which included some cases where there had been transient concerns in preschool that had resolved, or where the concern affected only reading).  The latter is referred to as the ‘no concerns’ group. In addition, children who had received speech and language therapy after the age of 4 years were included in the ‘language concerns’ group. 
+  
+The comparison sample consisted of twins recruited via fliers sent to primary schools around the UK, advertisements on our group's website and via twins' clubs. The age range for this sample was narrower than for the SCT cases. We aimed to recruit families with twin children aged between 6 years 0 months and 11 years 11 months, with over-representation of those where one or both twins had language or literacy problems. Further details are provided in Wilson and Bishop (2018).  
+  
+Our second question involved comparing the language profile of children with trisomies with that of children with language disorders of unknown cause. Usually, language disorder would be diagnosed on the basis of language test scores, but if we took that approach, the result would be a foregone conclusion, in that we would use the same measures to define the independent variable (language status) and the dependent variables. To avoid this circularity, twin children were subdivided according to parental concern about language and history of speech and language therapy (SALT), rather than by language test scores, which were treated as dependent variables. Parental concern was coded from the initial interview, and used to divide the twin sample into a ‘language concerns’ group with ongoing parental concerns about oral language (mild or severe) and the remainder (which included some cases where there had been transient concerns in preschool that had resolved, or where the concern affected only reading).  The latter is referred to as the ‘no concerns’ group. In addition, children who had received speech and language therapy after the age of 4 years were included in the ‘language concerns’ group.   
 We followed the CATALISE criteria for DLD and excluded twin pairs if either twin had a pre-existing diagnosis of autism spectrum disorder (ASD), failed the hearing screen, had a performance IQ score below 70, or had a serious long-term illness; other diagnoses, such as dyslexia, ADHD, or dyspraxia, were not grounds for exclusion (Bishop et al., 2017).   
-One twin from each pair was selected at random to avoid dependencies in the data. The final sample consisted of `r concernM+concernF` children in the language concerns group, and `r noconcernM+noconcernF` children with no concerns.  The latter group were used to derive a normative range against which to evaluate the other groups on language measures. Figure 2 shows the number of twin children included in the study, and the number for whom useable CCC-2 data were available.
-
+  
+One twin from each pair was selected at random to avoid dependencies in the data. The final sample consisted of `r concernM+concernF` children in the language concerns group, and `r noconcernM+noconcernF` children with no concerns.  The latter group were used to derive a normative range against which to evaluate the other groups on language measures. Figure 2 shows the number of twin children included in the study, and the number for whom useable CCC-2 data were available.  
+  
 ![Figure 2. Numbers of twin children with and without language concerns.](twins_flow.png)
 
-## Methods
+## Methods  
 
-### Language, literacy and cognitive assessments###
-
+### Language, literacy and cognitive assessments  
+  
 The assessment battery administered to the child is shown in Table 1. 
 
-```{r table1, echo=FALSE}
+```{r table1, echo=FALSE,include=TRUE}
 #usual problems with getting tables to print in Word. OK with updated pandoc 2.0
 #https://davidgohel.github.io/flextable/articles/overview.html
 #autofit(regulartable(testbattery))
@@ -1660,103 +1673,136 @@ ft <- width(ft, width = 3)
 ft
 ```
 Parents were asked to complete the Children’s Communication Checklist – 2 (CCC-2: Bishop, 2003) and Social Responsiveness Scales (SRS: Constantino, 2005) and return them by mail; the response rate was 86% for the trisomy families and 83% for the twin families.  The SRS data and results from an online interview covering behavioural and psychiatric characteristics will be described in a companion paper. 
+  
 Results from the assessments in table 1 were converted to age-scaled scores on a common scale with mean 100 and SD 15. All tests had published norms covering the age range of the twin sample (6 to 11 years), but some did not extend outside this range. As explained in Newbury et al. (2018), where feasible norms were extrapolated based on data from other samples encompassing the wider age range. For oromotor skills, however, extrapolated norms gave scaled scores that were well below the range of other tests. For this test, therefore the No Concerns twin group was used to derive norms, using the regression of total correct on age to compute a standardized residual, which was then scaled to mean 100 and SD 15. 
+  
 Our original intention was to use MANOVAs to test group differences that related to the three research questions, but preliminary analysis showed that the MANOVA assumption of multivariate normality was not met when all 14 measures were entered into the analysis. Accordingly, we created four composites for the psychometric tests, by averaging scores as follows: Nonverbal ability (Matrices and Block Design), Core language (Vocabulary and Woodcock-Johnson Comprehension), Verbal production/memory (Sentence repetition, Nonword repetition, Oromotor sequences) and Literacy skills (all subtests from Neale Analysis of Reading Ability, Test of Word Reading Efficiency, and PhAB Rapid Naming). These composites mostly met criteria for multivariate normality within subgroups. Distributions of scores on the component tests for the different groups are shown in Supplementary Materials. Multivariate normality was again an issue for the CCC-2 test data, so composites were formed based on three sets of scales, identified as Structural Language (scales A-C), Pragmatics (scales D-G), and Autistic Features (scales H-J). The means and SEs for the original 10 subscales are shown in Supplementary Materials, Figure S3.
-
+  
 ## Covariates
 
 Two measures of socio-economic variables that have been associated with language status were included in the analysis. These were:  
 a)	Educational level of mother, transformed into an ordinal scale based on age at leaving full-time education/qualifications obtained, with points of 0 (prior to age 16 years), 1 (16 years/did GCSE or O-levels), 2 (18 years/ did A-levels), 3 (21 years, degree), 4 (postgraduate study).   
-
+  
 b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank over 32,000 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable, by dividing by 32750 before applying the qnorm function in R.  A value of zero was assigned to 13 SCT cases and 4 twin pairs from Wales, Scotland and Northern Ireland.
 
 
-## Procedure
-
+## Procedure  
+  
 Children were seen for an individual assessment at home or school. The language, reading and nonverbal ability tests (Table 1) were given in an initial session lasting around 90 minutes, followed by an assessment of laterality, the results of which are described elsewhere (Wilson & Bishop, 2018).  
 
-## Analysis
-
-Table 2 shows the characteristics of the trisomy and twin groups on background variables: age, mother's educational level and standardized deprivation index.
-
+## Analysis  
+  
+Table 2 shows the characteristics of the trisomy and twin groups on background variables: age, mother's educational level and standardized deprivation index.  
+  
 **Table 2: Mean (SD) for age, mother's educational level and standardized deprivation index for SCT and twin groups**
 
-```{r table2, echo=FALSE}
+```{r table2,include=TRUE}
 
 ft2<-regulartable(mybkg.tab2)
 ft2 <- width(ft2, width = c(2.2,1,.8,.8,.8))
 ft2
 ```
 
-## Statistical comparisons
+## Statistical comparisons  
+
 For each type of variable (Psychometric tests and parent report on CCC-2) three comparisons were conducted, corresponding to the three research questions, A) Comparison of the three trisomies for Low Bias group only; B) Comparison of all Low Bias trisomy cases aged 6-11 yr with the Language Concerns twin comparison group; C) Comparison of Low Bias and High Bias trisomy groups.
 
 ### Psychometric tests    
+
 A.	**Comparison of three trisomy groups** (Low Bias group only)  
-
+  
 As a first step, data from the psychometric composites were plotted to see the range and distribution of scores for the three Low Bias trisomy groups, as shown in the red beeswarm plots in Figure 3. These plots exclude children with missing data on any test. The continuous horizontal bars show the mean for each group. The yellow shaded area shows the range covered by mean +/- 1 SD for the No Concerns twins. The distribution of blue points, corresponding to the Language Concerns twins will be discussed below (analysis B).  
-
+  
 An initial impression from these plots is that there is variation from test to test in severity of impairment, but on all measures, the most striking feature is a wide spread of scores, with some children scoring above average and others well below. Although the mean test scores vary from trisomy to trisomy, the within-group variation is much greater than between group variation. This pattern is also evident in data from the individual tests making up the composites (Supplementary Material, Figure S1).  
 
 ![Figure 3: Distributions of scores on four clusters of psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group. Filled circles show cases in age range 6 to 11 yr. Dotted line is mean for 6-11 yr olds, solid line is mean for whole sample. Yellow band is mean +/- 1 SD for No Concern comparison group.](beeswarm_lowbias4gp.png)
 
-MANOVA was used to test whether there were reliable differences between the three trisomy groups on the four composite measures, after taking covariates (Mother's educational level and normalised deprivation index) into account.  No effect of trisomy type was found (see Table 3).  
-
-**Table 3. Results of MANOVA comparisons on psychometric tests**
-```{r table3, echo=FALSE}
+MANOVA was used to test whether there were reliable differences between the three trisomy groups on the four composite measures, after taking covariates (Mother's educational level and normalised deprivation index) into account.  No effect of trisomy type was found (see Table 3). 
+  
+**Table 3. Results of MANOVA comparisons on psychometric tests**  
+```{r table3,include=TRUE,echo=FALSE}
 ft3<-regulartable(manova.dataframe)
+ft3 <- width(ft3, width = c(2,1,.8,.8,.8,.8,.8))
+ft3
+```
+  
+B.	**Comparison of combined trisomy cases aged 6-11 yr (Low Bias) with Language Concern twin comparison group**  
+
+For this analysis, we combined all trisomy cases aged 6-11 years (filled circles in Figure 3) with the twin comparison group with language concerns. Table 3 shows the MANOVA result for this comparison, again revealing no overall group effect of group. The only factor affecting scores was mother's education, with each additional point on the scale associated with an increase of `r round(my.moedregb,1)` points in average score on psychometric tests.  
+  
+C.	**Comparison of effect of bias group: trisomy cases only**  
+  
+Figure 4 shows the distributions of scores on the four composites for children in the two ascertainment risk groups. For this analysis, we considered the effect of bias group, combining across trisomy type. As shown in table 3, there was a strong effect of ascertainment bias, with the high bias group having lower test scores.  
+  
+![Figure 4: Distributions of scores on psychometric composites for the Low Bias vs High Bias trisomy groups. Filled circles show cases in age range 6 to 11 yr, unfilled circles show older children. Continous lines are group means. Yellow band is mean +/- 1 SD for No Concern comparison group. ](beeswarm_bias.gp.png)  
+  
+  
+### Children's Communication Checklist-2  
+  
+Completion rates for the CCC-2 showed some variation by group: the checklist was completed by parents of `r ccc.yes[1]`% of the low bias and `r ccc.yes[2]`% of the high bias trisomy group, and by `r ccc.yes[3]`% of the parents of No Concern twins and `r ccc.yes[4]`% of parents of Language Concern twins. Data was not useable for `r ccc.inconsist`% of checklists which failed the consistency check: this is a criterion based on comparing scores for items describing strength and difficulites: if raw scores are similar for both, this suggests that the respondent has not appreciated the need to change the polarity of responses between the two sets. 
+  
+To establish potential bias introduced by those with missing or unusable data, we conducted a logistic regression analysis, with CCC-2 data coded as 1 (useable data) vs 0 (missing or inconsistent), and with maternal educational level, single parent status, trisomy status, and a composite measure of the child's language status (language factor from Newbury et al., 2018) as predictors. Availability of CCC-2 data not predicted by parental characteristics (mother's education or single parent status), but was predicted by whether the child came from the twin or trisomy group, and by severity of language problems. The lower response rate by parents of twins might be explained by the fact that checklist completion was more onerous for them, as they were asked to complete a checklist for each twin. As shown in Supplementary Table S1 and Supplementary Figure S2, the impact of child's language status reflected that CCC-2 was less likely to be completed when the child had more severe language difficulties. Thus the CCC-2 results may underestimate the extent of communication difficulties in both samples.  
+  
+A.	**Comparison of three trisomy groups** (Low Bias group only)  
+  
+Mean scores on the CCC-2 subscales are shown in Figure 5. As expected, the No Concerns comparison group has mean scores close to the population mean of 10. As with the psychometric tests, three MANOVAs were conducted, corresponding to the three research questions.  
+
+![Figure 5: Mean scores on the three CCC-2 clusters for trisomy and comparison groups. For trisomies, continuous lines show mean for whole group, and dotted lines show means for children aged 6 to 11 years.](beeswarm_ccc.gp.png)
+  
+**Table 4. Results of MANOVA comparisons on CCC-2 subscales**
+ 
+```{r table4,include=TRUE}
+ft3<-regulartable(manova.ccc.df)
 ft3 <- width(ft3, width = c(2,1,.8,.8,.8,.8,.8))
 ft3
 
 ```
 
-B.	**Comparison of combined trisomy cases aged 6-11 yr (Low Bias) with Language Concern twin comparison group**  
-For this analysis, we combined all trisomy cases aged 6-11 years (filled circles in Figure 3) with the twin comparison group with language concerns. Table 3 shows the MANOVA result for this comparison, again revealing no overall group effect of group. The only factor affecting scores was mother's education, with each additional point on the scale associated with an increase of `r my.moedregb` points in average score on psychometric tests.
-
-C.	**Comparison of effect of bias group: trisomy cases only**  
-Figure 4 shows the distributions of scores on the four composites for children in the two ascertainment risk groups. For this analysis, we considered the effect of bias group, combining across trisomy type. As shown in table 3, there was a strong effect of ascertainment bias, with the high bias group having lower test scores.  
-
-![Figure 4: Distributions of scores on psychometric composites for the Low Bias vs High Bias trisomy groups. Filled circles show cases in age range 6 to 11 yr, unfilled circles show older children. Continous lines are group means. Yellow band is mean +/- 1 SD for No Concern comparison group. ](beeswarm_bias.gp.png)
-### Children's Communication Checklist-2  
-
-Completion rates for the CCC-2 showed some variation by group: the checklist was completed by parents of `r ccc.yes[1]`% of the low bias and `r ccc.yes[2]`% of the high bias trisomy group, and by `r ccc.yes[3]`% of the parents of No Concern twins and `r ccc.yes[4]`% of parents of Language Concern twins. Data was not useable for `r ccc.inconsist`% of checklists which failed the consistency check: this is a criterion based on comparing scores for items describing strength and difficulites: if raw scores are similar for both, this suggests that the respondent has not appreciated the need to change the polarity of responses between the two sets.  
-To establish potential bias introduced by those with missing or unusable data, we conducted a logistic regression analysis, with CCC-2 data coded as 1 (useable data) vs 0 (missing or inconsistent), and with maternal educational level, single parent status, trisomy status, and a composite measure of the child's language status (language factor from Newbury et al., 2018) as predictors. Availability of CCC-2 data not predicted by parental characteristics (mother's education or single parent status), but was predicted by whether the child came from the twin or trisomy group, and by severity of language problems. The lower response rate by parents of twins might be explained by the fact that checklist completion was more onerous for them, as they were asked to complete a checklist for each twin. As shown in Supplementary Table S1 and Supplementary Figure S2, the impact of child's language status reflected that CCC-2 was less likely to be completed when the child had more severe language difficulties. Thus the CCC-2 results may underestimate the extent of communication difficulties in both samples.
-
-A.	**Comparison of three trisomy groups** (Low Bias group only)  
-
-Mean scores on the CCC-2 subscales are shown in Figure 5. As expected, the No Concerns comparison group has mean scores close to the population mean of 10. As with the psychometric tests, three MANOVAs were conducted, corresponding to the three research questions.
-
-![Figure 5: Mean scores on the 10 CCC-2 subscales for trisomy and comparison groups. For trisomies, continuous lines show Low Bias group, and dotted lines show High Bias group.](cccplot.png)
-**Table 4. Results of MANOVA comparisons on CCC-2 subscales**
-
-Categorical analysis - DLD or not
-The lack of effect of bias group may seem surprising, given the visual evidence of group differences in some of the plots. An important factor in the statistical outcome is the wide spread of scores in all groups. To demonstrate this, we ran an alternative analysis in which ANOVA was conducted with the number of test scores more than 1 SD below the normative mean as dependent measure. This showed a
+**Number of language tests below cutoff**
 
 
-## Acknowledgements
+
+## Acknowledgements  
+
 We offer warmest thanks to the families who took part in the study, and school staff who helped facilitate assessment arrangements. We greatly appreciate the help we had with recruitment from Unique (the Rare Chromosome Disorder Support Group), the Klinefelter’s Syndrome Association, and staff from Clinical Genetics Centres in the following NHS Trusts: Royal Devon and Exeter, The Northwest London Hospitals, University Hospitals Bristol, Sheffield Children’s, Liverpool Women’s, University Hospital Southampton, Birmingham Women’s Hospital, Great Ormond Street Hospital for Children, Leeds Teaching Hospitals, Newcastle upon Tyne Hospitals, Oxford University Hospitals, Central Manchester University Hospitals, University Hospitals of Leicester, Nottingham University Hospitals, Belfast Health and Social Care Trust and the NIHR Clinical Research Network. We extend special thanks to Dr Gillian Borthwick, National Research Coordinator NIHR CRN: Genetics, for helping us navigate the complexities of working with multiple NHS sites under the NIHR UK Rare Genetic Disease Research Consortium Agreement. The study would not have been possible without the generous support of Prof Simon Fisher, Director of the Max Planck Institute for Psycholinguistics, who offered facilities for analysis of genetic material during the data collection phase of this study. We thank Katerina Kucera and Arianna Vino for their substantial work in processing DNA samples.
 
 
-# Supplementary Material
-
-## Distribution of scores on individual psychometric measures.  
+# Supplementary Material  
+  
+### Distribution of scores on individual psychometric measures. 
+  
 Figure S1 shows beeswarm plots for individual test scores: low bias trisomy groups and Language Concern twin group. Note that on some tests there is a minimum scaled score that leads to a skewed distribution. 
-
+  
 ![Figure S1: Distributions of scores on the fourteen measures from psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group. Filled circles show cases in age range 6 to 11 yr. Continous line is mean for 6-11 yr olds, dotted line is mean for whole sample. Yellow band is mean +/- 1 SD for No Concern comparison group.](beeswarm14_lowbias4gp.png)
+  
+### Prediction of CCC-2 checklist completion from child and parent variables.  
+  
+Table S1 shows results of the logistic regression analysis predicting CCC-2 completion rate from parent and child variables.  
+  
+**Table S1. Results from logistic regression with CCC-2 completion (yes/no) as dependent variable**  
+  
+```{r TableS1, echo=FALSE,include=TRUE}
+#This is an absolute nightmare to construct bcs the row names aren't included in regulartable so have to be bolted on in a data.frame, but all the values from the regression coefficients are in a matrix, and tend to turn to factors in the data table. It gets v fiddly indeed to change 0 to .001 after rounding....
+regnames<-c('Intercept','Lang.severity','Mo_educ2','Mo_educ3','Mo_educ4','Single parent','Trisomy/twin')
+regbit1<-round(nonresp.summary$coefficients,3)
+regtable<-cbind(regnames,regbit1)
+w<-which(regtable[,5]<.001)
+regtable[w,5]<-'<.001'
+regtable<-data.frame(regtable)
+colnames(regtable)<-c('Coefficient','Estimate','SE','z score','p-value')
 
-## Prediction of CCC-2 checklist completion from child and parent variables.  
-
-Table S1 shows results of the logistic regression analysis predicting CCC-2 completion rate from parent and child variables.
-`r nonresp.summary`
-
-```{r TableS1, echo=FALSE}
-
-st2<-regulartable(data.frame(nonresp.summary$coefficients))
-#st2 <- width(ft2, width = c(2.2,1,.8,.8,.8))
+st2<-regulartable(regtable)
+ft2 <- width(st2, width = c(2.2,1,.8,.8,.8))
 st2
 ```
 
-Figure S2 shows fitted points for CCC-2 response rate in trisomy and twin samples, in relation to language status of the child (score on language factor, where low score indicates impairment). 
-![Figure S2: Distributions of scores on the fourteen measures from psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group. Filled circles show cases in age range 6 to 11 yr. Continous line is mean for 6-11 yr olds, dotted line is mean for whole sample. Yellow band is mean +/- 1 SD for No Concern comparison group.](png.cccresp.png)
-Figure S3 shows means for CCC-2 scales for trisomy groups subdivided by bias type (continuous lines = Low Bias, and dotted lines = High Bias) and for the two twin groups. Error bars show standard errors.
-![Figure S3.](cccplot.png)
+Figure S2 shows fitted points for CCC-2 response rate in trisomy and twin samples, in relation to language status of the child (score on language factor, where low score indicates impairment). Note that checklist completion was lowest for parents whose child had more severe language problems.  
+  
+![Figure S2. Fitted regression lines for predicting CCC-2 completion from child status. ](png.cccresp.png)  
+
+### CCC-2 subscale data  
+  
+In the MANOVA for CCC-2, we used composites based on averaged subscales to minimise problems with non-normality of data. The data on the individual scales are summarised in Figure S3.   
+  
+![Figure S3. Means for CCC-2 scales for trisomy groups subdivided by bias type (continuous lines = Low Bias, and dotted lines = High Bias) and for the two twin groups. Error bars show standard errors.](cccplot.png)
+
