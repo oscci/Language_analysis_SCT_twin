@@ -12,7 +12,7 @@ html_document: default
 
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
-                      echo=FALSE, include=FALSE, warning=FALSE, message=FALSE)
+                      echo=FALSE,  warning=FALSE, message=FALSE)
 ```
 
 ```{r load_packages, include = FALSE, echo=FALSE}
@@ -56,6 +56,7 @@ library(flextable) #for word-compatible tables in rmd
 library(officer)
 library(stargazer)
 library(mvnormtest) #check assumptions for MANOVA
+library(plotly) #for heatmap https://plot.ly/r/heatmaps/
 testbattery<-read.csv('testbattery.csv') #used for Table 1 in word doc
 
 #################################################################################
@@ -1309,6 +1310,12 @@ summary(aov.gcc)
 
 aov.scdi<-aov(mydata$scdi~mydata$bias)
 summary(aov.scdi)
+
+#look at N below GCC 55 cutoff
+all.short$gcclow<-0
+w<-which(all.short$gcc<55)
+all.short$gcclow[w]<-1
+table(all.short$group8,all.short$gcclow)
 ```
 
 ```{r beeswarm.ccc, include=FALSE}
@@ -1362,6 +1369,65 @@ make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngd
                           groupcolor,mylims,dodiffmean,addtext)
 ```
 
+```{r langcutoffs, include=TRUE}
+#First rank order the tests according to N low
+varlist<-c('Vocab','Comprehnsn','SentRep','NwdRep','Oromotor')
+w<-which(colnames(all.short)%in% varlist)
+colnames(all.short)[w]
+nlow<-vector()
+for (i in 1:length(w)) {
+  nlow[i]<-length(which(all.short[,w[i]]<86))
+  
+}
+test.order<-w[order(-nlow)] #orders the column number from easiest to hardest
+colnames(all.short)[test.order]
+#build up langlow_index, which will be a 5 digit value of 0 and 1
+#e.g. if all tests are unimpaired, value is 11111; if all are impaired it is 00000
+#of only sentrep and comp are low, then value will be 01110 as these are 1st and last tests in test.order
+all.short$langlow_index<-'' #initialise with ''
+all.short$langlow_count<-0
+for (i in 1:length(w)) {
+  colx<-test.order[i]
+  x<-which(all.short[,colx]>85)
+  all.short$langlow_index[x]<-paste0('1',all.short$langlow_index[x])
+    all.short$langlow_index[-x]<-paste0('0',all.short$langlow_index[-x])
+ all.short$langlow_count[-x]<-all.short$langlow_count[-x]+1
+}
+all.short$langlow_index<-paste0('p',all.short$langlow_index)
+langlowtab<-table(all.short$group8,all.short$langlow_index)
+planglow<-t(prop.table(langlowtab,1)) #transpose rows and cols
+
+#inspect table - find categories with few entries and merge these
+all.short$langlow_orig<-all.short$langlow_index
+mergelist<-matrix(c('p00011','p00010',
+                    'p00100','p00110',
+                    'p01100','p01110',
+                    'p01100','p01010',
+                    'p10000','p10001',
+                    'p10010','p10011',
+                    'p10110','p10111'),ncol=2,byrow=TRUE)
+for (i in nrow(mergelist)){
+  ww<-which(all.short$langlow_index==mergelist[i,2])
+  all.short$langlow_index[ww]<-mergelist[i,1]
+}
+
+langlowtab<-table(all.short$group8,all.short$langlow_index)
+planglow<-t(prop.table(langlowtab,1)) #transpose rows and cols
+planglow<-round(planglow,3)
+
+
+langlowcounttab<-table(all.short$group8,all.short$langlow_count)
+planglowcount<-prop.table(langlowcounttab,1)
+planglowcount<-round(100*(planglowcount),1)
+
+  myheat<-plot_ly(x=levels(all.short$group8),y=seq(0:5),
+                    z = planglowcount, type = "heatmap", colorscale = "Greys")
+ # myheat
+  
+  #conclude that heat map is not helpful in seeing patterns - either with proportions with patterns, or with simpler N low measure! Table is better, using Nlow count.
+
+
+```
 
 ```{r flow_sct, include=FALSE}
 ## Flow diagrams
@@ -1586,6 +1652,7 @@ if(heatmap==1){
   # These plots no longer needed, given that no group effect - previously, before excluding older SCT cases, there was a group effect, which seemed driven by different associations between reading/language measures. Can still see a suggestion of this - lighter red for lang/read correlations in twins. But as NS, not worth exploring further.
   png_heat<-'heat_plot_sct.png'
   png(png_heat,width=1000,height=500)
+  
   cormat_SCT <- round(cor(lobias.sct2[lobias.sct2$mycontrast==1,nurange],use="na.or.complete"),2)
   ggcorrplot(cormat_SCT,title='SCT')
   dev.off()
@@ -1757,8 +1824,12 @@ ft3 <- width(ft3, width = c(2,1,.8,.8,.8,.8,.8))
 ft3
 
 ```
+# NEED TO ADD GCC and SIDC here?
 
-**Number of language tests below cutoff**
+
+**Number of language tests below cutoff**  
+
+In a final analysis, we focused on rates of impairment rather than mean scores. There have been various attempts to operationalise diagnostic criteria for language disorder (e.g. Tomblin et al, xxxx). Although an overall language test composite can be used for this purpose, this may miss cases who have an uneven profile, with striking deficits in just a few aspects of language function. To get a better impression of the nature of language deficits in the trisomy and comparison groups, we selected six language measures: Vocabulary, Comprehension, Sentence Repetition, Nonword Repetition, and Oromotor Sequences, and categorised each case according to whether their score was more than 1 SD below the population mean (i.e. 85 or less on the rescaled scores). Across the whole sample, the number scoring this low was greatest for Sentence Repetition and lowest for Comprehension. 
 
 
 
