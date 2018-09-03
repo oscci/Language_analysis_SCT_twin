@@ -22,6 +22,8 @@ knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
 #require(formr) #to handle conflicts with 'select' function in dplyr (may not be needed)
 require(here) #for reproducible pathnames: see https://www.tidyverse.org/articles/2017/12/workflow-vs-script/
 
+library(apaTables) #not yet used, but recommended for APA style output
+library(apaText)
 library(tidyverse)
 library(reshape2)  #for melt
 library(knitr) #for kable - allows nice tables in Word output - but can be temperamental
@@ -67,7 +69,7 @@ testbattery<-read.csv('testbattery.csv') #used for Table 1 in word doc
 #Need to create a main analysis file in which we have a code that corresponds to group.
 #Have col for trisomy which corresponds to XXX, XXY, XYY, and NA: NA will be twins
 #Makes sense to use is_twin to select just one from each pair
-#For trisomies, have a col that specifies whether highbias or lowbias
+#For trisomies, have a col that specifies whether Highbias or lowbias
 
 #Have a col that determines if meeting criteria for DLD - regardless of whether twin or not.
 #This can be same criterion as for doppler paper : this was:
@@ -423,7 +425,7 @@ w<-c(which(all.short$why_tested==2),which(all.short$why_tested==3))
 all.short$bias[w]<-1
 sct.tab <- table(all.short$trisomy,all.short$bias)
 rownames(sct.tab)<-c('XXX','XXY','XYY')
-colnames(sct.tab)<-c('low bias','high bias','NA')
+colnames(sct.tab)<-c('Low Bias','High Bias','NA')
 #Show tables
 twin.tab
 tab_sct<-sct.tab
@@ -456,7 +458,7 @@ print('In 2009 study')
 w<-which(all.short$orig_famcode==1)
 origstudy<-table(all.short$bias[w],all.short$trisomy[w])
 colnames(origstudy)<-c('XXX','XXY','XYY')
-rownames(origstudy)<-c('Low bias','High bias')
+rownames(origstudy)<-c('Low Bias','High Bias')
 origstudy
 
 #Count how many cases available for MANOVAs
@@ -465,7 +467,7 @@ w<-which(all.short$n_missinglang<2) #we have retained those with one missing val
 tempshort<-all.short[w,]
 sct.tab1 <- table(tempshort$trisomy,tempshort$bias)
 rownames(sct.tab1)<-c('XXX','XXY','XYY')
-colnames(sct.tab1)<-c('low bias','high bias','NA')
+colnames(sct.tab1)<-c('Low Bias','High Bias','NA')
 #Show tables
 print('Cases with full data for nv/lang analysis')
 
@@ -476,7 +478,7 @@ w<-which(all.short$n_missingread<2) #we have retained those with one missing val
 tempshort<-all.short[w,]
 sct.tab2 <- table(tempshort$trisomy,tempshort$bias)
 rownames(sct.tab2)<-c('XXX','XXY','XYY')
-colnames(sct.tab2)<-c('low bias','high bias','NA')
+colnames(sct.tab2)<-c('Low Bias','High Bias','NA')
 #Show tables
 print('Cases with full data for reading/naming analysis')
 
@@ -566,7 +568,7 @@ for (i in mcx1:mcx2){
 ##Covariates
 # a)	Educational level of mother and father, transformed into an ordinal scale based on age at leaving full-time education/qualifications obtained, with points of 0 (prior to age 16 years), 1 (16 years/did GCSE or O-levels), 2 (18 years/ did A-levels), 3 (21 years, degree), 4 (postgraduate study). 
 # 
-# b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank over 32,000 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable.  
+# b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank 32,844 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable.  
 # 
 # c)	Living with single parent, coded as a binary variable (0 or 1), based on status at the time of the initial interview.
 # 
@@ -580,29 +582,23 @@ par.ed <-aggregate(all.short$mo_educ, by=list(all.short$group8),
 pirateplot(mo_educ~group8,data=all.short)
 pirateplot(fa_educ~group8,data=all.short)
 
-#Deprivation index
-#pirateplot(deprivation_index~group8,data=all.short,main='Deprivation index: high is good')
-
-#Can generate deciles, but better to normalise deprviation index as below
-#depcut<-3275*c(1,2,3,4,5,6,7,8,9)
-# print('Deprivation index decile cutpoints are:')
-# print(depcut)
-# pirateplot(deprivation_index~mo_educ,data=all.short,main='Deprivation index: high is good')
-
 #Use ranks to convert to normal distribution
-#Rw deprivation index is a rank out of 32750
+#Rw deprivation index is a rank.
+
+depmax<-32844 #N possible ranks
+
 w<-which(is.na(all.short$deprivation_index))
-all.short$deprivation_index[w]<-32850/2
+all.short$deprivation_index[w]<-depmax/2
 #Assign avg score to those outside england where no dep index
-all.short$deprivz<-qnorm(all.short$deprivation_index/32850)
+all.short$neighborz<-qnorm(all.short$deprivation_index/depmax)
 
 firsttwin<-min(which(all.short$is_twin==TRUE))
 print(paste('N SCT with missing dep index (assigned 0) = ',length(which(w<firsttwin))))
 print(paste('N twin with missing dep index (assigned 0) = ',length(which(w>firsttwin))))
-all.short$deprivz[w]<-0
+all.short$neighborz[w]<-0
 dopirate<-0 #toggle to 1 to see pirateplot (not really needed here, but useful as eg of plot labeling)
 if (dopirate==1){
-  pirateplot(deprivz~group8,data=all.short,xaxt='n')
+  pirateplot(neighborz~group8,data=all.short,xaxt='n')
   text(1,3.2,'XXX',cex=.8)
   text(2,3.2,'XXY',cex=.8)
   text(3,3.2,'XYY',cex=.8)
@@ -612,7 +608,7 @@ if (dopirate==1){
   text(7,3.4,'Twin\nno concerns',cex=.8)
   text(8,3.2,'Twin\nlanguage\nproblems ',cex=.8)
   text(2,-3,'<-------Low bias------->')
-  text(5,-3,'<-------High bias------->')
+  text(5,-3,'<-------High Bias------->')
 }
 all.short$singlepar<-0
 all.short$singlepar[all.short$fam_structure<3]<-1
@@ -695,7 +691,7 @@ round(table(all.short$dldcat,all.short$slt.code),2) #check how SALT relates to D
 ##Analyse language test and reading data
 # First select the data 
 # 
-# Then make shorter sctfile that excludes the high bias group
+# Then make shorter sctfile that excludes the High Bias group
 
 # Make table for creating sums for Participants section
 exclude.tab<-table(all.short$dldcat,all.short$bias,all.short$trisomy) #can index cells as DLDcat,bias,trisomy
@@ -745,21 +741,21 @@ mybkg.tab <- data.frame(all.short %>%
                                     Age.SD   = sd(Age),
                                     MotherEd   = mean(mo_educ, na.rm = TRUE),
                                     MotherEd.SD   = sd(mo_educ, na.rm = TRUE),
-                                    Deprivation = mean(deprivz, na.rm = TRUE),
-                                    Depriv.SD = sd(deprivz, na.rm = TRUE)))
+                                    Deprivation = mean(neighborz, na.rm = TRUE),
+                                    Depriv.SD = sd(neighborz, na.rm = TRUE)))
 mybkg.tab2<-mybkg.tab[1:8,c(1,2,3,5,7)]
-mybkg.tab2[,1]<-c('XXX: Low bias',
-                  'XXY: Low bias',
-                  'XYY: Low bias',
-                  'XXX: High bias',
-                  'XXY: High bias',
-                  'XYY: High bias',
+mybkg.tab2[,1]<-c('XXX: Low Bias',
+                  'XXY: Low Bias',
+                  'XYY: Low Bias',
+                  'XXX: High Bias',
+                  'XXY: High Bias',
+                  'XYY: High Bias',
                   'Twin: No concerns',
                   'Twin: Language concerns')
 mybkg.tab2[,3]<-paste0(round(mybkg.tab[1:8,3],0),' (',round(agesd.tab[,2],1),')')
 mybkg.tab2[,4]<-paste0(round(mybkg.tab[1:8,5],1),' (',round(mybkg.tab[1:8,6],2),')')
 mybkg.tab2[,5]<-paste0(round(mybkg.tab[1:8,7],1),' (',round(mybkg.tab[1:8,8],2),')')
-colnames(mybkg.tab2)<-c('Group','N','Age (mo)','Mo. educ.','Depriv. index')
+colnames(mybkg.tab2)<-c('Group','N','Age (mo)','Mo. educ.','Neighbourhood advantage')
 
 ```
 
@@ -767,7 +763,7 @@ colnames(mybkg.tab2)<-c('Group','N','Age (mo)','Mo. educ.','Depriv. index')
 
 
 
-```{r MANOVAfunctions}
+```{r MANOVAfunctions, include=FALSE, echo=FALSE}
 ######################################################################################
 #define function for running MANOVA here
 #Currently can have up to 2 covariates
@@ -829,7 +825,7 @@ gp.sctlow<-filter(lobias.sct2,group8level<4)
 psychrange<-which(colnames(gp.sctlow) %in% c('piq','genlang','verbmem','literacy'))
 gpcolumn<-which(colnames(gp.sctlow)=='group8level')
 gpvalues<-c(1,2,3)
-covcolumns<-which(colnames(gp.sctlow) %in% c('mo_educ','deprivz'))
+covcolumns<-which(colnames(gp.sctlow) %in% c('mo_educ','neighborz'))
 mymanova.fit<-do.manova(gp.sctlow,psychrange,gpcolumn,gpvalues,covcolumns)
   mymanova.sum<-summary(mymanova.fit, test="Wilks")
 
@@ -841,12 +837,12 @@ print('Ns for analysis:')
 print(mytab)
 
 #select values to pass to manova.write function
-mycomparison<-paste0('A. Low bias: XXX (',mytab[1],
+mycomparison<-paste0('A. Low Bias: XXX (',mytab[1],
                      ') vs XXY (',mytab[2],
                      ') vs XYY (',mytab[3],')')
 
 manova.stats<-mymanova.sum$stats
-effectnames<-c('Group','Mo. education','Depriv. index')
+effectnames<-c('Group','Mo. education','Neighbourhood advantage')
 offset<-0
 manova.dataframe<-manova.write(mycomparison,effectnames,offset,manova.stats,manova.dataframe)
 #summary.aov(gp.sctlow.fit) - if you want to inspect individual language measures
@@ -865,7 +861,7 @@ lobias.agematch<-lobias.sct2[w,]
 psychrange<-which(colnames(gp.sctlow) %in% c('piq','genlang','verbmem','literacy'))
 gpcolumn<-which(colnames(gp.sctlow)=='is_twin')
 gpvalues<-c(0,1)
-covcolumns<-which(colnames(gp.sctlow) %in% c('mo_educ','deprivz'))
+covcolumns<-which(colnames(gp.sctlow) %in% c('mo_educ','neighborz'))
 mymanova.fit<-do.manova(lobias.agematch,psychrange,gpcolumn,gpvalues,covcolumns)
 mymanova.sum<-summary(mymanova.fit, test="Wilks")
 print('Manova on the psychometric measures for the SCT vs DLD groups age matched')
@@ -912,20 +908,20 @@ trisomy.only<-filter(trisomy.only,langdata_complete==1)
 psychrange<-which(colnames(trisomy.only) %in% c('piq','genlang','verbmem','literacy'))
 gpcolumn<-which(colnames(trisomy.only)=='bias')
 gpvalues<-c(0,1)
-covcolumns<-which(colnames(trisomy.only) %in% c('mo_educ','deprivz'))
+covcolumns<-which(colnames(trisomy.only) %in% c('mo_educ','neighborz'))
 mymanova.fit<-do.manova(trisomy.only,psychrange,gpcolumn,gpvalues,covcolumns)
 mymanova.sum<-summary(mymanova.fit, test="Wilks")
-print('Manova on the psychometric measures for the high vs low bias groups')
+print('Manova on the psychometric measures for the High vs Low Bias groups')
 mymanova.sum
 
 mytab<-table(trisomy.only$bias)
 names(mytab)<-c('Low','High')
 print('Ns for analysis:')
 print(mytab)
-print('Manova on the summary psychometric measures for the low vs high bias SCT')
+print('Manova on the summary psychometric measures for the low vs High Bias SCT')
 mymanova.sum
 
-mycomparison<-paste0('C. Low bias (',mytab[1],') vs. High bias (',mytab[2],')')
+mycomparison<-paste0('C. Low Bias (',mytab[1],') vs. High Bias (',mytab[2],')')
 manova.stats<-mymanova.sum$stats
 offset<-nrow(manova.dataframe)
 manova.dataframe<-manova.write(mycomparison,effectnames,offset,manova.stats,manova.dataframe)
@@ -933,17 +929,6 @@ manova.dataframe<-manova.write(mycomparison,effectnames,offset,manova.stats,mano
 summary.aov(mymanova.fit) #- if you want to inspect individual language measures
 ```
 
-```{r lowlangtests}
-#Optional extra: count how many language tests are low
-print('ANOVA on N tests low: Vocab, Comp, Sent Rep, Nwrep, Oromotor + GCC')
-lowtest6.aov<-aov(trisomy.only$Ntestlow~trisomy.only$trisomy*trisomy.only$bias)
-summary(lowtest6.aov)
-lowdld6.aov<-aov(trisomy.only$dldlevel~trisomy.only$trisomy*trisomy.only$bias)
-summary(lowdld6.aov)
-cutofflang.tab<-table(trisomy.only$Ntestlow,trisomy.only$group8level)
-cutofflang.tab
-
-```
 
 ```{r beeswarm.function, include=FALSE}
 make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,
@@ -1006,8 +991,8 @@ for (i in 1:length(varlist)){
   polygon(c(0,0,(ngroup+1),(ngroup+1)), c(up.lim, low.lim, low.lim, up.lim),
           col=adjustcolor("yellow",alpha.f=0.3), border = NA)
   if(addtext==1){
-  text(2,mylims[2],'<---------Low bias--------->')
-  text(5,mylims[2],'<---------High bias--------->')
+  text(2,mylims[2],'<---------Low Bias--------->')
+  text(5,mylims[2],'<---------High Bias--------->')
   }
 }
 dev.off()
@@ -1055,7 +1040,7 @@ make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngd
 
 
 ```{r bias.beeswarm, include=FALSE}
-##Comparison of low and high bias groups
+##Comparison of low and High Bias groups
 #Use trisomy.only group for this
 
 
@@ -1091,7 +1076,7 @@ z<-which(colnames(all.short)=='trisomy')
 z1<-which(colnames(all.short)=='bias')
 z2<-which(colnames(all.short)=='dldlevel')
 z3<-which(colnames(all.short)=='mo_educ')
-z4<-which(colnames(all.short)=='deprivz')
+z4<-which(colnames(all.short)=='neighborz')
 z5<-which(colnames(all.short)=='is_twin')
 z6<-which(colnames(all.short)=='ageband')
 #make file with ID,  and CCC results, as well as group8; gender, age added at end
@@ -1115,8 +1100,8 @@ ccc.yes<-100*(1-ccc.no)
 ccc.yes<-round(ccc.yes,1)
 
 print('Proportions of non-response to CCC-2')
-print(paste('All low bias SCT:',ccc.no[1]))
-print(paste('All high bias SCT:',ccc.no[2]))
+print(paste('All Low Bias SCT:',ccc.no[1]))
+print(paste('All High Bias SCT:',ccc.no[2]))
 print(paste('Twin: no concerns:',ccc.no[3]))
 print(paste('Twin: language concerns:',ccc.no[4]))
 #percentage of completed checklists failing consistency check
@@ -1264,14 +1249,14 @@ mydata<-ccc.data[w,]
 mycolrange<-c('ccc_struct','ccc_prag','ccc_autfeat')
 gpcolumn<-'group8level'
 gpvalues<-c(1,2,3)
-covcolumns<-c('mo_educ','deprivz')
+covcolumns<-c('mo_educ','neighborz')
 ccc.manovafit<-do.manova(mydata,mycolrange,gpcolumn,gpvalues,covcolumns)
 
 mytab<-table(mydata$group8)
 mycomparison<-paste0('A. XXX (',mytab[1],'), XXY (',mytab[2],'),XYY (',mytab[3],')')
 manova.stats<-summary(ccc.manovafit, test="Wilks")$stats
 offset<-0
-effectnames<-c('Group','Mo. education','Depriv. index')
+effectnames<-c('Group','Mo. education','Neighbourhood advantage')
 manova.ccc.df<-manova.write(mycomparison,effectnames,offset,manova.stats,manova.ccc.df)
 
 
@@ -1286,12 +1271,12 @@ ccc.manovafit2<-do.manova(mydata,mycolrange,gpcolumn,gpvalues,covcolumns)
 
 offset<-nrow(manova.ccc.df)
 mycomparison<-'B. All SCT vs Lang concern twins'
-effectnames<-c('Group','Mo. education','Depriv. index')
+effectnames<-c('Group','Mo. education','Neighbourhood advantage')
 manova.stats<-summary(ccc.manovafit2, test="Wilks")$stats
 manova.ccc.df<-manova.write(mycomparison,effectnames,offset,manova.stats,manova.ccc.df)
 
 
-#Now compare hi and low bias trisomies
+#Now compare hi and Low Bias trisomies
 mydata<-filter(ccc.data,group8level<7)
 gpcolumn<-'bias'
 ccc.manovafit3<-do.manova(mydata,mycolrange,gpcolumn,gpvalues,covcolumns)
@@ -1299,7 +1284,7 @@ ccc.manovafit3<-do.manova(mydata,mycolrange,gpcolumn,gpvalues,covcolumns)
 manova.stats<-summary(ccc.manovafit3, test="Wilks")$stats
 offset<-nrow(manova.ccc.df)
 mycomparison<-'C. Bias '
-effectnames<-c('Bias','Mo. education','Depriv. index','Bias x Trisomy')
+effectnames<-c('Bias','Mo. education','Neighbourhood advantage','Bias x Trisomy')
 manova.ccc.df<-manova.write(mycomparison,effectnames,offset,manova.stats,manova.ccc.df)
 
 
@@ -1315,11 +1300,16 @@ summary(aov.scdi)
 all.short$gcclow<-0
 w<-which(all.short$gcc<55)
 all.short$gcclow[w]<-1
-table(all.short$group8,all.short$gcclow)
+mygcctab<-table(all.short$group8,all.short$gcclow)
+
+p.lowgcc.lobias<-100*sum(mygcctab[1:3,2]/sum(mygcctab[1:3,]))
+p.lowgcc.hibias<-100*sum(mygcctab[4:6,2]/sum(mygcctab[4:6,]))
+p.lowgcc.twinTD<-100*sum(mygcctab[7,2]/sum(mygcctab[7,]))
+p.lowgcc.twinLD<-100*sum(mygcctab[8,2]/sum(mygcctab[8,]))
 ```
 
 ```{r beeswarm.ccc, include=FALSE}
-#initial beeswarm parallels that for the psychometric tests with 3 low bias gp and LDtwin
+#initial beeswarm parallels that for the psychometric tests with 3 Low Bias gp and LDtwin
 
 w<-which(ccc.data$group8level%in%c(1,2,3,8))
 mydata<-ccc.data[w,]
@@ -1369,7 +1359,7 @@ make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngd
                           groupcolor,mylims,dodiffmean,addtext)
 ```
 
-```{r langcutoffs, include=TRUE}
+```{r langcutoffs, include=FALSE}
 #First rank order the tests according to N low
 varlist<-c('Vocab','Comprehnsn','SentRep','NwdRep','Oromotor')
 w<-which(colnames(all.short)%in% varlist)
@@ -1385,13 +1375,13 @@ colnames(all.short)[test.order]
 #e.g. if all tests are unimpaired, value is 11111; if all are impaired it is 00000
 #of only sentrep and comp are low, then value will be 01110 as these are 1st and last tests in test.order
 all.short$langlow_index<-'' #initialise with ''
-all.short$langlow_count<-0
+all.short$langlowcounttab<-0
 for (i in 1:length(w)) {
   colx<-test.order[i]
   x<-which(all.short[,colx]>85)
   all.short$langlow_index[x]<-paste0('1',all.short$langlow_index[x])
     all.short$langlow_index[-x]<-paste0('0',all.short$langlow_index[-x])
- all.short$langlow_count[-x]<-all.short$langlow_count[-x]+1
+ all.short$langlowcounttab[-x]<-all.short$langlowcounttab[-x]+1
 }
 all.short$langlow_index<-paste0('p',all.short$langlow_index)
 langlowtab<-table(all.short$group8,all.short$langlow_index)
@@ -1416,7 +1406,7 @@ planglow<-t(prop.table(langlowtab,1)) #transpose rows and cols
 planglow<-round(planglow,3)
 
 
-langlowcounttab<-table(all.short$group8,all.short$langlow_count)
+langlowcounttab<-table(all.short$group8,all.short$langlowcounttab)
 planglowcount<-prop.table(langlowcounttab,1)
 planglowcount<-round(100*(planglowcount),1)
 
@@ -1425,8 +1415,16 @@ planglowcount<-round(100*(planglowcount),1)
  # myheat
   
   #conclude that heat map is not helpful in seeing patterns - either with proportions with patterns, or with simpler N low measure! Table is better, using Nlow count.
-
-
+  lown.df<-data.frame(matrix(NA,nrow=11,ncol=8))
+  colnames(lown.df)<-c('Group','N','0','1','2','3','4','5')
+lown.df$Group<-c('Comparison','No concerns','Language concerns','Trisomy: Low Bias','XXX','XXY','XYY',
+               'Trisomy: High Bias','XXX','XXY','XYY' )
+lown.df$N <-c('',sum(langlowcounttab[7,]),sum(langlowcounttab[8,]),
+              '',sum(langlowcounttab[1,]),sum(langlowcounttab[2,]),sum(langlowcounttab[3,]),
+              '',sum(langlowcounttab[4,]),sum(langlowcounttab[5,]),sum(langlowcounttab[6,]))
+lown.df[2:3,3:8]<-planglowcount[7:8,]
+lown.df[5:7,3:8]<-planglowcount[1:3,]
+lown.df[9:11,3:8]<-planglowcount[4:6,]
 ```
 
 ```{r flow_sct, include=FALSE}
@@ -1545,8 +1543,8 @@ flow1<-DiagrammeR::grViz("
               
               [1]: paste0(' ')
               [2]: paste0('SCT:\\n N = ',y1)
-              [3]: paste0('Low bias,\\n N = ',biasLow)
-              [4]: paste0('High bias, \\nN = ',biasHigh)
+              [3]: paste0('Low Bias,\\n N = ',biasLow)
+              [4]: paste0('High Bias, \\nN = ',biasHigh)
               [5]: paste0('XXX','\\n', 'N = ',xxx_a0,'\\n','N* = ',xxx_a1,'\\n', 'N** = ',xxx_a2,'\\n', 'N*** = ',xxx_a3)
               [6]: paste0('XXY',' \\n', 'N = ',xxy_a0,' \\n','N* = ',xxy_a1,' \\n', 'N** = ',xxy_a2,' \\n', 'N*** = ',xxy_a3)
               [7]: paste0('XYY',' \\n','N = ',xyy_a0,' \\n', 'N* = ',xyy_a1,' \\n', 'N** = ',xyy_a2,' \\n', 'N*** = ',xyy_a3)
@@ -1688,13 +1686,16 @@ The association with language problems is of interest because there are few gene
   
 In 2011 we embarked on data collection for a new study of children with sex chromosome trisomies, including both pre- and post-natally identified cases. The goals were, first, to document the nature and range of language and behavioural difficulties in the three types of trisomy, and second, to test whether individual variation in outcomes could be predicted by variation in specific genetic variants. Here we report descriptive data relating to the first question, with a particular emphasis on language characteristics.  Behavioural and psychiatric findings will be covered in a companion paper. To date we have not found any associations of phenotypes with variants in CNTNAP2 and NRXN1 genes; these analyses are reported elsewhere (Newbury et al, 2018).  
   
-Our focus here is both on documenting whether there are reliable differences in language and cognitive outcomes for the three types of trisomy, and how far the pattern of language problems resembles that seen in children with developmental language disorder (DLD) who do not have any known genetic abnormalities. To minimize ascertainment bias, these analyses were restricted to children whose trisomy was either detected prenatally, or as an incidental finding during other medical investigations (referred to as a ‘low bias’ group). To address the latter question, we compared the results of trisomic children with those of children who had participated in a twin study of language development and disorders, and who had been given the same test battery. Finally, we considered how far trisomy outcomes are influenced by ascertainment bias, by comparing the low bias group with a high bias group whose trisomies were discovered in the course of investigation of behavioural or neurodevelopmental problems.  
+Our focus here is both on documenting whether there are reliable differences in language and cognitive outcomes for the three types of trisomy, and how far the pattern of language problems resembles that seen in children with developmental language disorder (DLD) who do not have any known genetic abnormalities. To minimize ascertainment bias, these analyses were restricted to children whose trisomy was either detected prenatally, or as an incidental finding during other medical investigations (referred to as a ‘Low Bias’ group). To address the latter question, we compared the results of trisomic children with those of children who had participated in a twin study of language development and disorders, and who had been given the same test battery. Finally, we considered how far trisomy outcomes are influenced by ascertainment bias, by comparing the Low Bias group with a High Bias group whose trisomies were discovered in the course of investigation of behavioural or neurodevelopmental problems.  
   
 The specific questions we considered were:  
   
 1.	Is there a distinctive language profile for each of the three types of trisomy?  
-2.	Is the cognitive profile of children with sex chromosome trisomies similar to that of children with language problems who have the usual XY or XX karyotype?  
-3.	How far does ascertainment bias affect the language and cognitive profiles of children with sex chromosome trisomies?  
+*To add in introduction: something about why we might expect trisomy differences - see Skuse etc.*
+
+2.	Is there a distinctive language and cognitive phenotype of children with sex chromosome trisomies, or do they resemble children with language problems who have the usual XY or XX karyotype? 
+
+3.	How much does ascertainment bias affect the language and cognitive profiles of children with sex chromosome trisomies?  
 
 ## Participants  
 
@@ -1702,7 +1703,7 @@ The specific questions we considered were:
 
 We recruited `r tab_sct[1,1]+tab_sct[1,2]` girls with XXX, `r tab_sct[2,1]+tab_sct[2,2]` boys with XXY and `r tab_sct[3,1]+tab_sct[3,2]` boys with XYY to the study, in the age range from 5 years 0 months to 15 years 11 months. `r round(100*sum(origstudy)/sum(tab_sct),0)`% of the children had participated in the Bishop et al (2011) study. Recruitment was via NHS Clinical Genetics centres, two support groups (Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association) and self-referral through social media. To be included in the study, the child had to be aware of their trisomy status.  
   
-**Ascertainment bias**. During the initial telephone interviews, caregivers were asked how their child was diagnosed, in particular whether this followed postnatal testing motivated by neurodevelopmental/behavioural problems. The phenotype of such children may be more severe, potentially biasing the sample, and so, as shown in Figure 1, we grouped them prospectively as a high-risk-of-bias (‘High Bias’) subgroup, comprised of `r sum(exclude.tab[,2,1])` XXX, `r sum(exclude.tab[,2,2])` XXY and `r sum(exclude.tab[,2,3])` XYY cases. All other children formed the low-risk-of-bias (‘Low Bias’) subgroup, with `r sum(exclude.tab[,1,1])` XXX, `r sum(exclude.tab[,1,2])` XXY and `r sum(exclude.tab[,1,3])` XYY cases.  
+**Ascertainment bias**. During the initial telephone interviews, caregivers were asked how their child was diagnosed, in particular whether this followed postnatal testing motivated by neurodevelopmental/behavioural problems. The phenotype of such children may be more severe, potentially biasing the sample, and so, as shown in Figure 1, we grouped them prospectively as a High-risk-of-bias (High Bias) subgroup, comprised of `r sum(exclude.tab[,2,1])` XXX, `r sum(exclude.tab[,2,2])` XXY and `r sum(exclude.tab[,2,3])` XYY cases. All other children formed the low-risk-of-bias (Low Bias) subgroup, with `r sum(exclude.tab[,1,1])` XXX, `r sum(exclude.tab[,1,2])` XXY and `r sum(exclude.tab[,1,3])` XYY cases.  
   
 **Exclusionary criteria**. Given our current focus on language disorder, we excluded children who had a nonverbal ability scaled score more than 2 SD below the mean (`r sum(exclude.tab[3,1,])` Low Bias and `r sum(exclude.tab[3,2,])` High Bias), those who met criteria for autism spectrum disorder (ASD) (`r sum(exclude.tab[4,1,])` Low Bias and `r sum(exclude.tab[4,2,])` High Bias) and those who failed a hearing screen (`r sum(exclude.tab[5,1,])` Low Bias and `r sum(exclude.tab[5,2,])` High Bias). This enabled us to make a direct comparison with the twin sample, which also excluded children on this basis, and to see how far language problems were seen in children who did not have accompanying conditions that are likely to affect language function. However, note that this means that our conclusions are based on a selected sample of trisomy cases. ASD and other diagnoses in children with sex chromosome trisomies will be the focus of a companion paper.  
   
@@ -1718,7 +1719,8 @@ The numbers included in different analyses are shown in the flowchart in Figure 
   
 The comparison sample consisted of twins recruited via fliers sent to primary schools around the UK, advertisements on our group's website and via twins' clubs. The age range for this sample was narrower than for the SCT cases. We aimed to recruit families with twin children aged between 6 years 0 months and 11 years 11 months, with over-representation of those where one or both twins had language or literacy problems. Further details are provided in Wilson and Bishop (2018).  
   
-Our second question involved comparing the language profile of children with trisomies with that of children with language disorders of unknown cause. Usually, language disorder would be diagnosed on the basis of language test scores, but if we took that approach, the result would be a foregone conclusion, in that we would use the same measures to define the independent variable (language status) and the dependent variables. To avoid this circularity, twin children were subdivided according to parental concern about language and history of speech and language therapy (SALT), rather than by language test scores, which were treated as dependent variables. Parental concern was coded from the initial interview, and used to divide the twin sample into a ‘language concerns’ group with ongoing parental concerns about oral language (mild or severe) and the remainder (which included some cases where there had been transient concerns in preschool that had resolved, or where the concern affected only reading).  The latter is referred to as the ‘no concerns’ group. In addition, children who had received speech and language therapy after the age of 4 years were included in the ‘language concerns’ group.   
+Our second question involved comparing the language profile of children with trisomies with that of children with language disorders of unknown cause. Usually, language disorder would be diagnosed on the basis of language test scores, but if we took that approach, the result would be a foregone conclusion, in that we would use the same measures to define the independent variable (language status) and the dependent variables. To avoid this circularity, twin children were subdivided according to parental concern about language and history of speech and language therapy (SALT), rather than by language test scores, which were treated as dependent variables. Parental concern was coded from the initial interview, and used to divide the twin sample into a Language Concerns group with ongoing parental concerns about oral language (mild or severe) and the remainder (which included some cases where there had been transient concerns in preschool that had resolved, or where the concern affected only reading).  The latter is referred to as the No Concerns group. In addition, children who had received speech and language therapy after the age of 4 years were included in the Language Concerns group.   
+
 We followed the CATALISE criteria for DLD and excluded twin pairs if either twin had a pre-existing diagnosis of autism spectrum disorder (ASD), failed the hearing screen, had a performance IQ score below 70, or had a serious long-term illness; other diagnoses, such as dyslexia, ADHD, or dyspraxia, were not grounds for exclusion (Bishop et al., 2017).   
   
 One twin from each pair was selected at random to avoid dependencies in the data. The final sample consisted of `r concernM+concernF` children in the language concerns group, and `r noconcernM+noconcernF` children with no concerns.  The latter group were used to derive a normative range against which to evaluate the other groups on language measures. Figure 2 shows the number of twin children included in the study, and the number for whom useable CCC-2 data were available.  
@@ -1741,7 +1743,7 @@ ft
 ```
 Parents were asked to complete the Children’s Communication Checklist – 2 (CCC-2: Bishop, 2003) and Social Responsiveness Scales (SRS: Constantino, 2005) and return them by mail; the response rate was 86% for the trisomy families and 83% for the twin families.  The SRS data and results from an online interview covering behavioural and psychiatric characteristics will be described in a companion paper. 
   
-Results from the assessments in table 1 were converted to age-scaled scores on a common scale with mean 100 and SD 15. All tests had published norms covering the age range of the twin sample (6 to 11 years), but some did not extend outside this range. As explained in Newbury et al. (2018), where feasible norms were extrapolated based on data from other samples encompassing the wider age range. For oromotor skills, however, extrapolated norms gave scaled scores that were well below the range of other tests. For this test, therefore the No Concerns twin group was used to derive norms, using the regression of total correct on age to compute a standardized residual, which was then scaled to mean 100 and SD 15. 
+Results from the assessments in Table 1 were converted to age-scaled scores on a common scale with mean 100 and SD 15. All tests had published norms covering the age range of the twin sample (6 to 11 years), but some did not extend outside this range. As explained in Newbury et al. (2018), where feasible norms were extrapolated based on data from other samples encompassing the age range (see Appendix 2 on Open Science Framework project here https://osf.io/ae8yn/). For Oromotor Skills, however, extrapolated norms gave scaled scores that were well below the range of other tests. For this test, therefore the No Concerns twin group was used to derive norms, using the regression of total correct on age to compute a standardized residual, which was then scaled to mean 100 and SD 15. 
   
 Our original intention was to use MANOVAs to test group differences that related to the three research questions, but preliminary analysis showed that the MANOVA assumption of multivariate normality was not met when all 14 measures were entered into the analysis. Accordingly, we created four composites for the psychometric tests, by averaging scores as follows: Nonverbal ability (Matrices and Block Design), Core language (Vocabulary and Woodcock-Johnson Comprehension), Verbal production/memory (Sentence repetition, Nonword repetition, Oromotor sequences) and Literacy skills (all subtests from Neale Analysis of Reading Ability, Test of Word Reading Efficiency, and PhAB Rapid Naming). These composites mostly met criteria for multivariate normality within subgroups. Distributions of scores on the component tests for the different groups are shown in Supplementary Materials. Multivariate normality was again an issue for the CCC-2 test data, so composites were formed based on three sets of scales, identified as Structural Language (scales A-C), Pragmatics (scales D-G), and Autistic Features (scales H-J). The means and SEs for the original 10 subscales are shown in Supplementary Materials, Figure S3.
   
@@ -1750,7 +1752,7 @@ Our original intention was to use MANOVAs to test group differences that related
 Two measures of socio-economic variables that have been associated with language status were included in the analysis. These were:  
 a)	Educational level of mother, transformed into an ordinal scale based on age at leaving full-time education/qualifications obtained, with points of 0 (prior to age 16 years), 1 (16 years/did GCSE or O-levels), 2 (18 years/ did A-levels), 3 (21 years, degree), 4 (postgraduate study).   
   
-b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank over 32,000 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable, by dividing by 32750 before applying the qnorm function in R.  A value of zero was assigned to 13 SCT cases and 4 twin pairs from Wales, Scotland and Northern Ireland.
+b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank 32,844 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable, termed Neighbourhood Advantage index, by dividing by 32,844, before applying the qnorm function in R. A Neighbourhood Advantage index of zero (ie average) was assigned to 13 SCT cases and 4 twin pairs from Wales, Scotland and Northern Ireland.
 
 
 ## Procedure  
@@ -1759,9 +1761,9 @@ Children were seen for an individual assessment at home or school. The language,
 
 ## Analysis  
   
-Table 2 shows the characteristics of the trisomy and twin groups on background variables: age, mother's educational level and standardized deprivation index.  
+Table 2 shows the characteristics of the trisomy and twin groups on background variables: age, mother's educational level and neighbourhood advantage index.  
   
-**Table 2: Mean (SD) for age, mother's educational level and standardized deprivation index for SCT and twin groups**
+**Table 2: Mean (SD) for age, mother's educational level and neighbourhood advantage index for SCT and twin groups**
 
 ```{r table2,include=TRUE}
 
@@ -1772,7 +1774,7 @@ ft2
 
 ## Statistical comparisons  
 
-For each type of variable (Psychometric tests and parent report on CCC-2) three comparisons were conducted, corresponding to the three research questions, A) Comparison of the three trisomies for Low Bias group only; B) Comparison of all Low Bias trisomy cases aged 6-11 yr with the Language Concerns twin comparison group; C) Comparison of Low Bias and High Bias trisomy groups.
+For each type of variable (Psychometric tests and parent report on CCC-2) three comparisons were conducted, corresponding to the three research questions, A) Comparison of the three trisomies for Low Bias group only; B) Comparison of all Low Bias trisomy cases aged 6-11 yr with the Language Concerns twin comparison group; C) Comparison of Low Bias and High Bias trisomy groups. A Bonferroni-corrected alpha level of .05/6 = .008 was adopted.
 
 ### Psychometric tests    
 
@@ -1784,7 +1786,7 @@ An initial impression from these plots is that there is variation from test to t
 
 ![Figure 3: Distributions of scores on four clusters of psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group. Filled circles show cases in age range 6 to 11 yr. Dotted line is mean for 6-11 yr olds, solid line is mean for whole sample. Yellow band is mean +/- 1 SD for No Concern comparison group.](beeswarm_lowbias4gp.png)
 
-MANOVA was used to test whether there were reliable differences between the three trisomy groups on the four composite measures, after taking covariates (Mother's educational level and normalised deprivation index) into account.  No effect of trisomy type was found (see Table 3). 
+MANOVA was used to test whether there were reliable differences between the three trisomy groups on the four composite measures, after taking covariates (Mother's educational level and neighbourhood advantage index) into account.  No effect of trisomy type was found (see Table 3). 
   
 **Table 3. Results of MANOVA comparisons on psychometric tests**  
 ```{r table3,include=TRUE,echo=FALSE}
@@ -1793,28 +1795,29 @@ ft3 <- width(ft3, width = c(2,1,.8,.8,.8,.8,.8))
 ft3
 ```
   
+  
 B.	**Comparison of combined trisomy cases aged 6-11 yr (Low Bias) with Language Concern twin comparison group**  
 
 For this analysis, we combined all trisomy cases aged 6-11 years (filled circles in Figure 3) with the twin comparison group with language concerns. Table 3 shows the MANOVA result for this comparison, again revealing no overall group effect of group. The only factor affecting scores was mother's education, with each additional point on the scale associated with an increase of `r round(my.moedregb,1)` points in average score on psychometric tests.  
   
 C.	**Comparison of effect of bias group: trisomy cases only**  
   
-Figure 4 shows the distributions of scores on the four composites for children in the two ascertainment risk groups. For this analysis, we considered the effect of bias group, combining across trisomy type. As shown in table 3, there was a strong effect of ascertainment bias, with the high bias group having lower test scores.  
+Figure 4 shows the distributions of scores on the four composites for children in the two ascertainment risk groups. For this analysis, we considered the effect of bias group, combining across trisomy type. As shown in table 3, there was a strong effect of ascertainment bias, with the High Bias group having lower test scores.  
   
 ![Figure 4: Distributions of scores on psychometric composites for the Low Bias vs High Bias trisomy groups. Filled circles show cases in age range 6 to 11 yr, unfilled circles show older children. Continous lines are group means. Yellow band is mean +/- 1 SD for No Concern comparison group. ](beeswarm_bias.gp.png)  
   
   
 ### Children's Communication Checklist-2  
   
-Completion rates for the CCC-2 showed some variation by group: the checklist was completed by parents of `r ccc.yes[1]`% of the low bias and `r ccc.yes[2]`% of the high bias trisomy group, and by `r ccc.yes[3]`% of the parents of No Concern twins and `r ccc.yes[4]`% of parents of Language Concern twins. Data was not useable for `r ccc.inconsist`% of checklists which failed the consistency check: this is a criterion based on comparing scores for items describing strength and difficulites: if raw scores are similar for both, this suggests that the respondent has not appreciated the need to change the polarity of responses between the two sets. 
+Completion rates for the CCC-2 showed some variation by group: the checklist was completed by parents of `r ccc.yes[1]`% of the Low Bias and `r ccc.yes[2]`% of the High Bias trisomy group, and by `r ccc.yes[3]`% of the parents of No Concern twins and `r ccc.yes[4]`% of parents of Language Concern twins. Data was not useable for `r ccc.inconsist`% of checklists which failed the consistency check: this is a criterion based on comparing scores for items describing strength and difficulites: if raw means are similar for both, this suggests that the respondent has not appreciated the need to change the polarity of responses between the two sets. 
   
 To establish potential bias introduced by those with missing or unusable data, we conducted a logistic regression analysis, with CCC-2 data coded as 1 (useable data) vs 0 (missing or inconsistent), and with maternal educational level, single parent status, trisomy status, and a composite measure of the child's language status (language factor from Newbury et al., 2018) as predictors. Availability of CCC-2 data not predicted by parental characteristics (mother's education or single parent status), but was predicted by whether the child came from the twin or trisomy group, and by severity of language problems. The lower response rate by parents of twins might be explained by the fact that checklist completion was more onerous for them, as they were asked to complete a checklist for each twin. As shown in Supplementary Table S1 and Supplementary Figure S2, the impact of child's language status reflected that CCC-2 was less likely to be completed when the child had more severe language difficulties. Thus the CCC-2 results may underestimate the extent of communication difficulties in both samples.  
   
-A.	**Comparison of three trisomy groups** (Low Bias group only)  
-  
-Mean scores on the CCC-2 subscales are shown in Figure 5. As expected, the No Concerns comparison group has mean scores close to the population mean of 10. As with the psychometric tests, three MANOVAs were conducted, corresponding to the three research questions.  
+Mean scores on the three CCC-2 composites are shown for the Low Bias and Language Concerns groups in Figure 5. As expected, the No Concerns comparison group (range as yellow shading) has mean scores close to the population mean of 10. As with the psychometric tests, three MANOVAs were conducted, corresponding to the three research questions. The pattern of results was similar to that observed for psychometric tests. The three Low Bias trisomy groups did not differ from one another, and their mean scores on all three composites were not reliability different from the Language Concerns twin group. In contrast, the High Bias group scored substantially lower (Figure 6).
 
-![Figure 5: Mean scores on the three CCC-2 clusters for trisomy and comparison groups. For trisomies, continuous lines show mean for whole group, and dotted lines show means for children aged 6 to 11 years.](beeswarm_ccc.gp.png)
+![Figure 5: Mean scores on the three CCC-2 clusters for trisomy and comparison groups. The yellow shaded band shows mean +/-1 SD for the No Concerns twin group. For trisomies, continuous lines show mean for whole group, and dotted lines show means for children aged 6 to 11 years.](beeswarm_ccc.gp.png)
+
+![Figure 6: Mean scores on the three CCC-2 clusters for Low Bias vs High Bias trisomy groups. For trisomies, continuous lines show mean for whole group, and dotted lines show means for children aged 6 to 11 years.The yellow shaded band shows mean +/-1 SD for the No Concerns twin group.](beeswarm_cccbias.gp.png)
   
 **Table 4. Results of MANOVA comparisons on CCC-2 subscales**
  
@@ -1824,25 +1827,47 @@ ft3 <- width(ft3, width = c(2,1,.8,.8,.8,.8,.8))
 ft3
 
 ```
-# NEED TO ADD GCC and SIDC here?
-
 
 **Number of language tests below cutoff**  
 
-In a final analysis, we focused on rates of impairment rather than mean scores. There have been various attempts to operationalise diagnostic criteria for language disorder (e.g. Tomblin et al, xxxx). Although an overall language test composite can be used for this purpose, this may miss cases who have an uneven profile, with striking deficits in just a few aspects of language function. To get a better impression of the nature of language deficits in the trisomy and comparison groups, we selected six language measures: Vocabulary, Comprehension, Sentence Repetition, Nonword Repetition, and Oromotor Sequences, and categorised each case according to whether their score was more than 1 SD below the population mean (i.e. 85 or less on the rescaled scores). Across the whole sample, the number scoring this low was greatest for Sentence Repetition and lowest for Comprehension. 
+In a final analysis, we focused on rates of impairment rather than mean scores. There have been various attempts to operationalise diagnostic criteria for language disorder (e.g. Tomblin et al, xxxx). Although an overall language test composite can be used for this purpose, this may miss cases who have an uneven profile, with striking deficits in just a few aspects of language function. To get a better impression of the nature of language deficits in the trisomy and comparison groups, we selected five language measures: Vocabulary, Comprehension, Sentence Repetition, Nonword Repetition, and Oromotor Sequences, and categorised each case according to whether their score was more than 1 SD below the population mean (i.e. 85 or less on the rescaled scores). The percentages of children in each group who scored this low on between 0 and 5 tests is shown in Table 5. 
 
+**Table 5. Percentages of children with given N low language test scores**
+ 
+```{r table5,include=TRUE}
+ft5<-regulartable(lown.df)
+ft5 <- width(ft5, width = c(2,.6,.6,.6,.6,.6,.6,.6))
+ft5
+
+```
+
+Another indicator of language impairment is having a General Communication Composite (GCC) on the CCC-2 of 55 or less. The percentages of twins rated this low was `r round(p.lowgcc.twinTD,1)`% for the No Concerns group and `r round(p.lowgcc.twinLD,1)`% for the Language Concerns group. Among children with sex chromosome trisomies, `r round(p.lowgcc.lobias,1)`% of the Low Bias group and `r round(p.lowgcc.hibias,1)`% of the High Bias group were rated this poorly.  
+
+
+## Discussion 
+
+This study confirmed that there is a high rate of language problems among children with sex chromosome trisomies of all three kinds. In this relatively small sample, there were no consistent differences between those with XXX, XXY and XYY karyotypes in the severity or profile of language problems. ALthough it is possible that karyotype differences would emerge with a larger sample, a striking feature of the data is the wide range of variation within each type of trisomy. Indeed, for children selected in a manner that reduced ascertainment bias, around one third of cases resembled a comparison group without problems, in terms of having at most one low score on a set of five language tests. A similar proportion scored within the normal range on the overall index from parental report, i.e. the General Communication Composite of the Children's Communication Checklist. Furthermore, for ethical reasons, we were only able to study children who knew about their sex chromosome trisomy: we know from our previous study that these tend to be children with more severe problems, where the trisomy may be disclosed in order to help the child understand about their difficulties (Gratton et al, 2016). It is therefore likely that even our Low Bias group may overestimate the extent of language difficulties in childhood, because those without any difficulties would be less like to take part. On the other hand, the data reported here excluded nine children from the Low Bias sample because of intellectual disability, autism spectrum disorder, or hearing problems, and so it needs to be borne in mind that had these cases been included, an even wider range of scores would have been likely.
+
+The twin sample was subdivided to provide a way of assessing how far the language problems in those with sex chromosome trisomies resembled those of children who had language problems in the absence of any known neurobiological condition. Allocation to the language concerns group was made purely on the basis of parental report: either there was ongoing concern about the child's language skills and/or that the child had speech and language therapy after the age of 4 years. As can be seen in Figures 3 and 5, although the overall means were below average, many children selected this way did not have obvious language problems on the test battery used here. This mismatch between parental report and test performance is reminiscent of findings by Broomfield and Dodd (2014), who found that around 10% of children on the caseload of a speech-language therapy service had normal range performance on language assessment. This suggests that parents may be concerned about relatively minor problems that are not clinically important, or that are transient and have resolved by the time we assessed the child. It could also be that the battery used here was not sensitive to the kinds of difficulties that children experienced. For instance, some children receive speech and language therapy for problems with articulation, voice or fluency, and those problems would not be detected on our assessment battery. In the sample of Broomfield and Dodd (2014) speech difficulties were the most common type of problem. 
+
+Insofar as it was possible to compare the Language Concerns group with the trisomy cases, the profile and severity of their problems appeared similar. Thus, we did not detect any distinct phenotypic signature of a sex chromosome trisomy. 
+
+When we turn to consider children whose trisomy was discovered in the course of investigation for neurocognitive or behavioural difficulties (i.e. the High Bias group), we find a substantially Higher rate of language problems. Furthermore, 25 children were excluded from the High Bias sample because of intellectual disability, autism spectrum disorder or hearing problems, and a further 25 children had missing data and were excluded from analysis. Thus the language test scores shown here apply only to those who could complete the test battery and did not have additional problems. It is not surprising to find that children whose trisomy was identified in the course of investigations for developmental disorders should have high rates of problems, but it needs to be emphasised that one should not draw conclusions about typical outcomes for children with sex chromosome trisomies from samples that have this kind of ascertainment bias.
+
+There are several possible factors that might account for the range of variation in phenotypes seen in sex chromosome trisomies. One possibility is that the impact of a sex chromosome trisomy might be influenced by environmental background. This idea has been raised by Bender et al (1987). However, we included measures of environmental background - maternal years of education and neighbourhood advantage - in our analyses, and did not find any evidence that they had a significant influence on the phenotype in the trisomy cases. Elsewhere we have proposed that genetic variants on autosomes may interact with neurodevelopmental consequences of extra gene product from sex chromosomes, so there is amplication of impact from variants that usually have only a mild effect. To date we have not been able to identify such effects (Newbury et al, 2018). This does not, however, rule out the possibility that a mechanism of this kind does operate, but involves different genes. In future work, we plan to broaden the scope of our search for such genetic mechanisms.
+
+Where a sex chromosome trisomy is discovered on prenatal screening, parents will be anxious to know the implications for the child's development. Indeed, this information may be crucial in deciding whether they opt for a termination of the pregnancy. The results reported here illustrate the very wide range of outcomes that can be seen in children with an extra X or Y chromosome. Some children in our sample had no measureable language difficulties, while others were severely impaired. This makes advising parents challenging, as prediction of individual outcomes is impossible: the most that can be said in our current state of knowledge is that there is a clear risk that the child will have language problems that may interfere with daily life, social interaction and progress in school, but that such problems are by no means inevitable. Where children have language deficits, they tend to be of a range and severity similar to those seen in other children who have language difficulies in the absence of any biological condition.
 
 
 ## Acknowledgements  
 
-We offer warmest thanks to the families who took part in the study, and school staff who helped facilitate assessment arrangements. We greatly appreciate the help we had with recruitment from Unique (the Rare Chromosome Disorder Support Group), the Klinefelter’s Syndrome Association, and staff from Clinical Genetics Centres in the following NHS Trusts: Royal Devon and Exeter, The Northwest London Hospitals, University Hospitals Bristol, Sheffield Children’s, Liverpool Women’s, University Hospital Southampton, Birmingham Women’s Hospital, Great Ormond Street Hospital for Children, Leeds Teaching Hospitals, Newcastle upon Tyne Hospitals, Oxford University Hospitals, Central Manchester University Hospitals, University Hospitals of Leicester, Nottingham University Hospitals, Belfast Health and Social Care Trust and the NIHR Clinical Research Network. We extend special thanks to Dr Gillian Borthwick, National Research Coordinator NIHR CRN: Genetics, for helping us navigate the complexities of working with multiple NHS sites under the NIHR UK Rare Genetic Disease Research Consortium Agreement. The study would not have been possible without the generous support of Prof Simon Fisher, Director of the Max Planck Institute for Psycholinguistics, who offered facilities for analysis of genetic material during the data collection phase of this study. We thank Katerina Kucera and Arianna Vino for their substantial work in processing DNA samples.
-
+We offer warmest thanks to the families who took part in the study, and school staff who helped facilitate assessment arrangements. We greatly appreciate the help we had with recruitment from Unique (the Rare Chromosome Disorder Support Group), the Klinefelter’s Syndrome Association, and staff from Clinical Genetics Centres in the following NHS Trusts: Royal Devon and Exeter, The Northwest London Hospitals, University Hospitals Bristol, Sheffield Children’s, Liverpool Women’s, University Hospital Southampton, Birmingham Women’s Hospital, Great Ormond Street Hospital for Children, Leeds Teaching Hospitals, Newcastle upon Tyne Hospitals, Oxford University Hospitals, Central Manchester University Hospitals, University Hospitals of Leicester, Nottingham University Hospitals, Belfast Health and Social Care Trust and the NIHR Clinical Research Network. We extend special thanks to Dr Gillian Borthwick, National Research Coordinator NIHR CRN: Genetics, for helping us navigate the complexities of working with multiple NHS sites under the NIHR UK Rare Genetic Disease Research Consortium Agreement. 
 
 # Supplementary Material  
   
 ### Distribution of scores on individual psychometric measures. 
   
-Figure S1 shows beeswarm plots for individual test scores: low bias trisomy groups and Language Concern twin group. Note that on some tests there is a minimum scaled score that leads to a skewed distribution. 
+Figure S1 shows beeswarm plots for individual test scores: Low Bias trisomy groups and Language Concern twin group. Note that on some tests there is a minimum scaled score that leads to a skewed distribution. 
   
 ![Figure S1: Distributions of scores on the fourteen measures from psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group. Filled circles show cases in age range 6 to 11 yr. Continous line is mean for 6-11 yr olds, dotted line is mean for whole sample. Yellow band is mean +/- 1 SD for No Concern comparison group.](beeswarm14_lowbias4gp.png)
   
