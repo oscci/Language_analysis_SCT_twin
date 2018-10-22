@@ -32,7 +32,7 @@ affiliation:
     institution   : "Department of Experimental Psychology, University of Oxford"
     
 abstract: |
-  **Background** It is known that sex chromosome trisomies (47,XXX, 47,XXY and 47,XYY) are a risk factor for language problems, but typical outcomes are hard to estimate, because many cases are only identified when problems are found. **Methods** We recruited children aged 5-16 years with all three types of trisomy, and divided thenm according to how the trisomy was detected into a High Bias group, identified in the course of investigations for neurodevelopmental problems, and a Low Bias group, identified via prenatal screening or other medical investigations. Children from a twin sample were used to compare pattern and severity of language problems: they were subdivided according to parental concerns about language/history of speech-language therapy into a No Concerns group (N = 132) and a Language Concerns group (N = 41). Children were individually assessed on a psychometric battery, and a standardized parent checklist. After excluding children with intellectual disability, autism or hearing problems, psychometric data were available for 31 XXX, 20 XXY and 19 XYY Low Bias cases and 13 XXX, 25 XXY and 32 XYY High Bias cases.  **Results** Variation within each trisomy group was substantial: within the Low Bias group, overall language scores were depressed relative to normative data, but around one third had no evidence of problems. There was no effect of trisomy type, and the test profile was similar to the Language Concerns comparison group. The rate of problems was much greater in the High Bias children with trisomies. **Conclusions** When advising parents after discovery of a trisomy, it is important to emphasise that, though there is an increased risk of language problems, there is a very wide range of outcomes. Serious language problems are more common in those identified via genetic testing for neurodevelopmental problems but these are not typical of children identified on prenatal screening.
+  **Background** It is known that sex chromosome trisomies (47,XXX, 47,XXY and 47,XYY) are a risk factor for language problems, but typical outcomes are hard to estimate, because many cases are identified only when problems are found. **Methods** We recruited children aged 5-16 years with all three types of trisomy, and divided thenm according to how the trisomy was detected into a High Bias group, identified in the course of investigations for neurodevelopmental problems, and a Low Bias group, identified via prenatal screening or other medical investigations. Children from a twin sample were used to compare pattern and severity of language problems: they were subdivided according to parental concerns about language/history of speech-language therapy into a No Concerns group (N = 132) and a Language Concerns group (N = 41). Children were individually assessed on a psychometric battery, and a standardized parent checklist. After excluding children with intellectual disability, autism or hearing problems, psychometric data were available for 31 XXX, 20 XXY and 19 XYY Low Bias cases and 13 XXX, 25 XXY and 32 XYY High Bias cases.  **Results** Variation within each trisomy group was substantial: within the Low Bias group, overall language scores were depressed relative to normative data, but around one third had no evidence of problems. There was no effect of trisomy type, and the test profile was similar to the Language Concerns comparison group. The rate of problems was much greater in the High Bias children with trisomies. **Conclusions** When advising parents after discovery of a trisomy, it is important to emphasise that, though there is an increased risk of language problems, there is a very wide range of outcomes. Serious language problems are more common in those identified via genetic testing for neurodevelopmental problems but these are not typical of children identified on prenatal screening.
   
 keywords          : "Trisomy X, Klinefelter syndrome, XYY syndrome, ascertainment bias, variability, psychometric testing, parent report"
 wordcount         : "X"
@@ -138,9 +138,9 @@ library(papaja)
 redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
 
 #Use latest version - now includes milestones
-sct.redcap <- 'SCTDATA_DATA_2018-08-13_1234.csv'
+sct.redcap <- 'SCTDATA_DATA_2018-09-14_1345.csv'
 #updated to include code indicating whether participated in prior study
-twin.redcap <- 'TwinsData_DATA_2018-08-19_1139.csv' #updated to include ccc2_consistent variable
+twin.redcap <- 'TwinsData_DATA_2018-09-14_1344.csv' #updated to include ccc2_consistent variable
 #also now has pheno_include, which selects individual twins for inclusion
 sct.data <- read.csv(paste0(redcap.dir,sct.redcap),stringsAsFactors = FALSE)
 twin.data <- read.csv(paste0(redcap.dir,twin.redcap),stringsAsFactors = FALSE)
@@ -156,7 +156,8 @@ colnames(twin.data)[w] <-'neurodev_diag'
 #Nb Fam position: Coded so if you subtract 1 you get N older sibs: disregards birth order of twins
 w<-which(colnames(sct.data)=='position_in_family')
 colnames(sct.data)[w] <-'fam_position'
-
+w<-which(colnames(sct.data)=='fh_langprobs')
+colnames(sct.data)[w] <-'fh_langprob' #1 if 1 aff relative, 2 if more than one
 #NB this dld_rd categorisation not currently used
 twin.data$dyslexia<-twin.data$dld_rd%%10 #modulus 10 , ie last digit
 twin.data$lang_disorder<-round((twin.data$dld_rd-4.5)/10) #first digit is dld code
@@ -184,7 +185,7 @@ keepcols <- c('record_id','fam_id','female','age_at_test','partial_testing','pas
               'conduct_dsm_r1','asd_dsm_r1','autism_icd_r1','srs_t_score',
               'gcc','scdi','ccc_a','ccc_b','ccc_c','ccc_d','ccc_e','ccc_f',
               'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent','mo_educ','fa_educ','deprivation_index','fam_structure','fam_position','wordcode','sentcode','walkcode','drycode',
-              'nepsy_oromotor_seq_raw')
+              'nepsy_oromotor_seq_raw','fh_langprob')
 
 #NB asd_dsm_r1 does not always agree with parental report. Use either to exclude. 
 #Only definite diagnosis (1) on DSM is used (4 is PDDNOS)
@@ -358,7 +359,8 @@ w<-which(all.short$mo_educ==9)
 all.short$mo_educ[w]<-NA
 w<-which(all.short$fa_educ==9)
 all.short$fa_educ[w]<-NA
-
+w<-which(all.short$fh_langprob==9)
+all.short$fh_langprob[w]<-NA
 
 ```
 
@@ -618,6 +620,8 @@ for (i in mcx1:mcx2){
 # 
 # d)	Number of older siblings. For twins, the co-twin was not counted.
 # 
+# e) Family history of language problems: added after reading Boada et al, who suggest this could explain heterogeneity.
+
 # N.B. The finding that the lowbias SCT children are more likely to have older sibs is probably related to the fact that pre-natal testing is associated with older parents. We do have data on parental ages and could look at that, but not sure it's necessary. It does, though, make me concerned that there may be problems in using N older sibs as a covariate, as it could look causal when it is not. It might be reasonable to use it just within the twin group.
 
 #Parental educational level
@@ -667,7 +671,13 @@ round(prop.table(nsib.tab,1),3)
 
 n.col<-length(colnames(all.short)) #we will use this in later block as start column when adding new columns with all scaled on same scale
 
+print('Family history of language problems')
 
+fh.tab<-table(all.short$group8,all.short$fh_langprob)
+round(prop.table(fh.tab,1),3)
+chisq.test(fh.tab)
+#although it looks like the high bias boys have high rate FH+, this is not significant. And note too that the low bias XXX girls also have high rate
+n.col<-length(colnames(all.short)) #we will use this in later block as start column when adding new columns with all scaled on same scale
 ```
 
 
@@ -822,9 +832,13 @@ do.manova <- function(mydata,mycolrange,gpcolumn,gpvalues,covcolumns){
   my.matrix <- as.matrix(mydata[,mycolrange])
   mycov1<-mydata[  ,covcolumns[1]]
   mycov2<-mydata[  ,covcolumns[2]]
+  if (length(covcolumns)==2){ #not currently used
   mymanova.fit <- manova(my.matrix ~ as.factor(mydata[,gpcolumn])+mycov1+mycov2)
-  
-  
+  }
+  if (length(covcolumns)==3){
+    mycov3<-mydata[  ,covcolumns[3]]
+  mymanova.fit <- manova(my.matrix ~ as.factor(mydata[,gpcolumn])+mycov1+mycov2+mycov3)
+  }
   return(mymanova.fit)
 }
 ######################################################################################
@@ -972,7 +986,17 @@ manova.dataframe<-manova.write(mycomparison,effectnames,offset,manova.stats,mano
 
 summary.aov(mymanova.fit) #- if you want to inspect individual language measures
 ```
-
+```{r fhist.compare,include=FALSE}
+#just do basic linear regression to check if any association
+myp<-vector()
+for (i in 1:4){
+  mycol <- trisomy.only[,psychrange[i]]
+  myfh <- summary(lm(mycol~trisomy.only$fh_langprob))
+  myp[i]<-myfh$coefficients[2,4]
+  #the values of myp are p-values for the 4 composites in terms of relation to fh score
+  #All ns
+}
+```
 
 ```{r beeswarm.function, include=FALSE}
 make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,
@@ -1848,7 +1872,21 @@ if(heatmap==1){
   dev.off()
 }
 ```
+```{r famhist}
+#Taking up suggestion of Boada et al to look at FH lang problems in SCT
+#N with fh=2 is low, so make into 2 categories: FH+ and fh-
+#(fh 2 means more than one affected relative)
 
+all.short$fh <- all.short$fh_langprob+1
+w<-which(all.short$fh==3)
+all.short$fh[w]<-2
+beeswarm(genlang~group8level,data=all.short,pwcol=all.short$fh)
+
+#Nothing very compelling on eyeballing.
+#Also tried substituting this as covariate instead of deprivation index: no hint of any effect.
+
+
+```
 
 
 
@@ -1871,7 +1909,7 @@ A study of neurodevelopmental of outcomes of prenatally-identified children was 
   
 The association with language problems is of interest because there are few genetic aetiologies that selectively impair language development. There are two reasons why it is of interest to compare the language phenotype of children with sex chromosome trisomies with that seen in children with developmental language disorder (DLD) of unknown origin. First, a comparative study could also help determine whether interventions that have been devised for children with DLD are also likely to be effective for children with a sex chromosome trisomy:  {Bishop, 2017 #38726}. Second, if the similarities are not just superficial, then studying how an extra chromosome affects language development could help us understand aetiology of DLD {Bishop, 2011 #18110}.  Studies to date have suggested that there may be different profiles of impairment in the three types of trisomy, which could be related to the different genetic and hormonal impacts of an extra X or Y chromosome, but we still have only a very limited body of data from samples free from ascertainment bias.   
   
-In 2011 we embarked on data collection for a new study of children with sex chromosome trisomies, including both pre- and post-natally identified cases. The goals were, first, to document the nature and range of language and behavioural difficulties in the three types of trisomy, and second, to test whether individual variation in outcomes could be predicted by variation in specific genetic variants. Here we report descriptive data relating to the first question, with a particular emphasis on language characteristics.  Behavioural and psychiatric findings will be covered in a companion paper. To date we have not found any associations of phenotypes with variants in CNTNAP2 and NRXN1 genes; these analyses are reported elsewhere {Newbury, 2018 #39109}.  
+In 2011 we embarked on data collection for a new study of children with sex chromosome trisomies, including both pre- and post-natally identified cases. The goals were, first, to document the nature and range of language and behavioural difficulties in the three types of trisomy, and second, to test whether individual variation in outcomes could be predicted by variation in specific genetic variants. Here we report descriptive data relating to the first question, with a particular emphasis on language characteristics.  Behavioural and psychiatric findings will be covered in a companion paper. To date we have not found any associations of phenotypes with variants in CNTNAP2 and NRXN1 genes; these analyses are reported elsewhere {Newbury, 2018 #39109}.It is worth noting, however, the suggestion by {Beach, 2017 #19484}, that aneuploidy itself may be a cause of phenotypic heterogeneity. Most of their evidence comes from studies in yeast, where they found high variability in cell cycle progression among cells with identical aneuploidies, as well as variable response to environmental stress. They argued this tendency for gain or loss of a chromosome to cause genetic instability and increased variability in the phenotype may extend to mammals. They found wide variation in inbred mice with genetically engineered trisomy 19, despite a uniform genetic background and environment. If this applies to human sex chromosome trisomies, then a search for genetic or environmental correlates of phenotypic variation could prove fruitless.  
   
 Our focus here is both on documenting whether there are reliable differences in language and cognitive outcomes for the three types of trisomy, and how far the pattern of language problems resembles that seen in children with developmental language disorder (DLD) who do not have any known genetic abnormalities. To minimize ascertainment bias, these analyses were restricted to children whose trisomy was either detected prenatally, or as an incidental finding during other medical investigations (referred to as a ‘Low Bias’ group). To address the latter question, we compared the results of trisomic children with those of children who had participated in a twin study of language development and disorders, and who had been given the same test battery. Finally, we considered how far trisomy outcomes are influenced by ascertainment bias, by comparing the Low Bias group with a High Bias group whose trisomies were discovered in the course of investigation of behavioural or neurodevelopmental problems.  
   
@@ -1967,8 +2005,9 @@ Our original intention was to use MANOVAs to test group differences that related
 Two measures of socio-economic variables that have been associated with language status were included in the analysis. These were:  
 a)	Educational level of mother, transformed into an ordinal scale based on age at leaving full-time education/qualifications obtained, with points of 0 (prior to age 16 years), 1 (16 years/did GCSE or O-levels), 2 (18 years/ did A-levels), 3 (21 years, degree), 4 (postgraduate study).   
   
-b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank 32,844 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable, termed Neighbourhood Advantage index, by dividing by 32,844, before applying the qnorm function in R. A Neighbourhood Advantage index of zero (ie average) was assigned to 13 SCT cases and 4 twin pairs from Wales, Scotland and Northern Ireland.
+b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank 32,844 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable, termed Neighbourhood Advantage index, by dividing by 32,844, before applying the qnorm function in R. A Neighbourhood Advantage index of zero (ie average) was assigned to 13 SCT cases and 4 twin pairs from Wales, Scotland and Northern Ireland. 
 
+In addition, following a suggestion by {Boada, 2009 #17587}, we considered whether report of a positive family history of language problems was related to the language phenotype in the child. In an initial telephone interview with a parent, details of the mother, father and any siblings were recorded, and the informant was asked if each relative had any problems with hearing, speech, language or reading, and asked to elaborate if so. Family history was coded as positive if a relative was recorded as having definite evidence of language or literacy problems that had led to them requiring speech-language therapy or additional support at school. A three-point scale was used, with score of 0 for no family history, 1 for one affected relative, and 2 for two or more affected relatives. 
 
 ## Procedure  
   
@@ -2106,6 +2145,8 @@ ft4
 
 ```
 
+The same dataset was used to explore the relationship with family history of language problems, by running linear regressions for each of the four composite measures, with the family history score as a predictor. In no case did the association prove statistically robust (all p-values > .05). 
+
 **Number of language tests below cutoff**  
 
 In a final analysis, we focused on rates of impairment rather than mean scores. There have been various attempts to operationalise diagnostic criteria for language disorder, e.g.{Tomblin, 1996 #9991}. Although an overall language test composite can be used for this purpose, this may miss cases who have an uneven profile, with striking deficits in just a few aspects of language function. To get a better impression of the nature of language deficits in the trisomy and comparison groups, we selected five language measures: Vocabulary, Comprehension, Sentence Repetition, Nonword Repetition, and Oromotor Sequences, and categorised each case according to whether their score was more than 1 SD below the population mean (i.e. 85 or less on the rescaled scores). The percentages of children in each group who scored this low on between 0 and 5 tests is shown in Table 5. 
@@ -2145,15 +2186,15 @@ Another indicator of language impairment is having a General Communication Compo
 
 # Discussion 
 
-This study confirmed that there is a high rate of language problems among children with sex chromosome trisomies of all three kinds. In this relatively small sample, there were no consistent differences between those with XXX, XXY and XYY karyotypes in the severity or profile of language problems. ALthough it is possible that karyotype differences would emerge with a larger sample, a striking feature of the data is the wide range of variation within each type of trisomy. Indeed, for children selected in a manner that reduced ascertainment bias, around one third of cases resembled a comparison group without problems, in terms of having at most one low score on a set of five language tests. A similar proportion scored within the normal range on the overall index from parental report, i.e. the General Communication Composite of the Children's Communication Checklist. Furthermore, for ethical reasons, we were only able to study children who knew about their sex chromosome trisomy: we know from our previous study that these tend to be children with more severe problems, where the trisomy may be disclosed in order to help the child understand about their difficulties (Gratton et al, 2016). It is therefore likely that even our Low Bias group may overestimate the extent of language difficulties in childhood, because those without any difficulties would be less like to take part. On the other hand, the data reported here excluded nine children from the Low Bias sample because of intellectual disability, autism spectrum disorder, or hearing problems, and so it needs to be borne in mind that had these cases been included, an even wider range of scores would have been likely.
+This study confirmed that there is a high rate of language problems among children with sex chromosome trisomies of all three kinds. In this relatively small sample, there were no consistent differences between those with XXX, XXY and XYY karyotypes in the severity or profile of language problems. In their study of neonatally identified cases, {Bender, 2001 #14640} noted that females with XXX (N = 10) were more impaired than males with XXY (N = 11), but the conclusion was not based on direct comparison of the two groups. {Ross, 2009 #17672} found that boys with XYY had more pervasive and severe language problems than boys with XXY karyotype, but they noted that the former group included more postnatally identified cases, so ascertainment bias could affect findings. Although it is possible that karyotype differences would emerge with a larger sample, a striking feature of our data, and those of Bender et al (2001), is the wide range of variation within each type of trisomy. Indeed, for children selected in a manner that reduced ascertainment bias, we found that around one third of cases resembled a comparison group without problems, in terms of having at most one low score on a set of five language tests. A similar proportion scored within the normal range on the overall index from parental report, i.e. the General Communication Composite of the Children's Communication Checklist. Furthermore, for ethical reasons, we were only able to study children who knew about their sex chromosome trisomy: we know from our previous study that these tend to be children with more severe problems, where the trisomy may be disclosed in order to help the child understand about their difficulties (Gratton et al, 2016). It is therefore likely that even our Low Bias group may overestimate the extent of language difficulties in childhood, because those without any difficulties would be less like to take part. On the other hand, the data reported here excluded nine children from the Low Bias sample because of intellectual disability, autism spectrum disorder, or hearing problems, and so it needs to be borne in mind that had these cases been included, an even wider range of scores would have been likely. {Skuse, 2018 #39029} suggested that we might expect to see more variable expression of genes from an additional X chromosome than from the Y chromosome, in which case the language phenotype might have a narrower range in the XYY group. Visual inspection of the distribution of scores in the three trisomies (Figures 5 and 6), however, does not support that prediction. 
 
 The twin sample was subdivided to provide a way of assessing how far the language problems in those with sex chromosome trisomies resembled those of children who had language problems in the absence of any known neurobiological condition. Allocation to the language concerns group was made purely on the basis of parental report: either there was ongoing concern about the child's language skills and/or that the child had speech and language therapy after the age of 4 years. As can be seen in Figures 3 and 5, although the overall means were below average, many children selected this way did not have obvious language problems on the test battery used here. This mismatch between parental report and test performance is reminiscent of findings by Broomfield and Dodd {Broomfield, 2004 #15024} who found that around 10% of children on the caseload of a speech-language therapy service had normal range performance on language assessment. This suggests that parents may be concerned about relatively minor problems that are not clinically important, or that are transient and have resolved by the time we assessed the child. It could also be that the battery used here was not sensitive to the kinds of difficulties that children experienced. For instance, some children receive speech and language therapy for problems with articulation, voice or fluency, and those problems would not be detected on our assessment battery. In the sample of Broomfield and Dodd (2014) speech difficulties were the most common type of problem. 
 
 Insofar as it was possible to compare the Language Concerns group with the trisomy cases, the profile and severity of their problems appeared similar. Thus, we did not detect any distinct phenotypic signature of a sex chromosome trisomy. 
 
-When we turn to consider children whose trisomy was discovered in the course of investigation for neurocognitive or behavioural difficulties (i.e. the High Bias group), we find a substantially Higher rate of language problems. Furthermore, 25 children were excluded from the High Bias sample because of intellectual disability, autism spectrum disorder or hearing problems, and a further 25 children had missing data and were excluded from analysis. Thus the language test scores shown here apply only to those who could complete the test battery and did not have additional problems. It is not surprising to find that children whose trisomy was identified in the course of investigations for developmental disorders should have high rates of problems, but it needs to be emphasised that one should not draw conclusions about typical outcomes for children with sex chromosome trisomies from samples that have this kind of ascertainment bias.
+When we turn to consider children whose trisomy was discovered in the course of investigation for neurocognitive or behavioural difficulties (i.e. the High Bias group), we find a substantially Higher rate of language problems. Furthermore, 25 children were excluded from the High Bias sample because of intellectual disability, autism spectrum disorder or hearing problems, and a further 25 children had missing data and were excluded from analysis. Thus the language test scores shown here apply only to those who could complete the test battery and did not have additional problems. These results agree with those of {Wigby, 2016 #39137}, who found substantial differences in neurodevelopmental outcomes for girls with trisomy X, depending on whether the trisomy was identified prenatally or postnatally. It is not surprising to find that children whose trisomy was identified in the course of investigations for developmental disorders should have high rates of problems, but it needs to be emphasised that one should not draw conclusions about typical outcomes for children with sex chromosome trisomies from samples that have this kind of ascertainment bias.
 
-There are several possible factors that might account for the range of variation in phenotypes seen in sex chromosome trisomies. One possibility is that the impact of a sex chromosome trisomy might be influenced by environmental background. This idea has been raised by Bender et al {Bender, 1987 #8532}. However, we included measures of environmental background - maternal years of education and neighbourhood advantage - in our analyses, and did not find any evidence that they had a significant influence on the phenotype in the trisomy cases. Elsewhere we have proposed that genetic variants on autosomes may interact with neurodevelopmental consequences of extra gene product from sex chromosomes, so there is amplication of impact from variants that usually have only a mild effect. To date we have not been able to identify such effects {Newbury, 2018 #39109}. This does not, of course, rule out the possibility that a mechanism of this kind does operate, but involves different genes. In future work, we plan to broaden the scope of our search for such genetic mechanisms.
+There are several possible factors that might account for the range of variation in phenotypes seen in sex chromosome trisomies. One possibility is that the impact of a sex chromosome trisomy might be influenced by environmental background. This idea has been raised by Bender et al {Bender, 1987 #8532}. However, we included measures of environmental background - maternal years of education and neighbourhood advantage - in our analyses, and did not find any evidence that they had a significant influence on the phenotype in the trisomy cases. In a review of Klinefelter syndrome, {Boada, 2009 #17587} proposed that family history of language problems might affect severity of language phenotypes, but we found no evidence for this in the current sample. Elsewhere we have proposed that genetic variants on autosomes may interact with neurodevelopmental consequences of extra gene product from sex chromosomes, so there is amplication of impact from variants that usually have only a mild effect. To date we have not been able to identify such effects {Newbury, 2018 #39109}. This does not, of course, rule out the possibility that a mechanism of this kind does operate, but involves different genes. In future work, we plan to broaden the scope of our search for such genetic mechanisms.
 
 Where a sex chromosome trisomy is discovered on prenatal screening, parents will be anxious to know the implications for the child's development. Indeed, this information may be crucial in deciding whether they opt for a termination of the pregnancy. The results reported here illustrate the very wide range of outcomes that can be seen in children with an extra X or Y chromosome. Some children in our sample had no measureable language difficulties, while others were severely impaired. This makes advising parents challenging, as prediction of individual outcomes is impossible: the most that can be said in our current state of knowledge is that there is a clear risk that the child will have language problems that may interfere with daily life, social interaction and progress in school, but that such problems are by no means inevitable. Where children have language deficits, they tend to be of a range and severity similar to those seen in other children who have language difficulies in the absence of any biological condition.
 
