@@ -96,8 +96,8 @@ redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
 
 #Use latest version - this includes consensus DAWBA diagnosis for SCTs
 #Automated diagnosis added 30th Nov, with Soc Aptitude Scale data
-sct.redcap <- 'SCTData_DATA_2018-11-30_1018.csv'
-#updated to include code indicating whether participated in prior study
+sct.redcap <- 'SCTData_DATA_2018-11-30_1558.csv'
+#updated to include code indicating whether participated in prior study, with prior diagnosis if so
 twin.redcap <- 'TwinsData_DATA_2018-11-30_1030.csv' #updated to include ccc2_consistent variable
 #also now has pheno_include, which selects individual twins for inclusion
 sct.data <- read.csv(paste0(redcap.dir,sct.redcap),stringsAsFactors = FALSE)
@@ -155,6 +155,17 @@ twin.data$parent_conc[w]<-1
 #----------------------------------------------------------------------------------
 ```
 
+```{r ccc2009}
+#just checking correspondence between CCC-2 time 1 and time 2 for those seen twice
+sct.data$gcc[sct.data$gcc==999]<-NA #convert 999 to missing data code for gcc
+cor(sct.data$gcc,sct.data$ccc_gcc_2009,use='complete.obs')
+plot(sct.data$gcc,sct.data$ccc_gcc_2009,pch=(sct.data$trisomy-1),col=(1+sct.data$neurodev_diag))
+#xxx is square, xxy is circle, xyy is triangle
+#I checked the ones with big changes to ensure we have correct cases.
+#Nothing all that obvious to explain the little cluster who have declined. Not explained by age
+
+
+```
 
 ```{r colselect, include=FALSE}
 #########################################################################################
@@ -693,6 +704,7 @@ my.dawba<-select(my.dawba1,record_id,female,trisomy,orig_famcode,bias,why_tested
                  social_anx_icd_r2,emotional,conduct,hyperactivity,peer,prosocial,
                  sepanx_concern,socanx_concerns,soc_vs_sep,socfear_level,
                  group8,group8level,ageband,sas_total)
+my.dawba$sas_half <- my.dawba$sas_total/2
 #group of 5 from 'emotional' etc are SDQ scales, added Nov 2017; also social anxiety and sep anxiety added. Sas_total is social awareness scale
 my.dawba$Group <- my.dawba$group8 #for compatibility with later routines
 ```
@@ -702,56 +714,16 @@ my.dawba$Group <- my.dawba$group8 #for compatibility with later routines
 print('')
 print('In 2009 study')
 w<-which(my.dawba$orig_famcode==1)
+Norig<-length(w)
 origstudy<-table(my.dawba$bias[w],my.dawba$trisomy[w])
 colnames(origstudy)<-c('XXX','XXY','XYY')
 rownames(origstudy)<-c('Low Bias','High Bias')
-origstudy
+
+
 ```
 
 
 
-```{r cgas, include=FALSE}
-#########################################################################
-#Look at CGAS
-#########################################################################
-#First check rater agreement
-myr<-rcorr(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
-my.dawba$CGAS<-as.integer(my.dawba1$cgas_r1/10)
-#my.dawba$cgas<-mean(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
-
-
-cgast<-table(my.dawba$CGAS,my.dawba$group8)
-mysum<-summaryBy(CGAS ~ group8, data=my.dawba,
-                 FUN = function(x) { c(m = mean(x))})
-mymean<-rep(NA,8)
-for (i in 1:8){
-  mymean[i]<-paste0('Mean = ',round(mysum[i,2],1))
-}     
-if(dopng==1){
-pngname1<-'joyplot_cgas.png'
-png(pngname1,width=300,height=400)
-}
-
-g<-ggplot(my.dawba, aes(x = CGAS, y = group8,fill=group8)) 
-g1<-g+ geom_density_ridges(rel_min_height = 0.01)
-g2<-g1+ ylab('Low Bias             High Bias           ')
-g3<-g2+theme(axis.text.y= element_text( color="black", size=18))
-g4<-g3+theme(axis.text.x= element_text( color="black", size=14))
-g5<-g4+ theme(axis.title= element_text( color="black", size=18))
-g6<-g5+scale_x_continuous(breaks=seq(2,12,2))
-g7<-g6+scale_fill_cyclical(values = c("deeppink","darkorchid1", "deepskyblue","deeppink","darkorchid1", "deepskyblue","yellow","green"))
-g8<-g7+ annotate("text", x=10,y = seq(1.1,8.1,1), label =mymean, size=6)
-if(dopng==1){
-  dev.off()
-}
-g8
-#file.show(pngname1) 
-```
-#########################################################################
-```{r dawba_emot, include=FALSE}
-emot.tab<-table(my.dawba$dawba_emot,my.dawba$Group)
-conduct.tab<-table(my.dawba$dawba_conduct,my.dawba$Group)
-```
 
 ```{r socanx, include=FALSE}
 #Start with DAWBA diagnoses: focus on ASD and social anxiety; use consensus diagnoses
@@ -786,118 +758,132 @@ for (thisrow in 1:6){
 #rate of SocAnx
 forchi<-matrix(c(22,21,31,0,7,1),nrow=2,byrow=TRUE)
 chisq.test(forchi)
+
+#check if presence of diagnosis influences re-participation
+sct.only<-filter(my.dawba,group8level<7) #removetwins
+byprevious<-table(sct.only$bicode2,sct.only$orig_famcode)
+mat.for.chi<-matrix(c(byprevious[1,1],byprevious[1,2],
+                    sum(byprevious[2:5,1]),sum(byprevious[2:5,2])),nrow=2,byrow=TRUE)
+chisq.test(mat.for.chi)
 ```
 
 
 ```{r beeswarm.function, include=FALSE}
-# make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,
-#                           pngwidth,pngheight,groupcolor,mylims,dodiffmean,addtext){
-# #Now do a grid of beeswarm plots
-# 
-# png_bees<-paste0(pngname,'.png')#name to save png file
-# png(png_bees,width=pngwidth,height=pngheight,res=300)
-# par(mfrow=pngdim) #5 row and 3 columns
-# par(mar=c(5.5,5.1,4.1,1),mgp=c(4, 2, 0)) #mar sets the bottom, left, top and right margins
-# #mgp – sets  axis label locations relative to the edge of the inner plot window. The first value represents the location the labels (i.e. xlab and ylab in plot), the second the tick-mark labels, and third the tick marks. The default is c(3, 1, 0). Here need 4,2,0 to avoid 2-line label colliding with frame.
-# 
-# #beeswarm jittered values (last value in jitter statement determines amount of jitter)
-# 
-# grouplevel<-sort(unique(mydata[,groupcol]))
-# #list of group values in numeric order
-# 
-# ngroup<-length(grouplevel)
-# 
-# pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3 (used here for m/f)
-# agebit<-pointcol[mydata[,subgroupcol]+1]
-# testrange<-which(colnames(mydata)%in%varlist)
-# for (i in 1:length(varlist)){
-#   mytitle<-namelist[i]
-#   mylabel<-'' #default is to not label y axis unless it is left-most column
-#   if((i-1)%%pngdim[2]==0){ #heh! gets modulus of i-1 relative to n columns, which is zero if leftmost!
-#     mylabel<-'Scaled score'
-#   }
-#   
-#   beeswarm(jitter(mydata[,testrange[i]],3)~mydata[,groupcol] , xlab='Group',ylab=mylabel,spacing=.8,
-#            pch = 16,pwpch=agebit,cex=1.5,col=groupcolor,main=mytitle,ylim=mylims[1:2],
-#            cex.axis=1.21,cex.lab=1.5,cex.main=1.5) 
-# 
-#   #add means
-#   for (g in 1:ngroup){
-#     myg<-grouplevel[g]
-#     mm<-mean(mydata[mydata[,groupcol]==myg,testrange[i]],na.rm=TRUE) #means for whole sample by group
-#     segments(g-.4,mm,g+.4,mm,col = 1,lty=1,lwd=2) #plot straight solid lines at mean for each group
-#     
-#     #plot dotted lines for means for age-matched groups, i.e ageband2
-#     if(dodiffmean==1){
-#       #identify cases for each group in ageband2
-#       w1<-which(mydata[,groupcol]==myg)
-#       w2<-which(mydata$ageband==2)
-#     shortrange<-intersect(w1,w2)
-#     mm2<-mean(mydata[shortrange,testrange[i]],na.rm=TRUE)
-#     segments(g-.4,mm2,g+.4,mm2,col = 1,lty=2,lwd=2) #dotted line for age 6-11
-#     }
-#   }
-#   abline(a=mylims[3],b=0,col='darkgray',lty=1)
-#   abline(a=mylims[4],b=0,col='darkgray',lty=2)
-#   abline(a=mylims[5],b=0,col='darkgray',lty=2)
-#   
-#   mean_TD<-mean(meanfile[,testrange[i]],na.rm=T)
-#   sd_TD<-sd(meanfile[,testrange[i]],na.rm=T)
-#   
-#   up.lim<-mean_TD+sd_TD
-#   low.lim<-mean_TD-sd_TD
-#   
-#   polygon(c(0,0,(ngroup+1),(ngroup+1)), c(up.lim, low.lim, low.lim, up.lim),
-#           col=adjustcolor("yellow",alpha.f=0.3), border = NA)
-#   if(addtext==1){
-#   text(2,mylims[2],'<---------Low Bias--------->')
-#   text(5,mylims[2],'<---------High Bias--------->')
-#   }
-# }
-# dev.off()
-# }
+make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,
+                          pngwidth,pngheight,groupcolor,mylims,dodiffmean,addtext,yaxislabel){
+#Now do a grid of beeswarm plots
+
+png_bees<-paste0(pngname,'.png')#name to save png file
+png(png_bees,width=pngwidth,height=pngheight,res=300)
+par(mfrow=pngdim) #5 row and 3 columns
+par(mar=c(5.5,5.1,4.1,1),mgp=c(4, 2, 0)) #mar sets the bottom, left, top and right margins
+#mgp – sets  axis label locations relative to the edge of the inner plot window. The first value represents the location the labels (i.e. xlab and ylab in plot), the second the tick-mark labels, and third the tick marks. The default is c(3, 1, 0). Here need 4,2,0 to avoid 2-line label colliding with frame.
+
+#beeswarm jittered values (last value in jitter statement determines amount of jitter)
+
+grouplevel<-sort(unique(mydata[,groupcol]))
+#list of group values in numeric order
+
+ngroup<-length(grouplevel)
+
+pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3 (used here for m/f)
+agebit<-pointcol[mydata[,subgroupcol]+1]
+testrange<-which(colnames(mydata)%in%varlist)
+for (i in 1:length(varlist)){
+  mytitle<-namelist[i]
+  mylabel<-'' #default is to not label y axis unless it is left-most column
+  if((i-1)%%pngdim[2]==0){ #heh! gets modulus of i-1 relative to n columns, which is zero if leftmost!
+    mylabel<-yaxislabel
+  }
+
+  beeswarm(jitter(mydata[,testrange[i]],3)~mydata[,groupcol] , xlab='Group',ylab=mylabel,spacing=.8,
+           pch = 16,pwpch=agebit,cex=1.5,col=groupcolor,main=mytitle,ylim=mylims[1:2],
+           cex.axis=1.21,cex.lab=1.5,cex.main=1.5,xaxt='n')
+
+  #add means
+  for (g in 1:ngroup){
+    myg<-grouplevel[g]
+    mm<-mean(mydata[mydata[,groupcol]==myg,testrange[i]],na.rm=TRUE) #means for whole sample by group
+    segments(g-.4,mm,g+.4,mm,col = 1,lty=1,lwd=2) #plot straight solid lines at mean for each group
+
+    #plot dotted lines for means for age-matched groups, i.e ageband2
+    if(dodiffmean==1){
+      #identify cases for each group in ageband2
+      w1<-which(mydata[,groupcol]==myg)
+      w2<-which(mydata$ageband==2)
+    shortrange<-intersect(w1,w2)
+    mm2<-mean(mydata[shortrange,testrange[i]],na.rm=TRUE)
+    segments(g-.4,mm2,g+.4,mm2,col = 1,lty=2,lwd=2) #dotted line for age 6-11
+    }
+  }
+  abline(a=mylims[3],b=0,col='darkgray',lty=1)
+  abline(a=mylims[4],b=0,col='darkgray',lty=2)
+  abline(a=mylims[5],b=0,col='darkgray',lty=2)
+
+  mean_TD<-mean(meanfile[,testrange[i]],na.rm=T)
+  sd_TD<-sd(meanfile[,testrange[i]],na.rm=T)
+
+  up.lim<-mean_TD+sd_TD
+  low.lim<-mean_TD-sd_TD
+
+  polygon(c(0,0,(ngroup+1),(ngroup+1)), c(up.lim, low.lim, low.lim, up.lim),
+          col=adjustcolor("yellow",alpha.f=0.3), border = NA)
+  if(addtext==1){
+  text(2,mylims[2],'<---------Low Bias--------->')
+  text(5,mylims[2],'<---------High Bias--------->')
+  }
+  axis(1,at=1:7,labels=c('XXX','XXY','XYY','XXX','XXY','XYY','Twin+Lang \nConcern'))
+}
+dev.off()
+}
 
 ```
 
-```{r beeswarm_srs, include=F,message=FALSE}
+```{r beeswarm_sdq, include=F,message=FALSE}
 #call the make.beeswarm function - this creates a png file
-# twin.TD<-filter(my.dawba,group8level==7) #we're using numeric code for factor level to make this easier
-# 
-# groupcol<-which(colnames(my.dawba)=='group8')
-# subgroupcol<-which(colnames(my.dawba)=='female')
-# varlist<-c('socaw_ss','soccog_ss','soccomm_ss','socmot_ss','autfeat_ss','srs_t_score')
-# namelist<-c('Soc. Awareness','Soc. Cognition','Soc. Communication','Soc. Motivation',
-#             'Autistic Features','SRS t-score')
-# meanfile<-twin.TD
-# pngname<-'beeswarm_srs'
-# pngdim<-c(3,2)
-# pngwidth<-3000
-# pngheight<-3000
-# groupcolor<-c(2,2,2,4,4,4,3) #specify colours for each group - 3 trisomies the same, then twinLD
-# mylims<-c(0,100,50,75,90) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
-# dodiffmean<-0
-# addtext<-0
-# w<-which(my.dawba$group8level != 7)
-# mydata<-my.dawba[w,]
-# mydata$group8<-droplevels(mydata$group8)#need this to stop it remembering empty level!
-# #levels(mydata$Group)[4]<-'Twin +\nConcerns'
-# make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
-#                           groupcolor,mylims,dodiffmean,addtext)
-# 
-# #add sdq
-# pngname<-'beeswarm_sdq_SAS'
-# varlist<-c('emotional','conduct','hyperactivity','peer','prosocial','sas_total')
-# namelist<-c('Emotional','Conduct','Hyperactivity','Peer Relations',
-#             'Prosocial','Social Aptitude')
-# mylims<-c(0,30,0,0,0) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
-# make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
-#                           groupcolor,mylims,dodiffmean,addtext)
-# 
-# plot(my.dawba$sas_total,my.dawba$srs_t_score,col=(1+my.dawba$trisomy))
-# plot(my.dawba1$genlang,my.dawba$srs_t_score,col=(1+my.dawba$trisomy))
-# temp<-as.matrix(select(my.dawba1,genlang,sas_total,srs_t_score))
-# rcorr(temp)
-# 
+twin.TD<-filter(my.dawba,group8level==7) #we're using numeric code for factor level to make this easier
+pngname<-'beeswarm_sdq_SAS'
+varlist<-c('emotional','conduct','hyperactivity','peer','prosocial','sas_half')
+#To have things on comparable scale, SAS is divided by two.
+namelist<-c('Emotional','Conduct','Hyperactivity','Peer Relations',
+            'Prosocial','Social Aptitude/2')
+mylims<-c(0,15,0,0,0) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
+yaxislabel <- 'Raw score'
+groupcol<-which(colnames(my.dawba)=='group8')
+subgroupcol<-which(colnames(my.dawba)=='female')
+meanfile<-twin.TD
+pngname<-'beeswarm_sdq'
+pngdim<-c(3,2)
+pngwidth<-3000
+pngheight<-3000
+groupcolor<-c(2,2,2,4,4,4,3) #specify colours for each group - 3 trisomies the same, then twinLD
+dodiffmean<-0
+addtext<-0
+w<-which(my.dawba$group8level != 7)
+mydata<-my.dawba[w,]
+mydata$group8<-droplevels(mydata$group8)#need this to stop it remembering empty level!
+#levels(mydata$Group)[4]<-'Twin +\nConcerns'
+addtext<-1
+make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+                          groupcolor,mylims,dodiffmean,addtext,yaxislabel)
+
+```
+
+
+```{r beeswarmSRS}
+varlist<-c('socaw_ss','soccog_ss','soccomm_ss','socmot_ss','autfeat_ss','srs_t_score')
+namelist<-c('Soc. Awareness','Soc. Cognition','Soc. Communication','Soc. Motivation',
+            'Autistic Features','SRS t-score')
+mylims<-c(0,100,50,75,90) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
+
+make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+                          groupcolor,mylims,dodiffmean,addtext)
+
+plot(my.dawba$sas_total,my.dawba$srs_t_score,col=(1+my.dawba$trisomy))
+plot(my.dawba1$genlang,my.dawba$srs_t_score,col=(1+my.dawba$trisomy))
+temp<-as.matrix(select(my.dawba1,genlang,sas_total,srs_t_score))
+rcorr(temp)
+
 
 ```
 ```{r lme}
@@ -1006,6 +992,48 @@ chisq.test(forchi)
 # 
 # 
 
+```
+```{r cgas, include=FALSE}
+#########################################################################
+#Look at CGAS
+#########################################################################
+#First check rater agreement
+myr<-rcorr(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
+my.dawba$CGAS<-as.integer(my.dawba1$cgas_r1/10)
+#my.dawba$cgas<-mean(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
+
+
+cgast<-table(my.dawba$CGAS,my.dawba$group8)
+mysum<-summaryBy(CGAS ~ group8, data=my.dawba,
+                 FUN = function(x) { c(m = mean(x))})
+mymean<-rep(NA,8)
+for (i in 1:8){
+  mymean[i]<-paste0('Mean = ',round(mysum[i,2],1))
+}     
+if(dopng==1){
+pngname1<-'joyplot_cgas.png'
+png(pngname1,width=300,height=400)
+}
+
+g<-ggplot(my.dawba, aes(x = CGAS, y = group8,fill=group8)) 
+g1<-g+ geom_density_ridges(rel_min_height = 0.01)
+g2<-g1+ ylab('Low Bias             High Bias           ')
+g3<-g2+theme(axis.text.y= element_text( color="black", size=18))
+g4<-g3+theme(axis.text.x= element_text( color="black", size=14))
+g5<-g4+ theme(axis.title= element_text( color="black", size=18))
+g6<-g5+scale_x_continuous(breaks=seq(2,12,2))
+g7<-g6+scale_fill_cyclical(values = c("deeppink","darkorchid1", "deepskyblue","deeppink","darkorchid1", "deepskyblue","yellow","green"))
+g8<-g7+ annotate("text", x=10,y = seq(1.1,8.1,1), label =mymean, size=6)
+if(dopng==1){
+  dev.off()
+}
+g8
+#file.show(pngname1) 
+```
+#########################################################################
+```{r dawba_emot, include=FALSE}
+emot.tab<-table(my.dawba$dawba_emot,my.dawba$Group)
+conduct.tab<-table(my.dawba$dawba_conduct,my.dawba$Group)
 ```
 
 
@@ -1283,6 +1311,7 @@ We report how we determined our sample size, all data exclusions, all manipulati
 ## Participants 
 ### Children with sex chromosome trisomies 
 The analysis was conducted on data from `r n.K+n.L+n.M+n.N+n.O+n.P` children (`r n.K+n.N` with XXX, `r n.L+n.O` with XXY and `r n.M+n.P` with XYY) whose parents had completed the Development and Wellbeing Assessment (DAWBA). As shown in Figure 1, these came from a larger sample of `r n.C+n.D` children who participated in a study of language and laterality in sex chromosome trisomies, whose genetic, laterality and language characteristics have been reported in previous papers (xxx). Children were recruited from National Health Service Clinical Genetics centres, from two support groups: Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association, or from self-referral via social media. A criterion for inclusion was that the child was aware of their trisomy status. Figure 1 distinguishes between cases where the trisomy was discovered in childhood during investigations for behavioural or neurodevelopmental problems, as the latter group suffer from ascertainment bias and are likely to a high rate of disorder that is not  representative of that karyotype. These are referred to as the 'High Bias' subgroup. An unexpected feature of the sample was that the majority of girls with trisomy X were in the Low Bias subgroup, whereas the majority of boys with XXY or XYY were in the High Bias subgroup, suggesting that these karyotypes were more likely to be associated with neurodevelopmental problems. 
+`r Norig` children had taken part in the previous study by Bishop et al (2011). Information on these children was available only from parental report: two of them (8.7%) had been reported by their parents to have a diagnosis of ASD, closely similar to the rate of 13/136 (9.5%) for the whole 2011 sample. 
 In a previous report based on this sample (Bishop et al, 2018), we noted that the likelihood of parents completing checklists for this study was lower if the child had significant language problems. This prompted us to compare children whose parents did and did not complete the DAWBA, using a language factor score (see below) as an indicator of language level. A t-test revealed that, as before with checklist completion, parents who completed the DAWBA had children with milder language problems: mean for those who completed DAWBA was `r round(my.t.dawba$estimate[2],1)` versus `r round(my.t.dawba$estimate[1],1)` for the remainder, t (`r round(my.t.dawba$parameter,1)`) = `round(my.t.dawba$statistic,1)`.
 
 ![<b>Figure 1</b>. Flowchart showing numbers of children with each karyotype in the study, in relation to whether prenatally or postnatally diagnosed, whether high ascertainment bias, and whether DAWBA was completed.](SCT_asd_flow.png)
@@ -1311,7 +1340,7 @@ _Strength and Difficulties Questionnaire (SDQ) (Goodman, 1997)._
 The SDQ was incorporated in the online DAWBA assessment. SDQ is a questionnaire used to screen children's behaviour on five dimensions: 1) emotional symptoms (5 items); 2) conduct problems (5 items); 3) hyperactivity/inattention (5 items); 4) peer relationship problems (5 items); 5) prosocial behaviour (5 items). Norms are available for a representative sample of over 10,000 British children aged from 5 to 15 years (Meltzer et al., 2000). 
 
 _Social Aptitudes Scale (SAS) (Liddle et al, 2009)._
-This 10-item scale forms part of the DAWBA and was designed to tap skills in social understanding and behaviour that vary substantially in the general population. The behaviours surveyed in SAS relate to impairments of social understanding characteristic of ASD rather than to social anxiety.
+This 10-item scale forms part of the DAWBA and was designed to tap skills in social understanding and behaviour that vary substantially in the general population. The behaviours surveyed in SAS relate to aspects of social understanding rather than to social anxiety, and the parent is asked to rate positive rather than negative attributes, such as 'able to compromise and be felxible'.
 
 _The Children's Communication Checklist-2 (CCC-2)._
 \ 
@@ -1420,9 +1449,8 @@ ci.hi.xxy <- round(logoddsr.xxy+1.96*se.logoddsr.xxy,2)
 ci.low.xyy <-round(logoddsr.xyy-1.96*se.logoddsr.xyy,2)
 ci.hi.xyy <- round(logoddsr.xyy+1.96*se.logoddsr.xyy,2)
 ```
-Meltzer et al (2000) reported prevalence rates for 'Pervasive Developmental Disorder' (encompassing ASD and SCD) of 0.5% for boys and 0.1% for girls. Compared with these figures, there are elevated rates in all three trisomies. We consider here just the Low Bias groups: the log odds ratio (with 95% confidence interval) is `r logoddsr.xxx` (`r ci.low.xxx` - `r ci.hi.xxx`) for XXX girls; `r logoddsr.xxy` (`r ci.low.xxy` - `r ci.hi.xxy`) for XXY boys; and `r logoddsr.xyy` (`r ci.low.xyy` - `r ci.hi.xyy`) for XYY boys.
 
-*Need to check: are these the same children as were identified in the previous study?!*
+Meltzer et al (2000) reported prevalence rates for 'Pervasive Developmental Disorder' (encompassing ASD and SCD) of 0.5% for boys and 0.1% for girls. Compared with these figures, there are elevated rates in all three trisomies. We consider here just the Low Bias groups: the log odds ratio (with 95% confidence interval) is `r logoddsr.xxx` (`r ci.low.xxx` - `r ci.hi.xxx`) for XXX girls; `r logoddsr.xxy` (`r ci.low.xxy` - `r ci.hi.xxy`) for XXY boys; and `r logoddsr.xyy` (`r ci.low.xyy` - `r ci.hi.xyy`) for XYY boys. None of these affected children had been in the original 2011 study. 
 
 Although the odds ratio of ASD/SCD were elevated in all three trisomies, and the rate of SocAnx was high in the XXY boys, the majority of children in the Low Bias groups did not have either diagnosis. However, DAWBA categorical diagnoses only detect more severe levels of impairment associated with burden to families. We next considered the possibility that there might be distinctive subclinical features associated with an additional X or Y chromosome. To investigate this question we first considered the profile of scores on the two questionnaires incorporated into the DAWBA: SDQ and the SAS.
 
