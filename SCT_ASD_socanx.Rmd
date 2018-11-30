@@ -1,8 +1,6 @@
-
 ---
 title             : "Can we distinguish between autism spectrum disorder and social anxiety in children with sex chromosome trisomies?"
 shorttitle        : "ASD and social anxiety in trisomies"
-
 author: 
   - name          : "Alexander Wilson"
     affiliation   : "1"
@@ -42,7 +40,14 @@ lang              : "english"
 class             : "man"
 output            : papaja::apa6_word
 bibliography      :  ["/Users/dorothybishop/endnotehome/!bishoprefs2019.enl"]
+always_allow_html: yes
 ---
+```{r set-options, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE, cache = FALSE, error = TRUE)
+thistab<-0 #counter for tables
+thisfig<-0 #counter for figures
+```
 
 ```{r load_packages, include = FALSE}
 #devtools::install_github("crsh/papaja")
@@ -52,132 +57,1379 @@ library(knitr) #for kable
 library(pander)
 library(gridExtra)
 library(grid)
+library(Hmisc)
+library(doBy)
+library(beeswarm)
+library(DiagrammeR) #Needed for flowcharts
+library(DiagrammeRsvg)#Needed for flowcharts
+library(magrittr)#Needed for flowcharts
+library(svglite)#Needed for flowcharts
+library(rsvg)#Needed for flowcharts
+library(car)
+library(lavaan) #for language factor extraction
+library(semPlot)
+library(kableExtra)
+library(flextable)
+
+library(ggridges) #for joyplot
+dopng <- 0 #toggle for png figures
+numnames<-c('no','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve')
+#numnames used when reporting low Ns in text.
 ```
-```{r getOS, include = FALSE}
-get_os <- function(){
-  sysinf <- Sys.info()
-  if (!is.null(sysinf)){
-    os <- sysinf['sysname']
-    if (os == 'Darwin')
-      os <- "osx"
-  } else { ## mystery machine
-    os <- .Platform$OS.type
-    if (grepl("^darwin", R.version$os))
-      os <- "osx"
-    if (grepl("linux-gnu", R.version$os))
-      os <- "linux"
-  }
-  tolower(os)
-}
-```
+
 
 ```{r, echo=FALSE} 
 # Seed for random number generation
 set.seed(42)
+
 ```
 
-```{r,echo=FALSE}
-# Read in main data file
-dir<-"/Users/dorothybishop/Dropbox/ERCadvanced/project SCT analysis/Data from redcap/"
-mydata <- read.csv(paste0(dir,"SCTData_DATA_2018-08-13_1234.csv"))
-mydata<-filter(mydata,trisomy<9) #remove case of isochromosome
-#deal with missing data
-for (mycol in 242:318){
-  mymiss=which(mydata[,mycol]>900)
-  mydata[mymiss,mycol]=NA
+```{r readredcap, include=FALSE}
+#########################################################################################
+## Step 1 - this is identical to script for language phenotype paper
+#Read in latest SCT from redcap.
+#Do the same for the twins.
+#Select variables to be used.
+
+#redcap.dir <-"c:/Users/pthompson/Dropbox/project SCT analysis/Data from Redcap/"
+redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
+
+#Use latest version - this includes consensus DAWBA diagnosis for SCTs
+#Automated diagnosis added 30th Nov, with Soc Aptitude Scale data
+sct.redcap <- 'SCTData_DATA_2018-11-30_1018.csv'
+#updated to include code indicating whether participated in prior study
+twin.redcap <- 'TwinsData_DATA_2018-11-30_1030.csv' #updated to include ccc2_consistent variable
+#also now has pheno_include, which selects individual twins for inclusion
+sct.data <- read.csv(paste0(redcap.dir,sct.redcap),stringsAsFactors = FALSE)
+twin.data <- read.csv(paste0(redcap.dir,twin.redcap),stringsAsFactors = FALSE)
+twin.data <- twin.data[twin.data$pheno_include==1,]
+
+names(sct.data)[1]<-"record_id"
+names(twin.data)[1]<-"record_id"
+#fix any columns with discrepant names
+w<-which(colnames(twin.data)=='neurodev_diagnosis')
+colnames(twin.data)[w] <-'neurodev_diag'
+# Coded from parental interview only: 0, none, 1, ADHD
+# 2, APD (ignored), # 3, ASD, # 4, behav, # 5, dyscalc, # 6, dyslexia
+# 7, dyspraxia, # 8, SLI/DLD, # 9, ID
+
+#Nb Fam position: Coded so if you subtract 1 you get N older sibs: disregards birth order of twins
+w<-which(colnames(sct.data)=='position_in_family')
+colnames(sct.data)[w] <-'fam_position'
+w<-which(colnames(sct.data)=='fh_langprobs')
+colnames(sct.data)[w] <-'fh_langprob' #1 if 1 aff relative, 2 if more than one
+#NB this dld_rd categorisation not currently used
+twin.data$dyslexia<-twin.data$dld_rd%%10 #modulus 10 , ie last digit
+twin.data$lang_disorder<-round((twin.data$dld_rd-4.5)/10) #first digit is dld code
+
+#add gender info to sct data so it merges properly
+sct.data$female<-0
+w<-which(sct.data$trisomy==1)
+sct.data$female[w]<-1 #XXX cases are female
+
+sct.data$fam_id<-NA #dummy column to ensure merges ok
+
+#only one rater for DAWBA in twins, but need to have columns for the SCTs
+twin.data$asd_dsm_r2<-NA
+twin.data$autism_icd_r2 <-NA
+twin.data$social_anx_dsm_r2<-NA
+twin.data$social_anx_icd_r2<-NA
+twin.data$cgas_r2<-NA
+
+# Twins recruited in relation to splang_conc, which is coded as
+# 0, never
+# 1, preschool only
+# 2, continuing, mild
+# 3, continuing, severe
+# 4, reading concerns only
+# 9, unclear
+# We will be using this categorisation to subdivide twins; categories 2 and 3 distinguished.
+# 
+sct.data$parent_conc<-NA
+
+twin.data$parent_conc<-0
+w<-which(twin.data$splang_conc%in%c(2,3))
+twin.data$parent_conc[w]<-1
+
+#########################################################################################
+#----------------------------------------------------------------------------------
+```
+
+
+```{r colselect, include=FALSE}
+#########################################################################################
+#Focus on columns to be used in this analysis 
+#(includes DAWBA etc, cf. language pheno paper)
+
+#Specify columns to retain that are common to both sct and twin
+#NB we are using oromotor_ss2, which is renormed against the TD twin group
+#NB also include SRS items that form short scale
+
+#NB for ASD and Socphobia from DAWBA, we now have a variable called 'asd_dsm_agree',
+#and 'socphob_dsm_agree'. This is consensus rating: if R1 and R2 agreed, we used that,
+#otherwise DVMB reviewed the DAWBA and made a consensus rating.
+#We will use this for main diagnostic analysis.
+
+keepcols <- c('record_id','fam_id','female','age_at_test','parent_conc','partial_testing','pass_hearing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
+              'sent_rep_ss','nonword_rep_ss','oromotor_ss_2','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
+              'mo_educ','fa_educ','deprivation_index','fam_structure','fh_langprob',
+              'gcc','scdi','ccc_a','ccc_b','ccc_c','ccc_d','ccc_e','ccc_f',
+             'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent',
+             'srs_item10', 'srs_item14', 'srs_item16', 'srs_item18', 'srs_item24', 
+             'srs_item28', 'srs_item29', 'srs_item33', 'srs_item35', 'srs_item37',
+             'srs_item44', 'srs_item50', 'srs_item51', 'srs_item56', 'srs_item58', 'srs_item65',
+             'socaw_ss','soccomm_ss','soccog_ss','socmot_ss','autfeat_ss','srs_t_score', 
+             'asd_dsm_agree','socphob_dsm_agree','asd_dsm_r1', 'adhd_comb_dsm_r1', 'adhd_hyp_dsm_r1', 'adhd_inatt_dsm_r1', 'generalized_anx_dsm_r1',
+             'social_anx_dsm_r1', 'separation_anx_dsm_r1', 'other_anx_dsm_r1', 'phobia_dsm_r1',
+             'depression_dsm_r1', 'opp_def_dsm_r1', 'conduct_dsm_r1', 'chronic_tic_dsm_r1', 
+             'tourette_dsm_r1', 'anorexia_dsm_r1', 'autism_icd_r1', 'hyperkinetic_icd_r1',
+             'generalized_anx_icd_r1', 'social_anx_icd_r1', 'separation_anx_icd_r1', 'other_anx_icd_r1',
+             'phobia_icd_r1', 'minor_depression_icd_r1', 'mod_depression_icd_r1', 'sev_depression_icd_r1',
+             'opp_def_icd_r1', 'soc_conduct_icd_r1', 'unsoc_conduct_icd_r1', 'fam_conduct_icd_r1',
+             'chronic_tic_icd_r1', 'tourette_icd_r1', 'anorexia_icd_r1',
+             'cgas_r1', 'cgas_r2','honosca_disruptive_r1', 
+             'honosca_adhd_symptoms_r1', 'honosca_self_injury_r1', 'honosca_sub_misuse_r1',
+             'honosca_sholastic_lang_r1', 'honosca_phys_illness_r1', 'honosca_pschotic_r1',
+             'honosca_somatic_r1', 'honosca_emotional_r1', 'honosca_peers_r1', 'honosca_selfcare_ind_r1',
+             'honosca_family_r1', 'honosca_school_att_r1',
+             'dawba_id', 'emotional', 'conduct', 'hyperactivity', 'peer', 'prosocial', 'impact',
+             'dawba_sdq_complete', 'sepanx_concern', 'loss_af', 'taken_from_af', 'school_ref', 
+             'sleep_alone', 'sleep_af', 'sleep_away', 'room_alone', 'home_alone', 'sep_nightmare',
+             'somatic_sep', 'sep_antic_anx', 'sep_symptoms_1mo', 'sep_age_of_onset', 'sep_distress',
+             'sep_impact_family', 'sep_impact_friends', 'sep_impact_learning', 'sep_impact_leisure',
+             'sep_burden', 'socanx_concerns', 'new_people', 'many_people', 'soc_eating', 'soc_speaking',
+             'soc_reading', 'soc_writing', 'soc_vs_sep', 'adults_kids', 'can_socialise', 'cause_fear',
+             'cause_litprobs', 'socanx_age_onset', 'socanx_dur_mo', 'socfear_level', 'socfear_freq',
+             'avoid_soc', 'socanx_impact', 'fear_excessive', 'upset_socfear', 'socanx_burden',
+             'generous', 'lively', 'keen2learn', 'affectionate', 'reliable', 'easygoing', 'fun', 'interested',
+             'caring', 'bounces', 'grateful', 'indepdt', 'helps', 'gets_on', 'homework', 'creative', 'family',
+             'appearance', 'good_school', 'polite', 'good_sport', 'tidy', 'good_friends', 'good_behav',
+             'sas_laugh', 'sas_chat', 'sas_flexible', 'sas_defuse', 'sas_lose', 'sas_ease', 'sas_tom',
+             'sas_apolog', 'sas_leader', 'sas_socaware', 'sas_total', 'dawba_positive_complete',
+             'makefriends', 'keepfriends', 'nfriends', 'share_interest', 'joint', 'confide', 'gen_reason',
+             'mentalage', 'langlevel', 'langage', 'langcope', 'speech3yr', 'soc3yr', 'play3yr', 'ritual3yr',
+             'ment3yr', 'continued_diffs', 'words2yr', 'phrase3yr', 'toddlergesture', 'toddlergames',
+             'shareenjoy', 'repetitive', 'unusual', 'imagplay', 'adjustsplay', 'turntaking', 'obsession',
+             'topic', 'dominates', 'dominateconv', 'interferes', 'goodconv', 'goodsustain', 'chats',
+             'adjustsconv', 'nonvbl_blank', 'can_read_nv', 'abnormal_eye', 'echoing', 'repquest', 
+             'repcliche', 'strongroutine', 'changeroutine', 'flapping', 'parconcern', 'distress',
+             'impactfam', 'impactfriend', 'impactlearn', 'impactleisur', 'asd_burden',
+             'suddenonset', 'ageonset','asd_dsm_r2','autism_icd_r2','social_anx_dsm_r2',
+                 'social_anx_icd_r2')
+
+
+twin.short <- select(twin.data,keepcols)
+sct.short <- select(sct.data,keepcols) #NB 'select' is ambiguous between packages but should work ok if we use formr (otherwise need dplyr::select)
+
+#########################################################################################
+
+```
+
+```{r combinefiles, include=FALSE}
+###################################################################################################
+#Add columns that are specific to twins or SCTs so all aligned
+#Select data for short file
+
+
+sct.short$is_twin <- 0 #this specifies child is not a twin but a trisomy
+sct.short$zygosity <- NA
+twin.short$is_twin <- twin.data$randomtwininclude+1 #twins subdivided
+#randomly into 1 and 2 for replication sample
+
+
+twin.short$zygosity <- twin.data$zygosity
+#at current time have only one rater for twins, so treat that as consensus
+twin.short$asd_dsm_agree<-twin.short$asd_dsm_r1
+twin.short$socphob_dsm_agree<-twin.short$social_anx_dsm_r1
+
+sct.short$trisomy <- sct.data$trisomy
+sct.short$pre_postnatal_diag <- sct.data$pre_postnatal_diag
+sct.short$why_tested <-sct.data$why_tested
+sct.short$orig_famcode<-0
+sct.short$orig_famcode[sct.data$orig_famcode>0]<-1 #if seen before this is 1
+twin.short$trisomy <- 0
+twin.short$pre_postnatal_diag <- NA
+twin.short$why_tested <- NA
+twin.short$orig_famcode<-NA
+twin.short$splang_conc<-twin.data$splang_conc
+sct.short$splang_conc<-NA
+sct.short$pheno_include<-1
+twin.short$pheno_include<-twin.data$pheno_include #this codes reason for exclusion as:
+#2 ASD, 3 ASD-sib, 4-hearing, 5- other
+#exclude twins with DSM ASD diagnosis: nb in this analysis ASD case removed for twins only
+w<-which(twin.short$asd_dsm_r1==1)
+twin.short$pheno_include[w]<-2
+twin.short<-twin.short[twin.short$pheno_include==1,] #removes those with ASD, ASD-sib,hearing, other
+#remove one twin at random
+w <- which(twin.short$is_twin==1)
+twin.short<-twin.short[w,]
+#----------------------------------------------------------------------------------
+#Bolt SCT and twin files together
+all.short <-rbind(sct.short,twin.short)
+
+#remove case of isochromosome
+w<-which(all.short$trisomy==9)
+all.short<-all.short[-w,]
+
+
+
+#rename age variable
+w<-which(colnames(all.short)=='age_at_test')
+colnames(all.short)[w]<-'Age'
+
+#add a column identifying age range: 1 = <6, 2 = 6-11;11, 3 = 12+
+all.short$ageband<-2
+w<-which(all.short$Age<72)
+all.short$ageband[w]<-1
+
+w<-which(all.short$Age>143)
+all.short$ageband[w]<-3
+```
+
+```{r missingcheck, include=FALSE}
+#----------------------------------------------------------------------------------
+# These next chunks are taken direct from the lang-pheno script
+
+##Step 2
+#Deal with missing data
+#Codes are
+
+#999 – test not given
+#998 – result not valid (maladministration)
+#997 – result not valid (child refusal etc.)
+#996 – child too old/young for norms
+
+#Check for nonword rep - in some cases OK to substitute low score, if child unable to attempt task. 
+
+all.short$pass_hearing[all.short$pass_hearing==9]<-NA #change 9 to NA for pass_hearing
+#NB these include both refusal and equipment failure
+
+all.short$piq[all.short$piq==999]<-NA
+
+#missing data has codes of 996-999 for language tests
+w <- which(all.short$nonword_rep_ss>900)
+print('Cases with missing nonword rep data: ')
+all.short$record_id[w]
+#These cases all checked : all SCT cases who either were not tested because v limited spoken language, or who refused spoken tests or had low scores on other language tests. All these cases assigned a scaled score of 3.
+all.short$nonword_rep_ss[w] <- 3
+
+#999 is code where child was not tested bcs too low-functioning
+w <- which(all.short$wasi_vocab_ss==999)
+print('Cases with missing Vocab data (999) reassigned to floor: ')
+all.short$record_id[w]
+#These assigned SS of 2.33 SD below mean (equivalent to 3 on NEPSY scale)
+all.short$wasi_vocab_ss[w] <- 25
+
+w <- which(all.short$wdck_jhsn_ss==999)
+print('Cases with missing Woodcock_J data (999) reassigned to floor: ')
+all.short$record_id[w]
+#These assigned SS of 2.33 SD below mean (equivalent to 3 on NEPSY scale)
+all.short$wdck_jhsn_ss[w] <- 55
+
+w <- which(all.short$sent_rep_ss==999)
+print('Cases with missing Sent rep data (999) reassigned to floor:: ')
+all.short$record_id[w]
+#These assigned SS of 2.33 SD below mean (equivalent to 3 on NEPSY scale)
+all.short$sent_rep_ss[w] <- 3
+
+w <- which(all.short$oromotor_ss_2==999)
+print('Cases with missing oromotor data (999) reassigned to floor:: ')
+all.short$record_id[w]
+#These assigned SS of 55 , as this corresponds to floor in this sample
+all.short$oromotor_ss_2[w] <- 55
+
+#Now count how many tests have missing data
+mycols<-colnames(all.short)
+#Identify the range of columns where 900+ is missing data code
+mc <-which(mycols=='wasi_matrices_ss')
+mc0<-which(mycols=='nonword_rep_ss') #end of range for spoken language
+mc1<-which(mycols=='phab_digit_ss') #end of range of reading related
+mc2<-which(mycols=='ccc_a') #end of range of reading related
+mc3<-which(mycols=='ccc_j') #end of range of reading related
+
+all.short$n_missinglang<-0
+for(i in 1:nrow(all.short)){
+  mytests<-all.short[i,mc:mc0]
+  n.na<- length(which(is.na(mytests)))
+  n9<- length(which(mytests>900))
+  all.short$n_missinglang[i]<-(n.na+n9)
+  
 }
+table(all.short$n_missinglang,all.short$ageband)
+
+all.short$n_missingread<-0
+for(i in 1:nrow(all.short)){
+  mytests<-all.short[i,(mc0+1):mc1]
+  n.na<- length(which(is.na(mytests)))
+  n9<- length(which(mytests>900))
+  all.short$n_missingread[i]<-(n.na+n9)
+  
+}
+table(all.short$n_missingread,all.short$ageband)
+
+
+#Put in NA for missing data codes all lang/read/CCC-2
+for (i in c(mc:mc1,mc2:mc3)){
+  w <- which(all.short[,i]>900)
+  all.short[w,i]<-NA
+}
+
+n.col<-length(colnames(all.short)) #define n.col here
+
+#Parental educ variables, missing is 9
+w<-which(all.short$mo_educ==9)
+all.short$mo_educ[w]<-NA
+w<-which(all.short$fa_educ==9)
+all.short$fa_educ[w]<-NA
+w<-which(all.short$fh_langprob==9)
+all.short$fh_langprob[w]<-NA
+
 ```
 
-```{r include=FALSE}
-source('dawba_select_data.R')
-nxxx<-length(which(my.dawba$trisomy==1))
-nxxy<-length(which(my.dawba$trisomy==2))
-nxyy<-length(which(my.dawba$trisomy==3))
-source('SCT_for_beeswarm.R')
+```{r langfactor, include=FALSE}
+#Compute language factor, using script from Appendix 2 from Newbury et al 2018
+#Aim: to get a single robust measure of language ability 
+
+
+model.f5a <- ' f1 =~ wasi_vocab_ss + wdck_jhsn_ss + sent_rep_ss + oromotor_ss_2 
+              wasi_vocab_ss ~~ wdck_jhsn_ss'     
+fit.mod.E2 <- cfa(model.f5a, data = all.short,estimator = "ML",missing = "ML")
+lbls<-c("Vocabulary", "Woodcock\nJohnson", "Sentence\nRepetition", "Oromotor","Language")
+#semPaths(fit.mod.E2, "std", title = TRUE, curvePivot = TRUE, edge.label.cex = 1.2,width=10,height=5,nodeLabels=lbls,intercepts = FALSE,sizeMan = 10, sizeLat = 10)
+all.short$langfactor <- as.vector(predict(fit.mod.E2)) #factor scores
 ```
+
+```{r rescalelang, include=FALSE}
+#Rescale all variables to mean 100 and SD 15 and save in new columns
+#This is taken from language phenotypes Rmd script
+short.langnames<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','NwdRep','Oromotor',
+                   'ReadAcc','ReadComp','ReadRate','TOWREwd','TOWREnwd',
+                   'PicName','DigitName')
+
+#convert all variables to same scale: mean 100 and SD 15
+#This has to be hard coded because different tests on different scales
+langcog.cols<-c("wasi_matrices_ss" ,"wasi_block_design_ss", "wasi_vocab_ss" ,
+                "wdck_jhsn_ss" , "sent_rep_ss" , "nonword_rep_ss",  "oromotor_ss_2",
+                "nara_acc_ss" ,"nara_comp_ss","nara_rate_ss" ,"towre_words_ss",
+                "towre_nonwords_ss","phab_pic_ss","phab_digit_ss")
+#Note we now are using the oromotor_ss_2 variable: normed against TD twins
+
+lang.cols<-which(colnames(all.short)%in%langcog.cols)
+#NB this finds columns corresponding to langcog.cols, but they will be in the order they occur in file
+#start by just duplicating original scaled scores
+n.new<-length(short.langnames)
+n.col<-dim(all.short)[2] #find final column: will append new ones after this
+nurange<-(n.col+1):(n.col+n.new) #column range for ss values, NB n.col defined in prev block
+all.short[,nurange]<-all.short[,lang.cols]
+colnames(all.short)[nurange]<-short.langnames
+#First 3 are normed with mean 50 and SD 10
+for (i in 1:3){
+  oldmean<-50
+  oldsd<-10
+  all.short[,(i+n.col)]<- 100+15*(all.short[,lang.cols[i]]-oldmean)/oldsd
+}
+
+for (i in c(5,6)){
+  oldmean<-10
+  oldsd<-3
+  all.short[,(i+n.col)]<- 100+15*(all.short[,lang.cols[i]]-oldmean)/oldsd
+}
+
+
+```
+
+```{r interpolatemissing, include=FALSE}
+#Again, this taken from language phenotypes Rmd.
+#If just one value is missing in lang or reading clusters, substitute the mean of others
+langrange<-(n.col+1):(n.col+7)
+readrange<-(n.col+8):(n.col+13)
+#Start with language range
+w<-which(all.short$n_missinglang==1) #find those rows with just one missing value
+for(s in 1:length(w)){
+  thisrow<-w[s] #row with missing value
+  v<-which(is.na(all.short[thisrow,langrange])) #which value is missing?
+  mycol<-langrange[v] #column with missing data
+  all.short[thisrow,langrange[v]]<-round(rowMeans(all.short[thisrow,langrange],na.rm=TRUE),0) #mean of other values substituted
+}
+
+print(paste0('Mean substituted for cases with one missing datapoint: Interpolated ', length(w),' missing values from ',nrow(all.short)*length(langrange),
+             ' datapoints in ',length(langrange),' nonverbal and language tests'))
+
+w<-which(all.short$n_missingread==1) #find those rows with just one missing value
+for(s in 1:length(w)){
+  thisrow<-w[s] #row with missing value
+  v<-which(is.na(all.short[thisrow,readrange])) #which value is missing?
+  mycol<-readrange[v]
+  all.short[thisrow,readrange[v]]<-round(rowMeans(all.short[thisrow,readrange],na.rm=TRUE),0) #mean of other values substituted
+}
+print(paste0('Mean substituted for cases with one missing datapoint: Interpolated ', length(w),' missing values from ',nrow(all.short)*length(readrange),
+             ' datapoints in ',length(readrange),' reading and rapidnaming tests'))
+
+
+#create an averaged literacy measure to avoid floor effects: this is more normal
+all.short$literacy<-rowMeans(all.short[,(n.col+8):(n.col+14)])
+all.short$genlang<-rowMeans(all.short[,(n.col+3):(n.col+4)])
+all.short$verbmem<-rowMeans(all.short[,(n.col+5):(n.col+7)])
+#create an averaged verbalmem measure 
+```
+
+
+```{r ncheck, include=FALSE}
+## Step 3
+
+# #Check that Ns match those in the protocol
+# Should have three groups with N = 142 SCT, 194 twin1 and 194 twin2 (these are randomly assigned twin 1 and 2), - but Ns less for twins because of exclusions
+# Numbers are greater than for Newbury et al, as some children did not feature in that study because of lack of DNA.
+# 
+# Twins recruited in relation to splang_conc, which is coded as
+# 0, never
+# 1, preschool only
+# 2, continuing, mild
+# 3, continuing, severe
+# 4, reading concerns only
+# 9, unclear
+# We will be using this categorisation to subdivide twins; categories 2 and 3 distinguished.
+# 
+# Trisomies - divided according to reason for diagnosis
+# why tested used to make bias column: coded as: 
+# 0, maternal age
+# 1, medical concerns
+# 2, behavioural concerns
+# 3, neurodevelopmental concerns
+# 4, family history of genetic problems
+# 9, no information
+###################################################################################
+twin.tab <- table(all.short$is_twin)
+names(twin.tab)<-c('SCT','twin')
+
+all.short$bias<-NA
+w<-which(all.short$is_twin==0)
+all.short$bias[w]<-0
+w<-c(which(all.short$why_tested==2),which(all.short$why_tested==3))
+all.short$bias[w]<-1
+sct.tab <- table(all.short$trisomy,all.short$bias)
+rownames(sct.tab)<-c('twin','XXX','XXY','XYY')
+colnames(sct.tab)<-c('Low Bias','High Bias')
+#Show tables
+twin.tab
+tab_sct<-sct.tab
+sct.tab
+rowSums(sct.tab)
+
+all.short$parent_conc<-NA #parental concern re language
+w<-which(all.short$is_twin>0)
+all.short$parent_conc[w]<-0
+w<-which(all.short$splang_conc%in%c(2,3))
+all.short$parent_conc[w]<-1
+
+parcon.tab<-table(all.short$parent_conc,all.short$is_twin)
+rownames(parcon.tab)<-c('No concern','Concern')
+colnames(parcon.tab)<-c('null','twin')
+parcon.tab[,2]
+print('Age range (min, max, average) for SCT')
+min(sct.data$age_at_test)
+max(sct.data$age_at_test)
+mean(sct.data$age_at_test)
+print('Age range (min, max, average) for twin')
+min(twin.data$age_at_test)
+max(twin.data$age_at_test)
+mean(twin.data$age_at_test)
+
+
+
+```
+
+
+
+```{r groupcreate, include=FALSE}
+##Create 8 groups:
+# 1. XXX-nobias
+# 2. XXY-nobias
+# 3. XYY-nobias
+# 4. XXX-hibias
+# 5. XXY-hibias
+# 6. XYY-hibias
+# 7. twin_noconcern
+# 8. twin_concern
+
+#####################################################################################
+#first code SLT into 0, 1 or 2;  2 indicates SALT beyond 4 yr, 1 is assessment or preschool only
+all.short$slt.code<-0
+w<-c(which(all.short$slt==1),which(all.short$slt==8))
+all.short$slt.code[w]<-1
+w<-c(which(all.short$slt==2),which(all.short$slt==3))
+all.short$slt.code[w]<-2
+
+
+all.short$group8<-all.short$trisomy
+w<-which(all.short$bias==1)
+all.short$group8[w]<-all.short$group8[w]+3 #convert 1 2 3 to 4 5 6
+w<-which(all.short$is_twin>0) #just focus on twins
+all.short$group8[w]<-7
+w<-which(all.short$parent_conc==1) #coded as NA for SCTs, so only twins coded here
+all.short$group8[w]<-8
+
+#add twins with SLT code 2 to group 8, even if no parental concern
+w<-intersect(which(all.short$group8==7),which(all.short$slt.code==2))
+all.short$group8[w]<-8
+
+
+#Create factor for overall group
+all.short$group8level<-all.short$group8#useful to retain a column with numeric code before converting to factor (converting factor back to number is a nightmare!)
+all.short$group8<-as.factor(all.short$group8)
+levels(all.short$group8)<-c('XXX.lowbias','XXY.lowbias','XYY.lowbias',
+                            'XXX.hibias','XXY.hibias','XYY.hibias',
+                            'Twin: No Concerns','Twin: Lang concerns')
+
+#Add code for thse with NA data on the language tests
+#For MANOVA, only those with complete data are included
+all.short$langdata_complete<-1 #default: updated after interpolating values if only one missing
+mycols<-colnames(all.short)
+mcx1 <-which(mycols=='Matrices')
+mcx2<-which(mycols=='DigitName')
+for (i in mcx1:mcx2){
+  w <- which(is.na(all.short[,i]))
+  all.short$langdata_complete[w]<-0
+  
+}
+
+```
+
+```{r get.covariates, include=FALSE}
+## Again - this is from language phenotypes rmd.
+##Covariates
+# a)	Educational level of mother and father, transformed into an ordinal scale based on age at leaving full-time education/qualifications obtained, with points of 0 (prior to age 16 years), 1 (16 years/did GCSE or O-levels), 2 (18 years/ did A-levels), 3 (21 years, degree), 4 (postgraduate study). 
+# 
+# b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank 32,844 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable.  
+# 
+# c)	Living with single parent, coded as a binary variable (0 or 1), based on status at the time of the initial interview.
+# 
+# d)	Number of older siblings. For twins, the co-twin was not counted.
+# 
+# e) Family history of language problems: added after reading Boada et al, who suggest this could explain heterogeneity.
+
+# N.B. The finding that the lowbias SCT children are more likely to have older sibs is probably related to the fact that pre-natal testing is associated with older parents. We do have data on parental ages and could look at that, but not sure it's necessary. It does, though, make me concerned that there may be problems in using N older sibs as a covariate, as it could look causal when it is not. It might be reasonable to use it just within the twin group.
+
+#Parental educational level
+par.ed <-aggregate(all.short$mo_educ, by=list(all.short$group8),
+                   FUN=mean, na.rm=TRUE)
+
+
+#Use ranks to convert to normal distribution
+#Rw deprivation index is a rank.
+
+depmax<-32844 #N possible ranks
+
+w<-which(is.na(all.short$deprivation_index))
+all.short$deprivation_index[w]<-depmax/2
+#Assign avg score to those outside england where no dep index
+all.short$neighborz<-qnorm(all.short$deprivation_index/depmax)
+
+firsttwin<-min(which(all.short$is_twin==TRUE))
+print(paste('N SCT with missing dep index (assigned 0) = ',length(which(w<firsttwin))))
+print(paste('N twin with missing dep index (assigned 0) = ',length(which(w>firsttwin))))
+all.short$neighborz[w]<-0
+dopirate<-0 #toggle to 1 to see pirateplot (not really needed here, but useful as eg of plot labeling)
+all.short$singlepar<-0
+all.short$singlepar[all.short$fam_structure<3]<-1
+singlepar.tab<-table(all.short$group8,all.short$singlepar)
+colnames(singlepar.tab)<-c('2 parents','single parent')
+prop.table(singlepar.tab,1)
+
+
+```
+
+
+
+```{r dawba_select_data, include=FALSE}
+
+#code those without dawba data
+w<-which(is.na(all.short$asd_dsm_r1 )) #If DAWBA done, will have ASD coded
+all.short$withdawba<-1
+all.short$withdawba[w]<-0
+my.dawba1<-all.short[-w,] #short file just has those who did DAWBA
+
+#check if no dawba group is different on language level
+#using langfactor 
+temp<-filter(all.short,group8level<7)
+my.t.dawba <- t.test(temp$langfactor~temp$withdawba)
+
+#compute SRS brief - nb items have been re-ordered so this selects those in SRS brief
+w1<-which(colnames(my.dawba1)=='srs_item10')
+w2<-which(colnames(my.dawba1)=='srs_item65')
+my.dawba1$srsbrief <-rowSums(my.dawba1[,w1:w2])
+
+# Neurodev diag is coded from parental interview only: 0, none, 1, ADHD
+# 2, APD (ignored), # 3, ASD, # 4, behav, # 5, dyscalc, # 6, dyslexia
+# 7, dyspraxia, # 8, SLI/DLD, # 9, ID
+#find those where 3 included in the code (ie community diagnosis of ASD)
+temp<-as.character(my.dawba1$neurodev_diag)
+w<-grepl('3', temp)
+my.dawba1$asd<-0
+my.dawba1$asd[w]<-1
+
+#compute yes/no score for presence of emotional disorders or conduct disorders
+my.dawba1$dawba_emot <-my.dawba1$generalized_anx_dsm_r1
+                      +my.dawba1$social_anx_dsm_r1
+                      +my.dawba1$separation_anx_dsm_r1
+                      +my.dawba1$other_anx_dsm_r1
+                      +my.dawba1$phobia_dsm_r1
+                      +my.dawba1$depression_dsm_r1
+w<-which(my.dawba1$dawba_emot>1)
+my.dawba1$dawba_emot[w]<-1
+
+my.dawba1$dawba_conduct <-my.dawba1$opp_def_dsm_r1
+                      +my.dawba1$conduct_dsm_r1
+w<-which(my.dawba1$dawba_conduct>1)
+my.dawba1$dawba_conduct[w]<-1
+
+my.dawba<-select(my.dawba1,record_id,female,trisomy,orig_famcode,bias,why_tested,asd,
+                 srs_t_score,socaw_ss,soccog_ss,
+                 soccomm_ss,socmot_ss,autfeat_ss,srsbrief,
+                 dawba_emot,dawba_conduct,
+                 asd_dsm_agree,socphob_dsm_agree,
+                 cgas_r1,cgas_r2, asd_dsm_r1,autism_icd_r1,social_anx_dsm_r1,
+                 social_anx_icd_r1,asd_dsm_r2,autism_icd_r2,social_anx_dsm_r2,
+                 social_anx_icd_r2,emotional,conduct,hyperactivity,peer,prosocial,
+                 sepanx_concern,socanx_concerns,soc_vs_sep,socfear_level,
+                 group8,group8level,ageband,sas_total)
+#group of 5 from 'emotional' etc are SDQ scales, added Nov 2017; also social anxiety and sep anxiety added. Sas_total is social awareness scale
+my.dawba$Group <- my.dawba$group8 #for compatibility with later routines
+```
+
+```{r in.prev.study, include=FALSE}
+#count how many SCT cases were in the earlier 2009 study (Bishop et al 2011 paper)
+print('')
+print('In 2009 study')
+w<-which(my.dawba$orig_famcode==1)
+origstudy<-table(my.dawba$bias[w],my.dawba$trisomy[w])
+colnames(origstudy)<-c('XXX','XXY','XYY')
+rownames(origstudy)<-c('Low Bias','High Bias')
+origstudy
+```
+
+
+
+```{r cgas, include=FALSE}
+#########################################################################
+#Look at CGAS
+#########################################################################
+#First check rater agreement
+myr<-rcorr(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
+my.dawba$CGAS<-as.integer(my.dawba1$cgas_r1/10)
+#my.dawba$cgas<-mean(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
+
+
+cgast<-table(my.dawba$CGAS,my.dawba$group8)
+mysum<-summaryBy(CGAS ~ group8, data=my.dawba,
+                 FUN = function(x) { c(m = mean(x))})
+mymean<-rep(NA,8)
+for (i in 1:8){
+  mymean[i]<-paste0('Mean = ',round(mysum[i,2],1))
+}     
+if(dopng==1){
+pngname1<-'joyplot_cgas.png'
+png(pngname1,width=300,height=400)
+}
+
+g<-ggplot(my.dawba, aes(x = CGAS, y = group8,fill=group8)) 
+g1<-g+ geom_density_ridges(rel_min_height = 0.01)
+g2<-g1+ ylab('Low Bias             High Bias           ')
+g3<-g2+theme(axis.text.y= element_text( color="black", size=18))
+g4<-g3+theme(axis.text.x= element_text( color="black", size=14))
+g5<-g4+ theme(axis.title= element_text( color="black", size=18))
+g6<-g5+scale_x_continuous(breaks=seq(2,12,2))
+g7<-g6+scale_fill_cyclical(values = c("deeppink","darkorchid1", "deepskyblue","deeppink","darkorchid1", "deepskyblue","yellow","green"))
+g8<-g7+ annotate("text", x=10,y = seq(1.1,8.1,1), label =mymean, size=6)
+if(dopng==1){
+  dev.off()
+}
+g8
+#file.show(pngname1) 
+```
+#########################################################################
+```{r dawba_emot, include=FALSE}
+emot.tab<-table(my.dawba$dawba_emot,my.dawba$Group)
+conduct.tab<-table(my.dawba$dawba_conduct,my.dawba$Group)
+```
+
+```{r socanx, include=FALSE}
+#Start with DAWBA diagnoses: focus on ASD and social anxiety; use consensus diagnoses
+#ASD is coded 2 for ASD and 1 for partial symptoms (eg SCD)
+#SocPhobia is coded 2 for definite and 1 for unsure.
+#Unsure for soc phobia is rare, and so recoded here to 0
+w<-which(my.dawba$socphob_dsm_agree==1)
+my.dawba$socphob_dsm_agree[w]<-0
+w<-which(my.dawba$asd_dsm_agree==4) #code used for SCD 
+my.dawba$asd_dsm_agree[w]<-1
+my.dawba$bicode<- 10*my.dawba$asd_dsm_agree+my.dawba$socphob_dsm_agree
+my.dawba$bicode2<-as.factor(my.dawba$bicode)
+
+levels(my.dawba$bicode2)  <- c('Neither','SocAnx','SCD','SCD+SocAnx','ASD','ASD+SocAnx')                                                      
+mytab<-table(my.dawba$bicode2,my.dawba$group8) 
+mytab<-mytab[,1:6] #omit twins
+myprop<-prop.table(mytab,2) #proportions by column (2nd parameter denotes row =1 or col=2)
+# mytab<-as.data.frame.matrix(mytab)
+# myprop<-as.data.frame.matrix(myprop)
+nicetab <- data.frame(matrix(NA,nrow=8,ncol=6))
+rownames(nicetab)<-c('Diagnosis','N','Neither','SCD','ASD','SocAnx','SCD+SocAnx','ASD+SocAnx')
+colnames(nicetab)<-c('.','Low Bias','..','...','High Bias','....')
+nicetab[1,] <- c('XXX','XXY','XYY','XXX','XXY','XYY')
+nicetab[2,]<-colSums(mytab)
+myorder<-c(1,4,2,5,3,6) #reorder the rows to be more logical
+for (thisrow in 1:6){
+  for (thiscol in 1:6){
+    nicetab[(2+myorder[thisrow]),thiscol]<-paste0(mytab[thisrow,thiscol],' (',
+                                                  round(100*myprop[thisrow,thiscol],1),'%)')
+  }
+}
+#rate of SocAnx
+forchi<-matrix(c(22,21,31,0,7,1),nrow=2,byrow=TRUE)
+chisq.test(forchi)
+```
+
+
+```{r beeswarm.function, include=FALSE}
+# make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,
+#                           pngwidth,pngheight,groupcolor,mylims,dodiffmean,addtext){
+# #Now do a grid of beeswarm plots
+# 
+# png_bees<-paste0(pngname,'.png')#name to save png file
+# png(png_bees,width=pngwidth,height=pngheight,res=300)
+# par(mfrow=pngdim) #5 row and 3 columns
+# par(mar=c(5.5,5.1,4.1,1),mgp=c(4, 2, 0)) #mar sets the bottom, left, top and right margins
+# #mgp – sets  axis label locations relative to the edge of the inner plot window. The first value represents the location the labels (i.e. xlab and ylab in plot), the second the tick-mark labels, and third the tick marks. The default is c(3, 1, 0). Here need 4,2,0 to avoid 2-line label colliding with frame.
+# 
+# #beeswarm jittered values (last value in jitter statement determines amount of jitter)
+# 
+# grouplevel<-sort(unique(mydata[,groupcol]))
+# #list of group values in numeric order
+# 
+# ngroup<-length(grouplevel)
+# 
+# pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3 (used here for m/f)
+# agebit<-pointcol[mydata[,subgroupcol]+1]
+# testrange<-which(colnames(mydata)%in%varlist)
+# for (i in 1:length(varlist)){
+#   mytitle<-namelist[i]
+#   mylabel<-'' #default is to not label y axis unless it is left-most column
+#   if((i-1)%%pngdim[2]==0){ #heh! gets modulus of i-1 relative to n columns, which is zero if leftmost!
+#     mylabel<-'Scaled score'
+#   }
+#   
+#   beeswarm(jitter(mydata[,testrange[i]],3)~mydata[,groupcol] , xlab='Group',ylab=mylabel,spacing=.8,
+#            pch = 16,pwpch=agebit,cex=1.5,col=groupcolor,main=mytitle,ylim=mylims[1:2],
+#            cex.axis=1.21,cex.lab=1.5,cex.main=1.5) 
+# 
+#   #add means
+#   for (g in 1:ngroup){
+#     myg<-grouplevel[g]
+#     mm<-mean(mydata[mydata[,groupcol]==myg,testrange[i]],na.rm=TRUE) #means for whole sample by group
+#     segments(g-.4,mm,g+.4,mm,col = 1,lty=1,lwd=2) #plot straight solid lines at mean for each group
+#     
+#     #plot dotted lines for means for age-matched groups, i.e ageband2
+#     if(dodiffmean==1){
+#       #identify cases for each group in ageband2
+#       w1<-which(mydata[,groupcol]==myg)
+#       w2<-which(mydata$ageband==2)
+#     shortrange<-intersect(w1,w2)
+#     mm2<-mean(mydata[shortrange,testrange[i]],na.rm=TRUE)
+#     segments(g-.4,mm2,g+.4,mm2,col = 1,lty=2,lwd=2) #dotted line for age 6-11
+#     }
+#   }
+#   abline(a=mylims[3],b=0,col='darkgray',lty=1)
+#   abline(a=mylims[4],b=0,col='darkgray',lty=2)
+#   abline(a=mylims[5],b=0,col='darkgray',lty=2)
+#   
+#   mean_TD<-mean(meanfile[,testrange[i]],na.rm=T)
+#   sd_TD<-sd(meanfile[,testrange[i]],na.rm=T)
+#   
+#   up.lim<-mean_TD+sd_TD
+#   low.lim<-mean_TD-sd_TD
+#   
+#   polygon(c(0,0,(ngroup+1),(ngroup+1)), c(up.lim, low.lim, low.lim, up.lim),
+#           col=adjustcolor("yellow",alpha.f=0.3), border = NA)
+#   if(addtext==1){
+#   text(2,mylims[2],'<---------Low Bias--------->')
+#   text(5,mylims[2],'<---------High Bias--------->')
+#   }
+# }
+# dev.off()
+# }
+
+```
+
+```{r beeswarm_srs, include=F,message=FALSE}
+#call the make.beeswarm function - this creates a png file
+# twin.TD<-filter(my.dawba,group8level==7) #we're using numeric code for factor level to make this easier
+# 
+# groupcol<-which(colnames(my.dawba)=='group8')
+# subgroupcol<-which(colnames(my.dawba)=='female')
+# varlist<-c('socaw_ss','soccog_ss','soccomm_ss','socmot_ss','autfeat_ss','srs_t_score')
+# namelist<-c('Soc. Awareness','Soc. Cognition','Soc. Communication','Soc. Motivation',
+#             'Autistic Features','SRS t-score')
+# meanfile<-twin.TD
+# pngname<-'beeswarm_srs'
+# pngdim<-c(3,2)
+# pngwidth<-3000
+# pngheight<-3000
+# groupcolor<-c(2,2,2,4,4,4,3) #specify colours for each group - 3 trisomies the same, then twinLD
+# mylims<-c(0,100,50,75,90) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
+# dodiffmean<-0
+# addtext<-0
+# w<-which(my.dawba$group8level != 7)
+# mydata<-my.dawba[w,]
+# mydata$group8<-droplevels(mydata$group8)#need this to stop it remembering empty level!
+# #levels(mydata$Group)[4]<-'Twin +\nConcerns'
+# make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+#                           groupcolor,mylims,dodiffmean,addtext)
+# 
+# #add sdq
+# pngname<-'beeswarm_sdq_SAS'
+# varlist<-c('emotional','conduct','hyperactivity','peer','prosocial','sas_total')
+# namelist<-c('Emotional','Conduct','Hyperactivity','Peer Relations',
+#             'Prosocial','Social Aptitude')
+# mylims<-c(0,30,0,0,0) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
+# make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+#                           groupcolor,mylims,dodiffmean,addtext)
+# 
+# plot(my.dawba$sas_total,my.dawba$srs_t_score,col=(1+my.dawba$trisomy))
+# plot(my.dawba1$genlang,my.dawba$srs_t_score,col=(1+my.dawba$trisomy))
+# temp<-as.matrix(select(my.dawba1,genlang,sas_total,srs_t_score))
+# rcorr(temp)
+# 
+
+```
+```{r lme}
+# #---------------------------------------------------------------------
+# # Test for impact of trisomy on the 5 SRS subscales
+# #---------------------------------------------------------------------
+# 
+# library(lme4)
+# library(lmerTest) #Adding this extra package provides p-values (if you want them) for your fixed effects.
+# myfit <- lmer(SRS.score ~ trisomy + SRS.subscale + trisomy*SRS.subscale + (1 | record_id),  
+#               data = lowbias.long)
+# summary(myfit)
+# plot(myfit) # residuals check - look ok 
+# qqnorm(residuals(myfit)) #check residuals - look fine.
+# #Test of unequal variance in trisomy groups.
+# library(car)
+# leveneTest(residuals(myfit) ~ lowbias.long$trisomy) # not significant so equality of variance in trisomy groups.
+# 
+# 
+# #Look at summary stats for score data by trisomy group
+# require(psych)
+# socaw<-describeBy(lowbias$socaw_ss,lowbias$trisomy) # some summary statistics to confirm.
+# soccog<-describeBy(lowbias$soccog_ss,lowbias$trisomy)
+# soccomm<-describeBy(lowbias$soccomm_ss,lowbias$trisomy)
+# socmot<-describeBy(lowbias$socmot_ss,lowbias$trisomy)
+# autfeat<-describeBy(lowbias$autfeat_ss,lowbias$trisomy)
+# 
+# mysrs.summary<-data.frame(matrix(rep(NA,33),nrow=3))
+# rownames(mysrs.summary)<-c('XXX','XXY','XYY')
+# colnames(mysrs.summary)<-c('N','Soc Aware','(SD)','Soc Cog','(SD)','Soc Comm','(SD)','Soc Motiv','(SD)','Aut feat','(SD)')
+# #write.csv(lowbias.long, "lowbias.long.csv",row.names=FALSE) 
+# for (i in 1:3){
+#  mysrs.summary[i,]<-c(unlist(socaw[i])[2],unlist(socaw[i])[3],unlist(socaw[i])[4],
+#                       unlist(soccog[i])[3],unlist(soccog[i])[4],
+#                       unlist(soccomm[i])[3],unlist(soccomm[i])[4],
+#                       unlist(socmot[i])[3],unlist(socmot[i])[4],
+#                       unlist(autfeat[i])[3],unlist(autfeat[i])[4])
+#   
+# }
+# mysrs.summary<-round(mysrs.summary,2)
+# file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_Files/data/"
+# write.csv(mysrs.summary, file = paste0(file.loc,"nicetab_srs.csv"))
+# 
+# write.csv(my.dawba,file=paste0(file.loc,'my_dawba_short.csv'))
+# 
+# #---------------------------------------------------------------------
+# # Test for impact of trisomy on the 5 SDQ subscales
+# #---------------------------------------------------------------------
+# myfit2 <- lmer(SDQ.score ~ trisomy + SDQ.subscale + trisomy*SDQ.subscale + (1 | record_id),  
+#               data = lowbias.long)
+# summary(myfit2)
+# plot(myfit2) # residuals check - look ok 
+# qqnorm(residuals(myfit2)) #check residuals - look fine.
+# #Test of unequal variance in trisomy groups.
+# leveneTest(residuals(myfit2) ~ lowbias.long$trisomy) # not significant so equality of variance in trisomy groups.
+# 
+# #---------------------------------------------------------------------
+# # Means on the 5 SDQ subscales
+# #---------------------------------------------------------------------
+# 
+# emotional<-describeBy(lowbias$emotional,lowbias$trisomy) # some summary statistics to confirm.
+# conduct<-describeBy(lowbias$conduct,lowbias$trisomy)
+# hyperactive<-describeBy(lowbias$hyperactivity,lowbias$trisomy)
+# peer<-describeBy(lowbias$peer,lowbias$trisomy)
+# prosocial<-describeBy(lowbias$prosocial,lowbias$trisomy)
+# 
+# mysdq.summary<-data.frame(matrix(rep(NA,33),nrow=3))
+# rownames(mysdq.summary)<-c('XXX','XXY','XYY')
+# colnames(mysdq.summary)<-c('N','Emotional','(SD)','Conduct','(SD)','Hyperactive','(SD)','Peer','(SD)','Prosocial','(SD)')
+# for (i in 1:3){
+#   mysdq.summary[i,]<-c(unlist(emotional[i])[2],unlist(emotional[i])[3],unlist(emotional[i])[4],
+#                        unlist(conduct[i])[3],unlist(conduct[i])[4],
+#                        unlist(hyperactive[i])[3],unlist(hyperactive[i])[4],
+#                        unlist(peer[i])[3],unlist(peer[i])[4],
+#                        unlist(prosocial[i])[3],unlist(prosocial[i])[4])
+#   
+# }
+# mysdq.summary<-round(mysdq.summary,2)
+# file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_Files/data/"
+# write.csv(mysdq.summary, file = paste0(file.loc,"nicetab_sdq.csv"))
+# 
+# ##################################################################################
+# #analysis of social anx and sep anx symptoms
+# ##################################################################################
+# socialanx<-describeBy(lowbias$socanx_concerns,lowbias$trisomy)
+# 
+# #social anxiety symptoms
+# table(lowbias$socanx_concerns,lowbias$trisomy)
+# table(lowbias$sepanx_concern,lowbias$trisomy)
+# table(lowbias$soc_vs_sep,lowbias$trisomy)
+# table(lowbias$socfear_level,lowbias$trisomy)
+# lowbias$sep_or_soc<-lowbias$socanx_concerns
+# w<-which(lowbias$sepanx_concern==1)
+# lowbias$sep_or_soc[w]<-1
+# sepsoctable<-table(lowbias$sep_or_soc,lowbias$trisomy)
+# 
+# #social anxiety symptoms whole sample
+# table(my.dawba1$socanx_concerns,my.dawba1$trisomy)
+# table(my.dawba1$sepanx_concern,my.dawba1$trisomy)
+# table(my.dawba1$soc_vs_sep,my.dawba1$trisomy)
+# table(my.dawba1$socfear_level,my.dawba1$trisomy)
+# my.dawba1$sep_or_soc<-my.dawba1$socanx_concerns
+# w<-which(my.dawba1$sepanx_concern==1)
+# my.dawba1$sep_or_soc[w]<-1
+# sepsoctable<-table(my.dawba1$sep_or_soc,my.dawba1$trisomy)
+# 
+# 
+
+```
+
+
+
+```{r preflowchart.sct, include=FALSE}
+#http://rich-iannone.github.io/DiagrammeR/graphviz_and_mermaid.html
+
+# Based on version done for twins by Alex Wilson
+# 1st nov 2017 - now with plot of SRS by group by diagnosis
+w<-which(sct.data$trisomy==9) #remove isochromosome
+sct.data<-sct.data[-w,]
+#Referral source
+nhscases<-c(70, 212, 213, 214, 215, 218, 221, 222, 223, 225, 229, 231,
+            233, 234, 237, 239, 240, 241, 247, 251, 252, 254, 255, 257,
+            258, 264, 265, 268, 270, 273, 274, 276, 283, 285, 297, 304,
+            306, 307, 310, 318, 319, 321, 322, 323, 327, 328, 329, 331,
+            334, 335, 336, 337, 340, 342, 346, 348, 351, 352, 355, 357,
+            358, 360, 362, 365, 367, 368, 369, 370)
+nhsset<-filter(sct.data,record_id %in% nhscases)
+othset<-setdiff(sct.data,nhsset)
+
+y<-table(nhsset$pre_postnatal_diag)
+z<-table(othset$pre_postnatal_diag)
+y1=y[1]
+y2=y[2]
+z1=z[1]
+z2=z[2]
+
+#Count for diagnosis pre or postnatal
+prenatals<-subset(sct.data,pre_postnatal_diag==0)
+postnatals<-subset(sct.data,pre_postnatal_diag==1)
+label1<-'Prenatal'
+label2<-'Postnatal'
+label3<-'When SCT identified'
+
+n.A<-nrow(postnatals) #Ns needed for flowchart are now computed
+n.B<-nrow(prenatals)
+
+# reason for testing 2 = Behaviour and 3 =Neurodev.
+biasgrp<-filter(sct.data,why_tested==3|why_tested==2)
+nobiasgrp<-filter(sct.data,why_tested<2|why_tested>3)
+n.C <-nrow(nobiasgrp)
+n.D <-nrow(biasgrp) 
+
+#subset by karyotype
+xxx1<-subset(nobiasgrp,trisomy==1)
+xxy1<-subset(nobiasgrp,trisomy==2)
+xyy1<-subset(nobiasgrp,trisomy==3)
+xxx2<-subset(biasgrp,trisomy==1)
+xxy2<-subset(biasgrp,trisomy==2)
+xyy2<-subset(biasgrp,trisomy==3)
+
+n.E<-nrow(xxx1)
+n.F<-nrow(xxy1)
+n.G<-nrow(xyy1)
+n.H<-nrow(xxx2)
+n.I<-nrow(xxy2)
+n.J<-nrow(xyy2)
+
+#now check DAWBA
+n.K=length(which(xxx1$asd_dsm_r1> -1))
+n.L=length(which(xxy1$asd_dsm_r1> -1))
+n.M=length(which(xyy1$asd_dsm_r1> -1))
+n.N=length(which(xxx2$asd_dsm_r1> -1))
+n.O=length(which(xxy2$asd_dsm_r1> -1))
+n.P=length(which(xyy2$asd_dsm_r1> -1))
+
+#now create flow chart ; TB denotes top to bottom
+#Need to add labels along the side: top row 'Reason for testing or Time of testing'
+#Then trisomy, then with DAWBA data
+```
+
+```{r flow_SCTa, include=FALSE}
+flow1a<-DiagrammeR::grViz("
+digraph a_nice_graph {
+        
+        # node definitions with substituted label text
+        node [shape = plaintext, fontname = Helvetica]
+        X[label='@@1']
+        Y[label= 'Bias']
+        Z[label= 'Trisomy']
+        ZZ[label = 'With DAWBA']
+        
+        node [shape=rectangle, width = 1,height=.6]
+        A[label='@@2']
+        B[label='@@3']
+        node [shape=square, fixedsize = true, width = .6,height=.6]
+        C[label='@@4']
+        D[label='@@5']
+        E[label='@@6']
+        F[label='@@7']
+        G[label='@@8']
+        H[label='@@9']
+        I[label='@@10']
+        J[label='@@11']
+        K[label='@@12']
+        L[label='@@13']
+        M[label='@@14']
+        N[label='@@15']
+        O[label='@@16']
+        P[label='@@17']
+        # edge definitions with the node IDs
+        A -> C
+        B -> {C D}
+        C -> {E F G}
+        D -> {H I J}
+        E -> K
+        F -> L
+        G -> M
+        H -> N
+        I-> O
+        J -> P
+    
+        X -> Y [alpha=0,color='white']
+        Y -> Z [alpha=0,color='white']
+       Z -> ZZ [alpha=0,color='white']
+}
+
+[1]: paste0(label3, ':\\n ',' Recruited from')
+[2]: paste0(label1,':\\n', 'NHS: N = ',y1,':\\n', 'Other: N = ',y2)
+[3]: paste0(label2,':\\n', 'NHS: N = ',z1,':\\n' ,'Other: N = ',z2)
+[4]: paste0('Low',':\\n', 'N = ',n.C)
+[5]: paste0('High',':\\n', 'N = ',n.D)
+[6]: paste0('XXX',':\\n', 'N = ',n.E)
+[7]: paste0('XXY',':\\n', 'N = ',n.F)
+[8]: paste0('XYY',':\\n', 'N = ',n.G)
+[9]: paste0('XXX',':\\n', 'N = ',n.H)
+[10]: paste0('XXY',':\\n', 'N = ',n.I)
+[11]: paste0('XYY',':\\n', 'N = ',n.J)
+[12]: paste0('N = ',n.K)
+[13]: paste0('N = ',n.L)
+[14]: paste0('N = ',n.M)
+[15]: paste0('N = ',n.N)
+[16]: paste0('N = ',n.O)
+[17]: paste0('N = ',n.P)
+")
+
+
+flow1a %>% export_svg %>% charToRaw %>% rsvg_png("SCT_asd_flow.png")
+
+```
+
+```{r preflowchart.twin, include=FALSE}
+#Now do plot for twin data 
+twin.short$exclude<-0
+w<-which(twin.short$neurodev_diag %in% c(3,37,389))
+twin.short$exclude[w]<-1
+w<-which(twin.short$piq<70)
+twin.short$exclude[w]<-3
+w<-which(twin.short$pass_hearing==0)
+twin.short$exclude[w]<-2
+
+myexclude<-table(twin.short$exclude)
+
+y1<-table(twin.short$exclude)
+
+inc1<-y1[[1]] #N individual twins included
+exc1<-nrow(twin.short)-inc1 #N excluded bcs ASD/hearing loss/lowIQ
+
+twin.short$withdawba <-0
+w<-which(twin.short$asd_dsm_r1 > -1)
+twin.short$withdawba[w]<-1
+
+twin.short.inc<-twin.short[twin.short$exclude==0,]
+
+noconcernM<-table(twin.short.inc$parent_conc[twin.short.inc$female==0])[[1]]
+concernM<-table(twin.short.inc$parent_conc[twin.short.inc$female==0])[[2]]
+
+noconcernF<-table(twin.short.inc$parent_conc[twin.short.inc$female==1])[[1]]
+concernF<-table(twin.short.inc$parent_conc[twin.short.inc$female==1])[[2]]
+
+dawba_LI_Y <- table(twin.short.inc$withdawba[twin.short.inc$parent_conc==1])[[2]]
+dawba_LI_N <- table(twin.short.inc$withdawba[twin.short.inc$parent_conc==1])[[1]]
+
+dawba_TD_Y <- table(twin.short.inc$withdawba[twin.short.inc$parent_conc==0])[[2]]
+dawba_TD_N <- table(twin.short.inc$withdawba[twin.short.inc$parent_conc==0])[[1]]
+
+#now create flow chart ; TB denotes top to bottom
+
+label3<-' '
+
+flow2<-DiagrammeR::grViz("
+            digraph twinflowdawba {
+            
+            # node definitions with substituted label text
+            node [shape = plaintext, fontname = Helvetica]
+            X[label='@@1']
+             Y[label= 'Exclude:\\n ASD, IQ, hearing']
+            Z[label= 'Total N twin children']
+            Q[label='DAWBA\\n available']
+            
+           node [shape=square,fixedsize = true, width = 1.4,height=1.2]
+            I[label='@@10']
+            A[label='@@2',fillcolor=lightBlue]
+            B[label='@@3']
+            
+            C[label='@@4']
+            D[label='@@5']
+            E[label='@@6']
+            F[label='@@7']
+            G[label='@@8']
+            H[label='@@9']
+            
+            # edge definitions with the node IDs
+            I -> {A B}
+            B -> {G H}
+            G -> {C D}
+            H -> {E F}
+            
+            X -> Y [alpha=0,color='white']
+            Y -> Z [alpha=0,color='white']
+            Z -> Q [alpha=0,color='white']
+            }
+            
+            [1]: paste0(label3, ':\\n ',' ')
+            [2]: paste0('Excluded:\\n N = ',exc1)
+            [3]: paste0('Included:\\n N = ',inc1)
+            [4]: paste0('with DAWBA:\\nN = ',dawba_LI_Y)
+            [5]: paste0('without DAWBA:\\nN = ',dawba_LI_N)
+            [6]: paste0('with DAWBA:\\nN = ',dawba_TD_Y)
+            [7]:  paste0('without DAWBA:\\nN = ',dawba_TD_N)
+            [8]: paste0('Parental concern \\n or SALT,\\n N (male) = ',concernM,'\\n N (female) = ',concernF)
+            [9]: paste0('No concern \\n No SALT,\\n N (male) = ',noconcernM,'\\n N (female) = ',noconcernF)
+            [10]: paste0(y1,' twin pairs, \\n 1 selected at \\n random')
+            
+            ")
+
+flow2 %>% export_svg %>% charToRaw %>% rsvg_png("twins_flow_dawba.png")
+
+```
+
+
 
 
 #Abstract
 
-**Background**: Early studies of children with sex chromosome trisomies documented an association with language disorder, but more recent research has suggested an elevated risk for autism spectrum disorder (ASD), especially in males with 47,XXY (Klinefelter syndrome) and 47,XYY karyotypes. However, there is also evidence that an additional X chromosome is associated with high levels of social anxiety, raising the question of how far this is distinct from ASD. **Aims**: (1) To compare rates of social impairments in children with an extra X chromosome, i.e. girls with trisomy X (47,XXX karyotype) and boys with Klinefelter syndrome, versus those with an additional Y chromosome (boys with XYY syndrome); (2) To consider how far social impairments in all three groups are linked to ASD. **Methods**: We compared three sources of information: existing diagnoses, diagnoses from an online psychiatric assessment (DAWBA) and an autism-sensitive questionnaire, the Social Responsiveness Scale, completed by parents in children with 47,XXX (N = `r nxxx`), 47,XXY (N = `r nxxy`) and 47,XYY (N = `r nxyy`) karyotypes to consider how prevalent social impairments were in the three trisomy types, and how far they could be attributed to ASD. **Results**: We distinguished between a High Bias subgroup, whose trisomy was discovered when investigating behavioural or neurodevelopmental concerns, and a Low Bias subgroup who were diagnosed prenatally or on the basis of other medical concerns in childhood. Only three children (both from Low Bias group, two with XXX and one with XXY) had social anxiety without an ASD diagnosis. A further seven boys had a joint diagnosis of social anxiety and ASD: five were XXY cases, and four of these came from the High Bias group. Rates of ASD diagnosis on DAWBA in children with an extra X chromosome were higher than general population prevalence, but nevertheless only a minority of children were affected. In cases of XYY, however, ASD was substantially higher, affecting `r p1.XYY.asd.d`% of the Low Bias group, and `r p2.XYY.asd.d`% of the High Bias group. When parental report of ASD diagnosis was included as well as DAWBA diagnosis, these rates rose to `r p1.XYY.asd`% of the Low Bias group affected, and `r p2.XYY.asd`% of the High Bias group. **Discussion and Conclusions**: Social anxiety is relatively rare in non-autistic children with sex chromosome trisomies: numbers were too small to give confident conclusions, but, in line with prediction, the three cases with this diagnosis all had an extra X chromosome. In boys with an extra Y chromosome, ASD was found in around half the Low Bias sample, although outcomes were very variable, with some boys having no indication of any autistic features. It is important to note that where an extra chromosome is identified in the course of investigating behavioural or neurodevelopmental problems, rates of ASD will be artificially inflated.
+**Background**: Early studies of children with sex chromosome trisomies documented an association with language disorder, but more recent research has suggested an elevated risk for autism spectrum disorder (ASD), especially in males with 47,XXY (Klinefelter syndrome) and 47,XYY karyotypes. However, there is also evidence that an additional X chromosome is associated with high levels of social anxiety disorder, raising the question of how far this is distinct from ASD. **Aims**: (1) To compare rates of social impairments in children with an extra X chromosome, i.e. girls with trisomy X (47,XXX karyotype) and boys with Klinefelter syndrome, versus those with an additional Y chromosome (boys with XYY syndrome); (2) To consider how far social impairments in all three groups are linked to ASD. **Methods**: We compared three sources of information: existing diagnoses, diagnoses from an online psychiatric assessment (DAWBA) and an autism-sensitive questionnaire, the Social Responsiveness Scale, completed by parents in children with 47,XXX (N = `r n.K+n.N`), 47,XXY (N = `r n.L+n.O`) and 47,XYY (N = `r n.M+n.P`) karyotypes to consider how prevalent social impairments were in the three trisomy types, and how far they could be attributed to ASD. **Results**: We distinguished between a High Bias subgroup, whose trisomy was discovered when investigating behavioural or neurodevelopmental concerns, and a Low Bias subgroup who were diagnosed prenatally or on the basis of other medical concerns in childhood. Only three children (both from Low Bias group, two with XXX and one with XXY) had social anxiety without an ASD diagnosis. A further seven boys had a joint diagnosis of social anxiety and ASD: five were XXY cases, and four of these came from the High Bias group. Rates of ASD diagnosis on DAWBA in children with an extra X chromosome were higher than general population prevalence, but nevertheless only a minority of children were affected. In cases of XYY, however, ASD was substantially higher, affecting x% of the Low Bias group, and x% of the High Bias group. When parental report of ASD diagnosis was included as well as DAWBA diagnosis, these rates rose to x% of the Low Bias group affected, and `x% of the High Bias group. **Discussion and Conclusions**: Social anxiety is relatively rare in non-autistic children with sex chromosome trisomies: numbers were too small to give confident conclusions, but, in line with prediction, the three cases with this diagnosis all had an extra X chromosome. In boys with an extra Y chromosome, ASD was found in around half the Low Bias sample, although outcomes were very variable, with some boys having no indication of any autistic features. It is important to note that where an extra chromosome is identified in the course of investigating behavioural or neurodevelopmental problems, rates of ASD will be artificially inflated.
  
 
 # Introduction
-<!Based on Alex's review but with the SCT material foregrounded>
 Chromosome trisomies arise from an error of cell division during meiosis, so that either the egg or sperm contains two rather than one copy of the chromosome. When a trisomy affects one of the autosomes, this is often lethal, or causes severe physical and mental abnormalities. Trisomies of the sex chromosomes, however, have much milder effects, and often go undetected. This makes study of the impact of sex chromosome trisomies difficult, because those cases who do come to attention may be atypical, with genetic testing being prompted by developmental abnormalities.
 
 In the 1960s, several centres came together with the aim of evaluating the impact of sex chromosome trisomies in samples identified on newborn screening. The three kinds of trisomy - trisomy X (47,XXX), Klinefelter's syndrome (47,XXY) and 47,XYY karotypes were all found to be associated with neurodevelopmental problems, particularly affecting language and motor functions, though varying in profile and severity both within and between the three karyotypes {Leggett, 2010 #17405}. 
 
-More recent studies, however, have noted an increased risk of autism spectrum disorder (ASD) in males: both those with Klinefelter's syndrome and those with XYY karyotype {Bishop, 2011 #17168}. Furthermore, in all three trisomies, communication problems affecting pragmatic as well as structural domains of communication were found on the Children's Communication Checklist-2 {Bishop, 2003 #13641}, after excluding those with a diagnosis of ASD. 
+More recent studies, however, have noted an increased risk of autism spectrum disorder (ASD) in males: both those with Klinefelter's syndrome and those with XYY karyotype {Van Rijn, 2008 #16706}, {Bishop, 2011 #17168},{Ross, 2012 #18868},{Joseph, 2018 #38796}. Furthermore, in all three trisomies, communication problems affecting pragmatic as well as structural domains of communication can be found on the Children's Communication Checklist-2 {Bishop, 2003 #13641},{Bishop, 2018 #38799}, even after excluding those with a diagnosis of ASD. 
 
-The question arises as to why an increased risk of ASD was not identified in  earlier studies. One important consideration is whether ascertainment bias leads to overestimation of autism rates; the systematic review by  Leggett et al (2010) was restricted to studies of population samples that were unlikely to be affected by ascertainment bias, and though verbal abilities were depressed on average, ASD was not mentioned. However, the sample by Bishop et al (2011) included a substantial proportion of cases identified on prenatal screening: although rates of neurodevelopmental disorder in general were lower in these cases than in those identified postnatally, ASD rates were nevertheless elevated in those identified before birth. It was suggested that the most likely explanation was 'diagnostic substitution' - i.e., the broadening of diagnostic criteria for ASD between DSM-III and DSM-IV would mean that children who had hitherto been regarded as language-disordered would now be eligible for an ASD diagnosis. Other possibilities that cannot be ruled out include a genuine increase in ASD as a consequence of increased parental age, and/or an unknown environmental factor. 
+The question arises as to why an increased risk of ASD was not identified in  earlier studies. It is important to note that the early studies reviewed by Leggett et al {Leggett, 2010 #17405} focused on cases identified on neonatal screening, who tend to have milder difficulties than children with trisomies identified in the course of investigation for neurodevelopmental problems. Nevertheless, the sample by Bishop et al (2011) included a substantial proportion of cases identified on prenatal screening: although rates of neurodevelopmental disorder in general were lower in these cases than in those identified postnatally, ASD rates were nevertheless elevated in boys identified before birth. It was suggested that the most likely explanation was 'diagnostic substitution' - i.e., the broadening of diagnostic criteria for ASD between DSM-III and DSM-IV would mean that children who had hitherto been regarded as language-disordered would now be eligible for an ASD diagnosis. Other possibilities that cannot be ruled out include a genuine increase in ASD as a consequence of increased parental age, and/or an unknown environmental factor. 
 
-Other research, however, suggests another possibility, namely that there may be a tendency to give a diagnosis of ASD when a child has problems with social interaction, even if other features of autism such as pragmatic oddities in communication, restricted interests and repetitive behaviours, and sensory abnormalities are absent. Of particular interest is the idea that social anxiety, which has been described in children with an extra X chromosome, might be misdiagnosed as ASD. *Could elaborate here with Frith model*
+Other research, however, suggests another possibility, namely that there may be a tendency to give a diagnosis of ASD when a child has problems with social interaction, even if other features of autism such as pragmatic oddities in communication, restricted interests and repetitive behaviours, and sensory abnormalities are absent. Of particular interest is the idea that social anxiety, which has been described in children with an extra X chromosome, might be misdiagnosed as ASD. 
 
-Van Rijn and colleagues {Van Rijn, 2014 #38662} compared a sample of young people (aged 9 – 18) with an extra X chromosome to those with an ASD diagnosis, using the Social Responsiveness Scale (SRS) {Constantino, 2005 #14237}. The rationale behind the SRS is that ASD is not a qualitatively distinct disorder, but is the extreme point on a continuum of impairment. The SRS  was developed to quantify social and related impairments characteristic of autism in the broader population. Van Rijn et al found that the extra X group (overall M = 66.6, SD = 31.5; XXX M = 63.8, SD = 31.7; XXY M = 68.7, SD = 31.7) showed significantly higher total SRS T-scores than the control group (M = 26.3, SD = 16.3), but lower scores than the ASD group (M = 97.6, SD = 28.8). 44.2% of the extra X group scored above the threshold indicating clinically significant impairment (defined here as 65). However, the extra X group also showed significantly higher social anxiety on all five subscales of the Social Anxiety Scale (SAS) than both the ASD and the control group. In terms of mean SAS scores, Cohen’s d for the difference between the extra X and the control group was 0.8, and between the extra X and the ASD group was 0.2. 
+Van Rijn and colleagues {Van Rijn, 2014 #38662} compared a sample of young people (aged 9 – 18) with an extra X chromosome to those with an ASD diagnosis, using the Social Responsiveness Scale (SRS) {Constantino, 2005 #14237}. The rationale behind the SRS is that ASD is not a qualitatively distinct disorder, but is the extreme point on a continuum of impairment. The SRS  was developed to quantify social and related impairments characteristic of autism in the broader population, and is scored so that the population mean is 50 (SD = 10), with high scores corresponding to impairment. Van Rijn et al found that the extra X group (XXX M = 63.8, SD = 31.7; XXY M = 68.7, SD = 31.7) showed significantly higher total SRS T-scores than a control group (M = 26.3, SD = 16.3), but lower scores than an ASD comparison group (M = 97.6, SD = 28.8). 44.2% of the extra X group scored above the threshold indicating clinically significant impairment (defined here as 65). However, the extra X group also showed significantly higher social anxiety on all five subscales of the Social Anxiety Scale (SAS) than both the ASD and the control group. In terms of mean SAS scores, Cohen’s d for the difference between the extra X and the control group was 0.8, and between the extra X and the ASD group was 0.2. 
 
-At first glance, these results might suggest that an extra X chromosome creates an increased risk of both ASD and social anxiety. However, there is mounting evidence that while the SRS may be sensitive to ASD, it is not very specific. A number of studies have shown that high scores on the SRS are not restricted to those with a diagnosis of autism, but are also reported for young people with a range of diagnoses, including conduct disorder, ADHD and anxiety (e.g., {Pine, 2008 #39110}; {Towbin, 2005 #39111}; {Bölte, 2011 #39115}; {Settipani, 2012 #39113}; {Cholemkery, 2014 #39112}; {South, 2017 #39114}).
+At first glance, these results might suggest that an extra X chromosome creates an increased risk of both ASD and social anxiety. However, there is mounting evidence that while the SRS may be sensitive to ASD, it is not very specific. A number of studies have shown that high scores on the SRS are not restricted to those with a diagnosis of autism, but are also reported for young people with a range of diagnoses, including conduct disorder, ADHD and anxiety (e.g., {Pine, 2008 #39110}; {Towbin, 2005 #39111}; {Bölte, 2011 #39115}; {Settipani, 2012 #39113}; {Cholemkery, 2014 #39112}; {South, 2017 #39114}).In a study of males with XYY karyotype, Joseph et al (2018) found that elevated SRS scores were characteristic of this group, especially those identied postnatally, but the specificity of the SRS was poor, with high scores seen in those with a range of types of psychiatric symptomatology.
 
-This raises the question of whether there may be specific items on the SRS that are more sensitive to autism symptoms. Moul and colleagues (2015) attempted to address this in a large mixed clinical sample (N = 522), though with limited success. They found mean SRS total T-scores above the normal range in all their groups, including ASD (N = 18, M = 83.9), anxiety (N = 22, M = 61.7), and co-morbid diagnoses, of whom 38 had an ASD diagnosis (N = 298, M = 72.4). Notably, 73% of those with “pure” anxiety and 82% of the co-morbid sample were in the ‘autism likely’ range, defined as a T-score of 60 or above. ANOVAs identified 16 items of the SRS on which the “pure” ASD group scored more highly than the other groups with “pure diagnoses”; these items were grouped as the SRS-brief. At the cut-off of 60, the full-scale SRS showed a sensitivity of .96, but a very high false positive rate of .75, for ASD in the whole sample. The SRS-brief showed the same sensitivity and a marginally better, though still inadequate, specificity of .56. ROC curve analysis indicated an optimal cut-off of 76.5, with a sensitivity of .82 and a specificity of .72; the SRS-brief did not show any advantages in calculation of an optimal cut-off. 
+This raises the question of whether there may be specific items on the SRS that are more sensitive to autism symptoms. Moul and colleagues {Moul, 2015 #38800} attempted to address this in a mixed clinical sample (N = 522), though with limited success. They found mean SRS total T-scores above the normal range in all their groups, including ASD (N = 18, M = 83.9), anxiety (N = 22, M = 61.7), and co-morbid diagnoses, of whom 38 had an ASD diagnosis (N = 298, M = 72.4). Notably, 73% of those with “pure” anxiety and 82% of the co-morbid sample were in the ‘autism likely’ range, defined as a T-score of 60 or above. At the cut-off of 60, the full-scale SRS showed a sensitivity of .96, but a very high false positive rate of .75, for ASD in the whole sample. The authors went to on create a SRS-brief scale based on 16 items from the SRS on which the “pure” ASD group scored higher than the other groups with “pure diagnoses”. The SRS-brief showed the same sensitivity as the full SRS total, and a marginally better, though still inadequate, specificity of .56. 
 
-Most of the focus of studies of children with sex chromosome trisomies using the SRS have focused on the impact of an additional X chromosome. In contrast, Cordeiro and colleagues (2012) compared groups of children with XXY and XYY chromosome complements, and found that the XXY group had significantly less impairment than the XYY group by total SRS T-score (XXY M = 62.0, SD = 15.4; XYY M = 72.8, SD = 15.8). There was evidence of ascertainment bias in this study (but not in van Rijn et al, 2014), with prenatally diagnosed children (XXY M = 58.6, SD = 14.2; XYY = 63.5, SD = 15.6) having lower total SRS T-scores than postnatally diagnosed children (XXY M = 66.3, SD = 16.1; XYY M = 77.3, SD = 14.1). 47.1% of all the XXY children and 85% of the XYY children scored above the threshold for social impairment (defined as 60). Scores on individual SRS subscales were very similar to total scores, with significantly worse results for XXY children compared to XYY children on all subscales, except Social Motivation, on which they scored the same; this scale represented a relative strength for the XYY group in terms of their overall profile. For the XXY group, means were above the 60 cut-off on all subscales expect Social Awareness, which represented a relative strength for this group. Interestingly, these patterns for XXY boys to score relatively better on Social Awareness than other subscales and for XYY boys to score relatively better on Social Motivation than other subscales have been replicated in other studies (XXY: Tartaglia et al., 2010; XYY: Ross et al., 2015). This pattern indicates that there may be ‘characteristic profiles’ of social difficulties in children with SCTs, which is an interesting echo of earlier work that suggested that Klinefelter’s Syndrome was associated with a particular personality style (characterised as shy, sensitive and passive, Herlihy et al, 2011). 
+Most of the focus of studies of children with sex chromosome trisomies using the SRS have focused on the impact of an additional X chromosome. In contrast, Cordeiro and colleagues {Cordeiro, 2012 #38802} compared groups of children with XXY and XYY chromosome complements, and found that the XXY group had significantly less impairment than the XYY group by total SRS T-score (XXY M = 62.0, SD = 15.4; XYY M = 72.8, SD = 15.8). There was evidence of ascertainment bias in this study, with prenatally diagnosed children (XXY M = 58.6, SD = 14.2; XYY = 63.5, SD = 15.6) having lower total SRS T-scores than postnatally diagnosed children (XXY M = 66.3, SD = 16.1; XYY M = 77.3, SD = 14.1). 47.1% of all the XXY children and 85% of the XYY children scored above the threshold for social impairment (defined as 60). Scores on individual SRS subscales were very similar to total scores, with significantly more impairment for XXY children compared to XYY children on all subscales, except Social Motivation, on which they scored the same; this scale represented a relative strength for the XYY group in terms of their overall profile. For the XXY group, means were above the 60 cut-off on all subscales expect Social Awareness, which represented a relative strength for this group. Interestingly, these patterns for XXY boys to score relatively better on Social Awareness than other subscales and for XYY boys to score relatively better on Social Motivation than other subscales have been replicated in other studies (XXY: Tartaglia et al., 2010; XYY: Ross et al., 2015). This pattern indicates that there may be ‘characteristic profiles’ of social difficulties in children with SCTs, which is an interesting echo of earlier work that suggested that Klinefelter’s Syndrome was associated with a particular personality style (characterised as shy, sensitive and passive, Herlihy et al, 2011). 
 
-It may, therefore, be productive to identify, not only the SRS subscales that catch problems experienced by children with SCTs, but also specific items that are commonly endorsed at the group level to establish whether there is a characteristic phenotype, especially if the factor structure of the SRS is not the same in this group as in those with ASD. It would also be of interest to identify whether there are differences in the SRS items endorsed for children with an SCT who are also diagnosed with ASD to those who are not.
+It may, therefore, be productive to identify, not only the SRS subscales that are sensitive to problems experienced by children with SCTs, but also specific items that are commonly endorsed at the group level to establish whether there is a characteristic phenotype. 
 
-Taken together, these studies indicate that an increased likelihood of a clinical range score is seen in children who have an extra X or Y chromosome, but the pattern of results suggests there may be a different profile depending on karyotype. Studies of children who do not have trisomies have shown that many children and young people with anxiety score within the clinically significant range of the SRS. Indeed, the specificity of the SRS, when Youden’s factor (ref) is used to calculate an optimal cut-off on ROC curves, indicates that when differentiating between ASD and anxiety, about 1 in every 4 young people is classified as having ASD by the SRS when their existing diagnosis is anxiety not ASD. Notably, these cut-offs are invariably around 75, suggesting that to differentiate between anxiety and autism in clinical samples, the screening threshold suggested by the SRS manual (i.e. 60) is too low. Of course, the high SRS scores in those with social anxiety could reflect undiagnosed autistic deficits in social interaction; however, they could also reflect a miscategorisation of anxiety-related social behaviours that look like autism, but are cognitively different (Tyson & Cruess, 2012).
+Taken together, these studies indicate that an increased likelihood of a clinical range score is seen in children who have an extra X or Y chromosome, but the pattern of results suggests there may be a different profile depending on karyotype. Studies of children who do not have trisomies have shown that many children and young people with anxiety score within the clinically significant range of the SRS. Indeed, the specificity of the SRS, when Youden’s factor (ref) is used to calculate an optimal cut-off on ROC curves, indicates that when differentiating between ASD and anxiety, about 1 in every 4 young people is classified as having ASD by the SRS when their existing diagnosis is anxiety not ASD. Notably, these cut-offs are invariably around 75, suggesting that to differentiate between anxiety and autism in clinical samples, the screening threshold suggested by the SRS manual (i.e. 60) is too low. Of course, the high SRS scores in those with social anxiety could reflect undiagnosed autistic deficits in social interaction; however, they could also reflect a miscategorisation of anxiety-related social behaviours that look like autism, but are cognitively different {Tyson, 2012 #39118}.
 
-The goal of the current study was to compare profiles of social impairment in children with an extra sex chromosome, using information from prior diagnosis, an online diagnostic instrument (the DAWBA) and the SRS.
+The goal of the current study was to evaluate profiles of social impairment and autistic features in children with an extra sex chromosome, using information from prior diagnosis, parental interview, an online diagnostic instrument (the DAWBA) and the SRS.
+
+Specific predictions were: 
+1. In line with previous research, we expected to find an increased rate of autistic features in all three trisomies, but with confirmed autism diagnoses elevated only in boys with XXY or XYY. 
+2. Social anxiety symptoms were expected to be higher in children with an extra X chromosome (XXY and XXX) than in boys with an extra Y.
+3. Consistent with previous findings, we anticipate that ascertainment bias will affect results, and levels of social and psychiatric impairment will be substantially higher in children identified in the course of investigation for developmental disorders, than in other children with sex chromosome trisomies.
+4. Extending the work by Joseph et al (2018), we expected that children with all three types of trisomy will have elevated scores on the SRS, but this will not necessarily be indicative of ASD.
+5. Finally, we predict that social impairment and autistic features in children with sex chromosome trisomies will be consistent with the level of language impairment. To test this idea we will consider how well language level predicts SRS scores, both within the group with trisomies, and in relation to a comparison group of children with language difficulties of unknown origin.
 
 # Methods
 We report how we determined our sample size, all data exclusions, all manipulations, and all measures in the study. <!-- 21-word solution (Simmons, Nelson & Simonsohn, 2012; retrieved from http://ssrn.com/abstract=2160588) -->
 
-## Participants
-The analysis was conducted on data from 87 children (29 with XXX, 26 with XXY and 32 with XYY) whose parents had completed the Development and Wellbeing Assessment (DAWBA). As shown in Figure 1, these came from a larger sample of 140 children who participated in a study of language and laterality in sex chromosome trisomies. As shown in Figure 1, children were recruited from National Health Service Clinical Genetics centres, from two support groups: Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association, or from self-referral via social media. A criterion for inclusion was that the child was aware of their trisomy status. Figure 1 distinguishes between cases where the trisomy was discovered in childhood during investigations for behavioural or neurodevelopmental problems, as the latter group suffer from ascertainment bias and are likely to a high rate of disorder that is not  representative of that karyotype. These are referred to as the 'High Bias' subgroup. An unexpected feature of the sample was that the majority of girls with trisomy X were in the Low Bias subgroup, whereas the majority of boys with XXY or XYY were in the High Bias subgroup, suggesting that these karyotypes were more likely to be associated with neurodevelopmental problems. 
-![<b>Figure 1</b>. Flowchart showing numbers of children with each karyotype in the study, in relation to whether prenatally or postnatally diagnosed, whether high ascertainment bias, and whether DAWBA was completed.](/Users/dorothybishop//Dropbox/ERCadvanced/project SCT analysis/SCT_ASD_analysis/Project_Files/plots/fig1_flowchart.png)
+## Participants 
+### Children with sex chromosome trisomies 
+The analysis was conducted on data from `r n.K+n.L+n.M+n.N+n.O+n.P` children (`r n.K+n.N` with XXX, `r n.L+n.O` with XXY and `r n.M+n.P` with XYY) whose parents had completed the Development and Wellbeing Assessment (DAWBA). As shown in Figure 1, these came from a larger sample of `r n.C+n.D` children who participated in a study of language and laterality in sex chromosome trisomies, whose genetic, laterality and language characteristics have been reported in previous papers (xxx). Children were recruited from National Health Service Clinical Genetics centres, from two support groups: Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association, or from self-referral via social media. A criterion for inclusion was that the child was aware of their trisomy status. Figure 1 distinguishes between cases where the trisomy was discovered in childhood during investigations for behavioural or neurodevelopmental problems, as the latter group suffer from ascertainment bias and are likely to a high rate of disorder that is not  representative of that karyotype. These are referred to as the 'High Bias' subgroup. An unexpected feature of the sample was that the majority of girls with trisomy X were in the Low Bias subgroup, whereas the majority of boys with XXY or XYY were in the High Bias subgroup, suggesting that these karyotypes were more likely to be associated with neurodevelopmental problems. 
+In a previous report based on this sample (Bishop et al, 2018), we noted that the likelihood of parents completing checklists for this study was lower if the child had significant language problems. This prompted us to compare children whose parents did and did not complete the DAWBA, using a language factor score (see below) as an indicator of language level. A t-test revealed that, as before with checklist completion, parents who completed the DAWBA had children with milder language problems: mean for those who completed DAWBA was `r round(my.t.dawba$estimate[2],1)` versus `r round(my.t.dawba$estimate[1],1)` for the remainder, t (`r round(my.t.dawba$parameter,1)`) = `round(my.t.dawba$statistic,1)`.
+
+![<b>Figure 1</b>. Flowchart showing numbers of children with each karyotype in the study, in relation to whether prenatally or postnatally diagnosed, whether high ascertainment bias, and whether DAWBA was completed.](SCT_asd_flow.png)
+
+### Comparison sample 
+A comparison sample of twin children was recruited via fliers sent to primary schools around the UK, advertisements on our group's website and via twins' clubs. The age range for this sample was narrower than for the sex chromosome trisomy cases: 6 years 0 months to 11 years 11 months. The sample was recruited to be over-representative of cases where parents were concerned about the language development of one or both twins. Further details are provided in Wilson and Bishop {Wilson, 2018 #38731} and Bishop et al (2018). 
+As in our previous analysis (Bishop et al, 2018), we selected one twin at random to avoid dependencies in the data, and we excluded three children with evidence of autism spectrum disorder, significant hearing loss or intellectual disability. Children were then subdivided according to whether parents had expressed concern about persisting mild or severe language problems, or where the child had had speech and language therapy beyond 4 years of age. The remaining children were in a 'No Concerns' group, which was used to provide a normative range for some of the assessments. Figure 2 shows a flowchart indicating how twins were selected. The DAWBA was completed for `r dawba_LI_Y+dawba_TD_Y` of `r inc1` (`r round(100*(dawba_LI_Y+dawba_TD_Y)/inc1,1)`%) of these children.
+
+![<b>Figure 2</b>. Flowchart showing numbers of children in comparison group, in relation to whether there was parental concern about language, and whether DAWBA was completed.](twins_flow_dawba.png)
 
 ## Material\
 
 ### Psychiatric evaluation
 \
 In an initial telephone interview, parents were asked about the child's medical and educational history, including a question about whether anyone had diagnosed the child with a neurodevelopmental disorder such as ASD, developmental language disorder (DLD) or specific language impairment (SLI), dyslexia or dyspraxia. 
-In addition, one or both parents were asked to complete the online Development and Wellbeing Assessment (DAWBA) in their own time. 86 families (one with two affected children) complied with this request. The DAWBA gives information on likelihood of the child meeting criteria for a range of psychiatric diagnoses, but the final diagnosis is made by a trained rater who assimilates all the information and evaluates it against both ICD and DSM criteria. For this project, all interviews were coded by the first author, and a further 30 interviews were coded by a second independent rater to check on diagnostic agreement. The raters doing the coding was blind to the trisomy status of the child.
+In addition, one or both parents were asked to complete the online Development and Wellbeing Assessment (DAWBA){Goodman, 2000 #18146} in their own time. 86 families (one with two affected children) complied with this request. The DAWBA includes a range of questions relating to DSM5 and ICD10 diagnostic criteria, risk factors, and impact on the family, which are supplemented by optional free text. In addition, the DAWBA incorporates the Strength and Difficulties Questionnaire (SDQ) (Goodman, 1997), and the Social Aptitudes Scale (Liddle, 2009), which are described more fully below. 
+The DAWBA software codes the items relevant to different diagnoses to give a score indicating the likelihood of the child meeting criteria for a range of psychiatric diagnoses, with the final diagnosis being made by a trained rater who assimilates all the quantitative and qualitative information. DAWBA has been used to obtain prevalence estimates for psychiatric disorders for a representative sample of over 10,000 children in the UK (Meltzer et al., 2000). Validity of DAWBA for diagnosis of autism has been shown to be acceptable (McEwen et al, 2016).  
+All interviews with SCT cases were coded against DSM5 criteria by the first author (AW), and a further 30 interviews were coded by a second independent rater (JK) to check on diagnostic agreement. The rater doing the coding was blind to the trisomy status of the child, although occasionally this was mentioned by parents in free text comments. Cases of disagreement were resolved by the last author (DVMB), who gave a final consensus rating that was used here. All interviews with comparison twins were coded by the last author (DVMB). *(This is not ideal as it gives a confound) *. As well as assigning diagnoses, the rater completed two checklists that capture overall severity of problems:  the Children's Global Assessment Scale (CGAS) (Shaffer et al., 1983), and the Health of the Nation Outcome Scales for Children and Adolescents (HoNOSCA) (Gowers et al., 1999).
+*(Not sure if we will use these here)*. 
+For this analysis, we focused on DSM5 diagnoses of Autism Spectrum Disorder (ASD) and Social Anxiety Disorder. ASD was coded as absent (0) or present (2), with a code of 1 given for significant autism symptoms that fell short of diagnostic criteria. Most of the latter group would qualify as cases of Social Communication Disorder (SCD), in that they showed evidence of social and communicative difficulties, but did not have repetitive behaviours and restricted interests to a sufficient level to merit an ASD diagnosis. Accordingly, we will refer to those scoring 1 on this domain as cases of SCD.
+The criteria for Social Anxiety Disorder (SocAnx) include a marked and persistent fear of one or more social situations where the individual may be subject to scrutiny by others. For a diagnosis of SocAnx the symptoms must significantly with everyday life. In children, the anxiety must occur in peer settings, not just with adults, must be disproportionate to the situation, and not better explained by another disorder such as ASD. SocAnx is differentiated from Separation Anxiety and General Anxiety Disorder by the situational specificity of the anxiety.
+
+## Parental questionnaires 
+
+_Strength and Difficulties Questionnaire (SDQ) (Goodman, 1997)._
+The SDQ was incorporated in the online DAWBA assessment. SDQ is a questionnaire used to screen children's behaviour on five dimensions: 1) emotional symptoms (5 items); 2) conduct problems (5 items); 3) hyperactivity/inattention (5 items); 4) peer relationship problems (5 items); 5) prosocial behaviour (5 items). Norms are available for a representative sample of over 10,000 British children aged from 5 to 15 years (Meltzer et al., 2000). 
+
+_Social Aptitudes Scale (SAS) (Liddle et al, 2009)._
+This 10-item scale forms part of the DAWBA and was designed to tap skills in social understanding and behaviour that vary substantially in the general population. The behaviours surveyed in SAS relate to impairments of social understanding characteristic of ASD rather than to social anxiety.
+
+_The Children's Communication Checklist-2 (CCC-2)._
+\ 
+*(more info to be added here - if we decide to include it)* 
+
+_The Social Responsiveness Scale (SRS)._ 
+\ 
+The SRS is a 70-item scale designed to measure autism-related impairments as quantitative trait. It is composed of five subscales: social cognition, social awareness, social motivation, social communication and autistic features. Score on each subscale, and on the total scale, can be represented as T-scores with mean 50 and SD of 10, with impairment represented as a positive score. More information on previous research with SRS is provided in the introduction.
+
+
 
 ### Language, literacy and cognitive assessments
 \
 
-All children were seen for a detailed neurocognitive assessment and language assessment lasting around 1.5 to 2 hours. In addition, handedness and language laterality were assessed, the latter involving a child-friendly functional transcranial Doppler ultrasound paradigm (Groen et al, 2012). Results from these assessments will be described elsewhere.
-
-## Parental questionnaires
-
-_The Children's Communication Checklist-2 (CCC-2)._
-\ 
-(more info to be added here)
-_The Social Responsiveness Scale (SRS)._
-\ 
-(more info to be added here)
+All children were seen for a detailed neurocognitive assessment and language assessment lasting around 1.5 to 2 hours. The test battery and results from these assessments are described in a companion paper (Bishop et al., 2018). In addition, handedness and language laterality were assessed, the latter involving a child-friendly functional transcranial Doppler ultrasound paradigm {Groen, 2012 #18663}. Results from these assessments have been described elsewhere (Wilson & Bishop, 2018). 
+For the current paper, we will focus on two composite measures from the neurocognitive assessement: a measure of nonverbal ability (Performance IQ or PIQ) derived from the Block Design and Matrices subtests of the Wechsler Abbreviated Scale of Intelligence (WASI, Wechsler, 1999), and a language factor derived by Newbury et al (2018) from factor analysis of four language measures: a) Vocabulary scale of the WASI; b) Verbal Comprehension scale of the Woodcock Johnson III Tests of Cognitive Abilities {Woodcock, 2007 #19530}; c) Sentence Repetition and d) Oromotor Sequences from 
+NEPSY: A Developmental Neuropsychological Assessment {Korkman, 1998 #11973}. 
 
 ## Procedure  
 \
 Ethical approval was obtained for the study in 2011 from the Berkshire NHS Research Ethics Committee (reference 11/SC/0096), and data collection started in August of that year, finishing in October 2016. Families who had expressed interest in the study were interviewed by telephone to assess whether the child met inclusion criteria, and if so, an appointment was made to see the child at home or at school, depending on parental preference. Families were widely dispersed around the UK, including Northern Ireland, Scotland, Wales and England. During the course of recruitment, which lasted for a period of five years, a total of eight research assistants as well as the senior author were involved in assessing children. The assessment was conducted in a single session lasting between 2-3 hours per child, with breaks where needed.
 
 ## Data analysis  
-Study data were analysed using R software (R Core Team, 2016), with the main database managed using REDCap electronic data capture tools hosted at the University of Oxford (Harris et al., 2009). 
-The principal question was whether the rates of social anxiety and autism spectrum disorder differed between the three karyotypes. Because these rates are likely to be influenced by ascertainment bias, the data were analysed separately for the Low Bias and High Bias subgroups. Three measures were available for assessment of ASD symptoms: parental report of ASD diagnosis at the initial interview, the Social Responsiveness Scale (SRS), and the Development and Wellbeing Assessment (DAWBA). 
+Study data were analysed using R software (R Core Team, 2016), with the main database managed using REDCap electronic data capture tools hosted at the University of Oxford {Harris, 2009 #19562}. 
+ 
 
 
 
 # Results
 
+Our research questions focused on the rates of ASD and SocAnx in XXX, XXY and XYY karyotypes. Because we also predicted that these rates would be influenced by ascertainment bias, the data were analysed separately for the Low Bias and High Bias subgroups. Table `r thistab+1` shows the numbers of children with DSM-5 diagnoses of ASD, SCD or SocAnx on the Development and Wellbeing Assessment (DAWBA).
 
-
-```{r include=FALSE}
-source('SCT_for_beeswarm.R')
+**Table `r thistab+1`** 
+```{r diagtable,echo=FALSE}
+regulartable(nicetab) %>% 
+  theme_zebra() %>% 
+  autofit()
+thistab<-thistab+1 #increment table counter
+#nicetab has to have distinct column names - currently these are just dots.
 ```
+```{r socanxN,include=FALSE}
+socanx.xxy1 <- sum(mytab[c(2,4,6),2]) #low bias xxy cases with SocAnx
+socanxplus.xxy1 <- sum(mytab[c(4,6),2])#low bias xxy cases with SocAnx+ASD/SCD
+socanx.xxy2 <- sum(mytab[c(2,4,6),5])#hi bias xxy cases with SocAnx
+socanxplus.xxy2 <- sum(mytab[c(4,6),5])#hi bias xxy cases with SocAnx+ASD/SCD
+
+MeltzN <- 5219 #size of population from which population estimate BOYS
+Meltzp <-.4 #percentage prevalence from Meltzer sample BOYS
+Meltzaff <- round(MeltzN*Meltzp/100,0)
+Meltznon <-MeltzN-Meltzaff
+odds1 <-Meltzaff/Meltznon
+
+xxynon <-  (sum(mytab[,2])-socanx.xxy1)
+odds2 <-socanx.xxy1/xxynon
+oddsr <-odds2/odds1
+logoddsr <-log(oddsr)
+se.logoddsr <-sqrt(1/Meltzaff+1/Meltznon+1/socanx.xxy1+1/xxynon)
+ci.low <-round(logoddsr-1.96*se.logoddsr,2)
+ci.hi <- round(logoddsr+1.96*se.logoddsr,2)
+```
+Considering first those with a diagnosis of SocAnx, there were `r numnames[socanx.xxy1+1]` in the XXY-Low Bias group and `r numnames[socanx.xxy2+1]` in the XXY-High Bias group, as well as one child in the XYY-High Bias group. All but `r numnames[mytab[2,2]+1]` of these children had additional diagnoses of SCD or ASD. In the epidemiological sample of Meltzer et al. (2000), the prevalence of SocAnx was 0.3% in girls and 0.4% in boys. Although the numbers of boys with XXY studied here is very small, the finding that 21% in the Low Bias group and 28% in the High Bias group met diagnostic criteria for this condition is well above expectation (log odds ratio for Low Bias group = `r round(logoddsr,2)`, 95% CI = `r ci.low`-`r ci.hi`). 
+
+
+```{r asd.dawba, include=FALSE}
+#
+#For this we combine the SCD and ASD diagnoses
+asd.xxx1 <- sum(mytab[3:6,1])#low bias xxx cases with ASD/SCD
+asd.xxx2 <- sum(mytab[3:6,4])#hi bias xxx cases with ASD/SCD
+asd.xxy1 <- sum(mytab[3:6,2])#low bias xxy cases with ASD/SCD
+asd.xxy2 <- sum(mytab[3:6,5])#hi bias xxy cases with ASD/SCD
+asd.xyy1 <- sum(mytab[3:6,3])#low bias xyy cases with ASD/SCD
+asd.xyy2 <- sum(mytab[3:6,6])#hi bias xyy cases with ASD/SCD
+#Odds ratio for low bias only
+xxxnon<-(sum(mytab[,1])-asd.xxx1)
+xxynon<-(sum(mytab[,2])-asd.xxy1)
+xyynon<-(sum(mytab[,3])-asd.xyy1)
+
+MeltzN <- 5219 #size of population from which population estimate (same for boys and girls)
+Meltzp.boy <-.5 #percentage prevalence from Meltzer sample BOYS
+Meltzp.girl <-.1 #percentage prevalence from Meltzer sample BOYS
+
+Meltzaff.boy <- round(MeltzN*Meltzp.boy/100,0)
+Meltznon.boy <-MeltzN-Meltzaff.boy
+odds1.boy <-Meltzaff.boy/Meltznon.boy
+
+Meltzaff.girl <- round(MeltzN*Meltzp.girl/100,0)
+Meltznon.girl <-MeltzN-Meltzaff.girl
+odds1.girl <-Meltzaff.girl/Meltznon.girl
+
+odds.xxx <-asd.xxx1/xxxnon #odds ratios just for the low bias cases
+odds.xxy <-asd.xxy1/xxynon
+odds.xyy <-asd.xyy1/xyynon
+oddsr.xxx <-odds.xxx/odds1.girl
+oddsr.xxy <-odds.xxy/odds1.boy
+oddsr.xyy <-odds.xyy/odds1.boy
+logoddsr.xxx <-log(oddsr.xxx)
+logoddsr.xxy <-log(oddsr.xxy)
+logoddsr.xyy <-log(oddsr.xyy)
+se.logoddsr.xxx <-sqrt(1/Meltzaff.girl+1/Meltznon.girl+1/asd.xxx1+1/xxxnon)
+se.logoddsr.xxy <-sqrt(1/Meltzaff.boy+1/Meltznon.boy+1/asd.xxy1+1/xxynon)
+se.logoddsr.xyy <-sqrt(1/Meltzaff.boy+1/Meltznon.boy+1/asd.xyy1+1/xyynon)
+ci.low.xxx <-round(logoddsr.xxx-1.96*se.logoddsr.xxx,2)
+ci.hi.xxx <- round(logoddsr.xxx+1.96*se.logoddsr.xxx,2)
+ci.low.xxy <-round(logoddsr.xxy-1.96*se.logoddsr.xxy,2)
+ci.hi.xxy <- round(logoddsr.xxy+1.96*se.logoddsr.xxy,2)
+ci.low.xyy <-round(logoddsr.xyy-1.96*se.logoddsr.xyy,2)
+ci.hi.xyy <- round(logoddsr.xyy+1.96*se.logoddsr.xyy,2)
+```
+Meltzer et al (2000) reported prevalence rates for 'Pervasive Developmental Disorder' (encompassing ASD and SCD) of 0.5% for boys and 0.1% for girls. Compared with these figures, there are elevated rates in all three trisomies. We consider here just the Low Bias groups: the log odds ratio (with 95% confidence interval) is `r logoddsr.xxx` (`r ci.low.xxx` - `r ci.hi.xxx`) for XXX girls; `r logoddsr.xxy` (`r ci.low.xxy` - `r ci.hi.xxy`) for XXY boys; and `r logoddsr.xyy` (`r ci.low.xyy` - `r ci.hi.xyy`) for XYY boys.
+
+*Need to check: are these the same children as were identified in the previous study?!*
+
+Although the odds ratio of ASD/SCD were elevated in all three trisomies, and the rate of SocAnx was high in the XXY boys, the majority of children in the Low Bias groups did not have either diagnosis. However, DAWBA categorical diagnoses only detect more severe levels of impairment associated with burden to families. We next considered the possibility that there might be distinctive subclinical features associated with an additional X or Y chromosome. To investigate this question we first considered the profile of scores on the two questionnaires incorporated into the DAWBA: SDQ and the SAS.
+
 Figure 2 shows the total T-scores on the SRS for individual children, grouped by trisomy and bias group. 
 
 ![<b>Figure 2</b>. SRS total T-scores for children in Low and High Bias subgroups by Trisomy. DAWBA diagnoses: Social anxiety = blue, ASD = red, both = purple; pink denotes ASD by parental report only. Scores are jittered vertically for those at ceiling (score of 90) ](/Users/dorothybishop/Dropbox/ERCadvanced/project SCT analysis/SCT_ASD_analysis/Project_files/Plots/beeswarm_srsT.pdf)
 
-Only three children (both from Low Bias group, two with XXX and one with XXY) had social anxiety without an ASD diagnosis. A further seven boys had a joint diagnosis of social anxiety and ASD: five were XXY cases, and four of these came from the High Bias group. Rates of ASD diagnosis on DAWBA in children with an extra X chromosome were higher than general population prevalence, but nevertheless only a minority of children were affected. In cases of XYY, however, ASD was substantially higher, affecting `r p1.XYY.asd.d`% of the Low Bias group affected, and `r p2.XYY.asd.d`% of the High Bias group. When parental report of ASD diagnosis was included as well as DAWBA diagnosis, these rates rose to `r p1.XYY.asd`% of the Low Bias group affected, and `r p2.XYY.asd`% of the High Bias group.
 
 The DAWBA categorical diagnoses only detect more severe levels of impairment. We next considered the possibility that there might be distinctive subclinical features associated with an additional X or Y chromosome. To investigate this question we considered the profile of scores on the SRS subscales, which correspond to Social Awareness, Social Cognition, Social Communication, Social Motivation and Autistic Features. Insofar as an additional X chromosome is associated more with social anxiety than with impaired social cognition, we might expect scores on the Social Motivation subscale to show the most impairment.   Mean and SD for each SRS subscale are shown in table x.
 ```{r, echo=FALSE} 
@@ -205,3 +1457,8 @@ We offer warmest thanks to the families who took part in the study, and school s
 
 \setlength{\parindent}{-0.5in}
 \setlength{\leftskip}{0.5in}
+
+
+```{r sessinfo, include=FALSE}
+sessionInfo()
+```
