@@ -18,13 +18,13 @@ affiliation:
     institution   : "Oxford University"
 
 author_note: |
-  Add complete departmental affiliations for each author here. Each new line herein must be indented, like this line.
+Add complete departmental affiliations for each author here. Each new line herein must be indented, like this line.
 
-  Enter author note here.
+Enter author note here.
 
 abstract: |
-  see below.  
-  
+see below.  
+
 keywords          : "Autism spectrum disorder, social anxiety, developmental language disorder, sex chromosome trisomy, trisomy X, Klinefelter syndrome, XYY syndrome, DAWBA, SRS, CCC-2"
 wordcount         : "X"
 
@@ -192,48 +192,48 @@ keepcols <- c('record_id','fam_id','female','age_at_test','parent_conc','partial
               'sent_rep_ss','nonword_rep_ss','oromotor_ss_2','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
               'mo_educ','fa_educ','deprivation_index','fam_structure','fh_langprob',
               'gcc','scdi','ccc_a','ccc_b','ccc_c','ccc_d','ccc_e','ccc_f',
-             'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent',
-             'srs_item10', 'srs_item14', 'srs_item16', 'srs_item18', 'srs_item24', 
-             'srs_item28', 'srs_item29', 'srs_item33', 'srs_item35', 'srs_item37',
-             'srs_item44', 'srs_item50', 'srs_item51', 'srs_item56', 'srs_item58', 'srs_item65',
-             'socaw_ss','soccomm_ss','soccog_ss','socmot_ss','autfeat_ss','srs_t_score', 
-             'asd_dsm_agree','socphob_dsm_agree','asd_dsm_r1', 'adhd_comb_dsm_r1', 'adhd_hyp_dsm_r1', 'adhd_inatt_dsm_r1', 'generalized_anx_dsm_r1',
-             'social_anx_dsm_r1', 'separation_anx_dsm_r1', 'other_anx_dsm_r1', 'phobia_dsm_r1',
-             'depression_dsm_r1', 'opp_def_dsm_r1', 'conduct_dsm_r1', 'chronic_tic_dsm_r1', 
-             'tourette_dsm_r1', 'anorexia_dsm_r1', 'autism_icd_r1', 'hyperkinetic_icd_r1',
-             'generalized_anx_icd_r1', 'social_anx_icd_r1', 'separation_anx_icd_r1', 'other_anx_icd_r1',
-             'phobia_icd_r1', 'minor_depression_icd_r1', 'mod_depression_icd_r1', 'sev_depression_icd_r1',
-             'opp_def_icd_r1', 'soc_conduct_icd_r1', 'unsoc_conduct_icd_r1', 'fam_conduct_icd_r1',
-             'chronic_tic_icd_r1', 'tourette_icd_r1', 'anorexia_icd_r1',
-             'cgas_r1', 'cgas_r2','honosca_disruptive_r1', 
-             'honosca_adhd_symptoms_r1', 'honosca_self_injury_r1', 'honosca_sub_misuse_r1',
-             'honosca_sholastic_lang_r1', 'honosca_phys_illness_r1', 'honosca_pschotic_r1',
-             'honosca_somatic_r1', 'honosca_emotional_r1', 'honosca_peers_r1', 'honosca_selfcare_ind_r1',
-             'honosca_family_r1', 'honosca_school_att_r1',
-             'dawba_id', 'emotional', 'conduct', 'hyperactivity', 'peer', 'prosocial', 'impact',
-             'dawba_sdq_complete', 'sepanx_concern', 'loss_af', 'taken_from_af', 'school_ref', 
-             'sleep_alone', 'sleep_af', 'sleep_away', 'room_alone', 'home_alone', 'sep_nightmare',
-             'somatic_sep', 'sep_antic_anx', 'sep_symptoms_1mo', 'sep_age_of_onset', 'sep_distress',
-             'sep_impact_family', 'sep_impact_friends', 'sep_impact_learning', 'sep_impact_leisure',
-             'sep_burden', 'socanx_concerns', 'new_people', 'many_people', 'soc_eating', 'soc_speaking',
-             'soc_reading', 'soc_writing', 'soc_vs_sep', 'adults_kids', 'can_socialise', 'cause_fear',
-             'cause_litprobs', 'socanx_age_onset', 'socanx_dur_mo', 'socfear_level', 'socfear_freq',
-             'avoid_soc', 'socanx_impact', 'fear_excessive', 'upset_socfear', 'socanx_burden',
-             'generous', 'lively', 'keen2learn', 'affectionate', 'reliable', 'easygoing', 'fun', 'interested',
-             'caring', 'bounces', 'grateful', 'indepdt', 'helps', 'gets_on', 'homework', 'creative', 'family',
-             'appearance', 'good_school', 'polite', 'good_sport', 'tidy', 'good_friends', 'good_behav',
-             'sas_laugh', 'sas_chat', 'sas_flexible', 'sas_defuse', 'sas_lose', 'sas_ease', 'sas_tom',
-             'sas_apolog', 'sas_leader', 'sas_socaware', 'sas_total', 'dawba_positive_complete',
-             'makefriends', 'keepfriends', 'nfriends', 'share_interest', 'joint', 'confide', 'gen_reason',
-             'mentalage', 'langlevel', 'langage', 'langcope', 'speech3yr', 'soc3yr', 'play3yr', 'ritual3yr',
-             'ment3yr', 'continued_diffs', 'words2yr', 'phrase3yr', 'toddlergesture', 'toddlergames',
-             'shareenjoy', 'repetitive', 'unusual', 'imagplay', 'adjustsplay', 'turntaking', 'obsession',
-             'topic', 'dominates', 'dominateconv', 'interferes', 'goodconv', 'goodsustain', 'chats',
-             'adjustsconv', 'nonvbl_blank', 'can_read_nv', 'abnormal_eye', 'echoing', 'repquest', 
-             'repcliche', 'strongroutine', 'changeroutine', 'flapping', 'parconcern', 'distress',
-             'impactfam', 'impactfriend', 'impactlearn', 'impactleisur', 'asd_burden',
-             'suddenonset', 'ageonset','asd_dsm_r2','autism_icd_r2','social_anx_dsm_r2',
-                 'social_anx_icd_r2')
+              'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent',
+              'srs_item10', 'srs_item14', 'srs_item16', 'srs_item18', 'srs_item24', 
+              'srs_item28', 'srs_item29', 'srs_item33', 'srs_item35', 'srs_item37',
+              'srs_item44', 'srs_item50', 'srs_item51', 'srs_item56', 'srs_item58', 'srs_item65',
+              'socaw_ss','soccomm_ss','soccog_ss','socmot_ss','autfeat_ss','srs_t_score', 
+              'asd_dsm_agree','socphob_dsm_agree','asd_dsm_r1', 'adhd_comb_dsm_r1', 'adhd_hyp_dsm_r1', 'adhd_inatt_dsm_r1', 'generalized_anx_dsm_r1',
+              'social_anx_dsm_r1', 'separation_anx_dsm_r1', 'other_anx_dsm_r1', 'phobia_dsm_r1',
+              'depression_dsm_r1', 'opp_def_dsm_r1', 'conduct_dsm_r1', 'chronic_tic_dsm_r1', 
+              'tourette_dsm_r1', 'anorexia_dsm_r1', 'autism_icd_r1', 'hyperkinetic_icd_r1',
+              'generalized_anx_icd_r1', 'social_anx_icd_r1', 'separation_anx_icd_r1', 'other_anx_icd_r1',
+              'phobia_icd_r1', 'minor_depression_icd_r1', 'mod_depression_icd_r1', 'sev_depression_icd_r1',
+              'opp_def_icd_r1', 'soc_conduct_icd_r1', 'unsoc_conduct_icd_r1', 'fam_conduct_icd_r1',
+              'chronic_tic_icd_r1', 'tourette_icd_r1', 'anorexia_icd_r1',
+              'cgas_r1', 'cgas_r2','honosca_disruptive_r1', 
+              'honosca_adhd_symptoms_r1', 'honosca_self_injury_r1', 'honosca_sub_misuse_r1',
+              'honosca_sholastic_lang_r1', 'honosca_phys_illness_r1', 'honosca_pschotic_r1',
+              'honosca_somatic_r1', 'honosca_emotional_r1', 'honosca_peers_r1', 'honosca_selfcare_ind_r1',
+              'honosca_family_r1', 'honosca_school_att_r1',
+              'dawba_id', 'emotional', 'conduct', 'hyperactivity', 'peer', 'prosocial', 'impact',
+              'dawba_sdq_complete', 'sepanx_concern', 'loss_af', 'taken_from_af', 'school_ref', 
+              'sleep_alone', 'sleep_af', 'sleep_away', 'room_alone', 'home_alone', 'sep_nightmare',
+              'somatic_sep', 'sep_antic_anx', 'sep_symptoms_1mo', 'sep_age_of_onset', 'sep_distress',
+              'sep_impact_family', 'sep_impact_friends', 'sep_impact_learning', 'sep_impact_leisure',
+              'sep_burden', 'socanx_concerns', 'new_people', 'many_people', 'soc_eating', 'soc_speaking',
+              'soc_reading', 'soc_writing', 'soc_vs_sep', 'adults_kids', 'can_socialise', 'cause_fear',
+              'cause_litprobs', 'socanx_age_onset', 'socanx_dur_mo', 'socfear_level', 'socfear_freq',
+              'avoid_soc', 'socanx_impact', 'fear_excessive', 'upset_socfear', 'socanx_burden',
+              'generous', 'lively', 'keen2learn', 'affectionate', 'reliable', 'easygoing', 'fun', 'interested',
+              'caring', 'bounces', 'grateful', 'indepdt', 'helps', 'gets_on', 'homework', 'creative', 'family',
+              'appearance', 'good_school', 'polite', 'good_sport', 'tidy', 'good_friends', 'good_behav',
+              'sas_laugh', 'sas_chat', 'sas_flexible', 'sas_defuse', 'sas_lose', 'sas_ease', 'sas_tom',
+              'sas_apolog', 'sas_leader', 'sas_socaware', 'sas_total', 'dawba_positive_complete',
+              'makefriends', 'keepfriends', 'nfriends', 'share_interest', 'joint', 'confide', 'gen_reason',
+              'mentalage', 'langlevel', 'langage', 'langcope', 'speech3yr', 'soc3yr', 'play3yr', 'ritual3yr',
+              'ment3yr', 'continued_diffs', 'words2yr', 'phrase3yr', 'toddlergesture', 'toddlergames',
+              'shareenjoy', 'repetitive', 'unusual', 'imagplay', 'adjustsplay', 'turntaking', 'obsession',
+              'topic', 'dominates', 'dominateconv', 'interferes', 'goodconv', 'goodsustain', 'chats',
+              'adjustsconv', 'nonvbl_blank', 'can_read_nv', 'abnormal_eye', 'echoing', 'repquest', 
+              'repcliche', 'strongroutine', 'changeroutine', 'flapping', 'parconcern', 'distress',
+              'impactfam', 'impactfriend', 'impactlearn', 'impactleisur', 'asd_burden',
+              'suddenonset', 'ageonset','asd_dsm_r2','autism_icd_r2','social_anx_dsm_r2',
+              'social_anx_icd_r2')
 
 
 twin.short <- select(twin.data,keepcols)
@@ -688,16 +688,16 @@ my.dawba1$asd[w]<-1
 
 #compute yes/no score for presence of emotional disorders or conduct disorders
 my.dawba1$dawba_emot <-my.dawba1$generalized_anx_dsm_r1
-                      +my.dawba1$social_anx_dsm_r1
-                      +my.dawba1$separation_anx_dsm_r1
-                      +my.dawba1$other_anx_dsm_r1
-                      +my.dawba1$phobia_dsm_r1
-                      +my.dawba1$depression_dsm_r1
++my.dawba1$social_anx_dsm_r1
++my.dawba1$separation_anx_dsm_r1
++my.dawba1$other_anx_dsm_r1
++my.dawba1$phobia_dsm_r1
++my.dawba1$depression_dsm_r1
 w<-which(my.dawba1$dawba_emot>1)
 my.dawba1$dawba_emot[w]<-1
 
 my.dawba1$dawba_conduct <-my.dawba1$opp_def_dsm_r1
-                      +my.dawba1$conduct_dsm_r1
++my.dawba1$conduct_dsm_r1
 w<-which(my.dawba1$dawba_conduct>1)
 my.dawba1$dawba_conduct[w]<-1
 
@@ -770,7 +770,7 @@ chisq.test(forchi)
 sct.only<-filter(my.dawba,group8level<7) #removetwins
 byprevious<-table(sct.only$bicode2,sct.only$orig_famcode)
 mat.for.chi<-matrix(c(byprevious[1,1],byprevious[1,2],
-                    sum(byprevious[2:5,1]),sum(byprevious[2:5,2])),nrow=2,byrow=TRUE)
+                      sum(byprevious[2:5,1]),sum(byprevious[2:5,2])),nrow=2,byrow=TRUE)
 chisq.test(mat.for.chi)
 ```
 
@@ -778,74 +778,74 @@ chisq.test(mat.for.chi)
 ```{r beeswarm.function, include=FALSE}
 make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,
                           pngwidth,pngheight,groupcolor,mylims,dodiffmean,addtext,yaxislabel){
-#Now do a grid of beeswarm plots
-
-png_bees<-paste0(pngname,'.png')#name to save png file
-png(png_bees,width=pngwidth,height=pngheight,res=300)
-par(mfrow=pngdim) #5 row and 3 columns
-par(mar=c(5.5,5.1,4.1,1),mgp=c(4, 2, 0)) #mar sets the bottom, left, top and right margins
-#mgp – sets  axis label locations relative to the edge of the inner plot window. The first value represents the location the labels (i.e. xlab and ylab in plot), the second the tick-mark labels, and third the tick marks. The default is c(3, 1, 0). Here need 4,2,0 to avoid 2-line label colliding with frame.
-
-#beeswarm jittered values (last value in jitter statement determines amount of jitter)
-
-grouplevel<-sort(unique(mydata[,groupcol]))
-#list of group values in numeric order
-
-ngroup<-length(grouplevel)
-
-pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3 (or for m/f)
-min.val<-min(mydata[,subgroupcol]) #because m/f is coded 0/1 need to check minimum value, so can 
-#add one to code for points if we are using m/f
-min.offset<-0
-if(min.val==0){min.offset <- 1}
-agebit<-pointcol[mydata[,subgroupcol]+min.offset]
-testrange<-which(colnames(mydata)%in%varlist)
-for (i in 1:length(varlist)){
-  mytitle<-namelist[i]
-  mylabel<-'' #default is to not label y axis unless it is left-most column
-  if((i-1)%%pngdim[2]==0){ #heh! gets modulus of i-1 relative to n columns, which is zero if leftmost!
-    mylabel<-yaxislabel
-  }
-
-  beeswarm(jitter(mydata[,testrange[i]],3)~mydata[,groupcol] , xlab='Group',ylab=mylabel,spacing=.8,
-           pch = 16,pwpch=agebit,cex=1.5,col=groupcolor,main=mytitle,ylim=mylims[1:2],
-           cex.axis=1.21,cex.lab=1.5,cex.main=1.5,xaxt='n')
-
-  #add means
-  for (g in 1:ngroup){
-    myg<-grouplevel[g]
-    mm<-mean(mydata[mydata[,groupcol]==myg,testrange[i]],na.rm=TRUE) #means for whole sample by group
-    segments(g-.4,mm,g+.4,mm,col = 1,lty=1,lwd=2) #plot straight solid lines at mean for each group
-
-    #plot dotted lines for means for age-matched groups, i.e ageband2
-    if(dodiffmean==1){
-      #identify cases for each group in ageband2
-      w1<-which(mydata[,groupcol]==myg)
-      w2<-which(mydata$ageband==2)
-    shortrange<-intersect(w1,w2)
-    mm2<-mean(mydata[shortrange,testrange[i]],na.rm=TRUE)
-    segments(g-.4,mm2,g+.4,mm2,col = 1,lty=2,lwd=2) #dotted line for age 6-11
+  #Now do a grid of beeswarm plots
+  
+  png_bees<-paste0(pngname,'.png')#name to save png file
+  png(png_bees,width=pngwidth,height=pngheight,res=300)
+  par(mfrow=pngdim) #5 row and 3 columns
+  par(mar=c(5.5,5.1,4.1,1),mgp=c(4, 2, 0)) #mar sets the bottom, left, top and right margins
+  #mgp – sets  axis label locations relative to the edge of the inner plot window. The first value represents the location the labels (i.e. xlab and ylab in plot), the second the tick-mark labels, and third the tick marks. The default is c(3, 1, 0). Here need 4,2,0 to avoid 2-line label colliding with frame.
+  
+  #beeswarm jittered values (last value in jitter statement determines amount of jitter)
+  
+  grouplevel<-sort(unique(mydata[,groupcol]))
+  #list of group values in numeric order
+  
+  ngroup<-length(grouplevel)
+  
+  pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3 (or for m/f)
+  min.val<-min(mydata[,subgroupcol]) #because m/f is coded 0/1 need to check minimum value, so can 
+  #add one to code for points if we are using m/f
+  min.offset<-0
+  if(min.val==0){min.offset <- 1}
+  agebit<-pointcol[mydata[,subgroupcol]+min.offset]
+  testrange<-which(colnames(mydata)%in%varlist)
+  for (i in 1:length(varlist)){
+    mytitle<-namelist[i]
+    mylabel<-'' #default is to not label y axis unless it is left-most column
+    if((i-1)%%pngdim[2]==0){ #heh! gets modulus of i-1 relative to n columns, which is zero if leftmost!
+      mylabel<-yaxislabel
     }
+    
+    beeswarm(jitter(mydata[,testrange[i]],3)~mydata[,groupcol] , xlab='Group',ylab=mylabel,spacing=.8,
+             pch = 16,pwpch=agebit,cex=1.5,col=groupcolor,main=mytitle,ylim=mylims[1:2],
+             cex.axis=1.21,cex.lab=1.5,cex.main=1.5,xaxt='n')
+    
+    #add means
+    for (g in 1:ngroup){
+      myg<-grouplevel[g]
+      mm<-mean(mydata[mydata[,groupcol]==myg,testrange[i]],na.rm=TRUE) #means for whole sample by group
+      segments(g-.4,mm,g+.4,mm,col = 1,lty=1,lwd=2) #plot straight solid lines at mean for each group
+      
+      #plot dotted lines for means for age-matched groups, i.e ageband2
+      if(dodiffmean==1){
+        #identify cases for each group in ageband2
+        w1<-which(mydata[,groupcol]==myg)
+        w2<-which(mydata$ageband==2)
+        shortrange<-intersect(w1,w2)
+        mm2<-mean(mydata[shortrange,testrange[i]],na.rm=TRUE)
+        segments(g-.4,mm2,g+.4,mm2,col = 1,lty=2,lwd=2) #dotted line for age 6-11
+      }
+    }
+    abline(a=mylims[3],b=0,col='darkgray',lty=1)
+    abline(a=mylims[4],b=0,col='darkgray',lty=2)
+    abline(a=mylims[5],b=0,col='darkgray',lty=2)
+    
+    mean_TD<-mean(meanfile[,testrange[i]],na.rm=T)
+    sd_TD<-sd(meanfile[,testrange[i]],na.rm=T)
+    
+    up.lim<-mean_TD+sd_TD
+    low.lim<-mean_TD-sd_TD
+    
+    polygon(c(0,0,(ngroup+1),(ngroup+1)), c(up.lim, low.lim, low.lim, up.lim),
+            col=adjustcolor("yellow",alpha.f=0.3), border = NA)
+    if(addtext==1){
+      text(2,mylims[2],'<---------Low Bias--------->')
+      text(5,mylims[2],'<---------High Bias--------->')
+    }
+    axis(1,at=1:7,labels=c('XXX','XXY','XYY','XXX','XXY','XYY','Twin+Lang \nConcern'))
   }
-  abline(a=mylims[3],b=0,col='darkgray',lty=1)
-  abline(a=mylims[4],b=0,col='darkgray',lty=2)
-  abline(a=mylims[5],b=0,col='darkgray',lty=2)
-
-  mean_TD<-mean(meanfile[,testrange[i]],na.rm=T)
-  sd_TD<-sd(meanfile[,testrange[i]],na.rm=T)
-
-  up.lim<-mean_TD+sd_TD
-  low.lim<-mean_TD-sd_TD
-
-  polygon(c(0,0,(ngroup+1),(ngroup+1)), c(up.lim, low.lim, low.lim, up.lim),
-          col=adjustcolor("yellow",alpha.f=0.3), border = NA)
-  if(addtext==1){
-  text(2,mylims[2],'<---------Low Bias--------->')
-  text(5,mylims[2],'<---------High Bias--------->')
-  }
-  axis(1,at=1:7,labels=c('XXX','XXY','XYY','XXX','XXY','XYY','Twin+Lang \nConcern'))
-}
-dev.off()
+  dev.off()
 }
 
 ```
@@ -876,7 +876,7 @@ mydata$group8<-droplevels(mydata$group8)#need this to stop it remembering empty 
 #levels(mydata$Group)[4]<-'Twin +\nConcerns'
 addtext<-1
 make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
-                          groupcolor,mylims,dodiffmean,addtext,yaxislabel)
+              groupcolor,mylims,dodiffmean,addtext,yaxislabel)
 
 ```
 
@@ -892,7 +892,7 @@ namelist<-c('Soc. Awareness','Soc. Cognition','Soc. Communication','Soc. Motivat
 mylims<-c(0,100,50,75,90) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
 
 make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
-                          groupcolor,mylims,dodiffmean,addtext,yaxislabel)
+              groupcolor,mylims,dodiffmean,addtext,yaxislabel)
 
 #Would be good to have a way of coding those with bicode2 diagnoses
 
@@ -920,7 +920,7 @@ pca.dat$langz <- scale(pca.dat$langfactor)[,1]
 
 #try with regular pca
 pca.result<- prcomp(pca.dat[,2:12], center = TRUE,scale. = TRUE)
- #summary(pca.result)
+#summary(pca.result)
 
 pca.comps<-pca.result$x[,1:4]
 pca.dat<-cbind(pca.dat,pca.comps)
@@ -953,13 +953,13 @@ do.manova <- function(mydata,mycolrange,gpcolumn,gpvalues,covcolumns){
   }
   my.matrix <- as.matrix(mydata[,mycolrange])
   mycov1<-mydata[  ,covcolumns[1]]
- # mycov2<-mydata[  ,covcolumns[2]]
-   if (covcolumns==0){ 
-      mymanova.fit <- manova(my.matrix ~ as.factor(mydata[,gpcolumn]))}
-   else if (length(covcolumns)==2)#not currently used
-     { mymanova.fit <- manova(my.matrix ~ as.factor(mydata[,gpcolumn])+mycov1+mycov2)  } 
-   else if (length(covcolumns)==1)
-     {  mymanova.fit <- manova(my.matrix ~ as.factor(mydata[,gpcolumn])+mycov1) }
+  # mycov2<-mydata[  ,covcolumns[2]]
+  if (covcolumns==0){ 
+    mymanova.fit <- manova(my.matrix ~ as.factor(mydata[,gpcolumn]))}
+  else if (length(covcolumns)==2)#not currently used
+  { mymanova.fit <- manova(my.matrix ~ as.factor(mydata[,gpcolumn])+mycov1+mycov2)  } 
+  else if (length(covcolumns)==1)
+  {  mymanova.fit <- manova(my.matrix ~ as.factor(mydata[,gpcolumn])+mycov1) }
   return(mymanova.fit)
 }
 
@@ -1000,13 +1000,13 @@ manova.sdqetc.df<-manova.dataframe #just copying basic file
 #find col numbers for columns to use
 #NB intercorrelations within SRS are high and cause problems, so use overall SRS t-score
 mycolrange<-which(colnames(pca.dat) %in% c(
-              "sdq_totaldiff","srs_t_score"))
+  "sdq_totaldiff","srs_t_score"))
 
 gpcolumn<-which(colnames(pca.dat)=='group8level')
 gpvalues<-c(1,2,3)
 covcolumns<-which(colnames(pca.dat) %in% c('langz'))
 for (c in mycolrange){
-pca.dat[,c]<-scale(pca.dat[,c])[,1]
+  pca.dat[,c]<-scale(pca.dat[,c])[,1]
 }
 # poscols<-which(colnames(pca.dat) %in% c("prosocial" ,"sas_total"))
 # pca.dat[,poscols]<- -pca.dat[,poscols]
@@ -1017,109 +1017,141 @@ pca.dat[,c]<-scale(pca.dat[,c])[,1]
 gp.sctlow<-filter(pca.dat,group8level<4)
 covcolumns <- 0 
 mymanova.fit<-do.manova(gp.sctlow,mycolrange,gpcolumn,gpvalues,covcolumns)
-  mymanova.sum<-summary(mymanova.fit, test="Wilks")
+mymanova.sum<-summary(mymanova.fit, test="Wilks")
 
 #Massive failure of multivariate normality in all 3 groups!
 #Look at distributions to try to understand this  
-  #get cook's distance from regression - predict N Y chroms form test battery
-  fit <- lm(group8level~sas_total+sdq_totaldiff,
-            data = gp.sctlow)
-  avPlots(fit)
-  cutoff <- 4/((nrow(gp.sctlow)-length(fit$coefficients)-2))
-  plot(fit, which=4, cook.levels=cutoff)
- #Further testing shows big problems with floor and ceiling effects, as well as some skew.
-  #I've tried addressing these by taking sdq total score: if you take sqrt you get a reasonably normal variable, but then you lose the differentiation betweewn social /ASD.
-      #So go instead for many nonparametric tests and use permutation if necessary to establish pvalue
+#get cook's distance from regression - predict N Y chroms form test battery
+fit <- lm(group8level~sas_total+sdq_totaldiff,
+          data = gp.sctlow)
+avPlots(fit)
+cutoff <- 4/((nrow(gp.sctlow)-length(fit$coefficients)-2))
+plot(fit, which=4, cook.levels=cutoff)
+#Further testing shows big problems with floor and ceiling effects, as well as some skew.
+#I've tried addressing these by taking sdq total score: if you take sqrt you get a reasonably normal variable, but then you lose the differentiation betweewn social /ASD.
+#So go instead for many nonparametric tests and use permutation if necessary to establish pvalue
 ```
-  
+
 ```{r permutekruskalfunction}
- do.permute <- function(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,mytitle,pngname){
- #allocate group at random for permutation test
- n.forgp <-table(mydata[,gpcolumn])
- range1start<-1
- range2start<-n.forgp[1]+1
- range3start<-nrow(mydata)+1 #dummy value for case where just 2 groups
- if(length(gpvalues)>2){
- range3start <-n.forgp[1]+n.forgp[2]+1}
- myp<-data.frame(matrix(NA,nrow=n.iter*length(mycolrange),ncol=2))
- thisrow <- 0
- mydata$nugp <-mydata[,gpcolumn] #default is correct group value.
- for (i in 1:n.iter){
-   if (i>1){ #first run retains correct group value but then shuffled for subsequent runs
-   mydata$thisr<-rank(runif(nrow(mydata)))
-   mydata$nugp <- 3
-   w1<-which(mydata$thisr < range3start)
-   w2<-which(mydata$thisr < range2start)
-   mydata$nugp[w1]<-2
-   mydata$nugp[w2]<-1
-   }
-   thisk <- 0
-    for (k in mycolrange){
-      thisrow<-thisrow+1
-      thisk <- thisk+1
-    simk<- kruskal.test(mydata[,k]~mydata$nugp) 
-    myp[thisrow,1]<-thisk
-    myp[thisrow,2]<-simk$statistic
+do.permute <- function(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,
+                       mytitle,pngname,prevfile,upperquant){
+  if(n.iter==0){myp<-prevfile} #save time by reading prior file
+  #may need to load this first using load comment
+  else{
+    #allocate group at random for permutation test
+    n.forgp <-table(mydata[,gpcolumn])
+    range1start<-1
+    range2start<-n.forgp[1]+1
+    range3start<-nrow(mydata)+1 #dummy value for case where just 2 groups
+    if(length(gpvalues)>2){
+      range3start <-n.forgp[1]+n.forgp[2]+1}
+    myp<-data.frame(matrix(NA,nrow=n.iter*length(mycolrange),ncol=2))
+    thisrow <- 0
+    mydata$nugp <-mydata[,gpcolumn] #default is correct group value.
+    for (i in 1:n.iter){
+      if (i>1){ #first run retains correct group value but then shuffled for subsequent runs
+        mydata$thisr<-rank(runif(nrow(mydata)))
+        mydata$nugp <- 3
+        w1<-which(mydata$thisr < range3start)
+        w2<-which(mydata$thisr < range2start)
+        mydata$nugp[w1]<-2
+        mydata$nugp[w2]<-1
+      }
+      thisk <- 0
+      for (k in mycolrange){
+        thisrow<-thisrow+1
+        thisk <- thisk+1
+        simk<- kruskal.test(mydata[,k]~mydata$nugp) 
+        myp[thisrow,1]<-thisk
+        myp[thisrow,2]<-simk$statistic
+      }
     }
- }
- myptrue<-myp[1:length(mycolrange),]
- mypsim<-myp[-(1:length(mycolrange)),]
- 
-png(pngname,width=2000,height=1200,res=300)
-par(mar=c(4, 12, 1, 1) + 0.1)#bottom, left, top and right margins
-
-boxplot(myp$X2~myp$X1,yaxt='n',xlab='Chi square from randomisation',
-horizontal=TRUE,las=1,outcol='#FFFFFF',outcex=.1,
-main='')
-axis(2, at=1:11,labels=mylabs,las=2)
-for (i in 1:length(mycolrange)){
-   text(myptrue[i,2],i,'*',col='red',cex=2.5)
-}
-dev.off()
-
-
+  }
+  myptrue<-myp[1:length(mycolrange),]
+  mypsim<-myp[-(1:length(mycolrange)),]
+  
+  #see https://www.r-bloggers.com/whisker-of-boxplot/
+  #we want to set the whisker to denote the 97.5% point (ie top end of 95%CI)
+  #ideally for each measure separately, but failing that, for the overall dataset
+  #This version now allows user to specify which upperquantile is used with upperquant
+  myquant<-quantile(mypsim$X2,c(.25,.75,upperquant))
+  myfinmultiplier <- (myquant[3]-myquant[2])/(myquant[2]-myquant[1])
+  png(pngname,width=2000,height=1200,res=300)
+  par(mar=c(4, 12, 1, 1) + 0.1)#bottom, left, top and right margins
+  
+  boxplot(myp$X2~myp$X1,yaxt='n',xlab='Chi square from randomisation',
+          horizontal=TRUE,las=1,outcol='#FFFFFF',outcex=.1,range=myfinmultiplier,
+          main='')
+  axis(2, at=1:11,labels=mylabs,las=2)
+  for (i in 1:length(mycolrange)){
+    text(myptrue[i,2],i,'*',col='red',cex=2.5)
+  }
+  dev.off()
+  
+  
   return(myp)
- }
+}
 ```
- 
- 
-```{r get.kruskal.realdata}
 
-
-k.cols <- c("socaw_ss","soccog_ss","soccomm_ss","socmot_ss","autfeat_ss",
-              "emotional","conduct","hyperactivity","peer","prosocial" ,"sas_total")
- mycolrange<-which(colnames(pca.dat) %in% k.cols)
- gp.sctlow<-filter(pca.dat,group8level<4)
- gp.allsct <-filter(pca.dat,group8level<7)
- gp.scttwin <-filter(pca.dat,group8level%in%c(1:3,8)) #lowbias sct and langconc twins
- gp.scttwin2 <-filter(gp.scttwin,bicode2!='ASD')
- gp.scttwin2 <-filter(gp.scttwin2,bicode2!='ASD+SocAnx')
- 
-
-```
 
 ```{r run.kruskal.permute}
- 
- mydata <- gp.allsct
- k.cols <- c("socaw_ss","soccog_ss","soccomm_ss","socmot_ss","autfeat_ss",
-              "emotional","conduct","hyperactivity","peer","prosocial" ,"sas_total")
- mycolrange<-which(colnames(mydata) %in% k.cols)
- gpcolumn<-which(colnames(mydata)=='bias')
- gpvalues<-unique(mydata$bias)
- mylabs<-c('SRS: Social Awareness','SRS: Social Cognition','SRS: Social Communication','SRS: Social Motivation','SRS: Autistic Features',
-           'SDQ: Emotional','SDQ: Conduct','SDQ: Hyperactivity','SDQ: Peer Problems','SDQ: Prosocial',
-           'Social Aptitude Scale')
- n.iter<-10000
- mytitle<-'Low Bias vs High Bias SCT groups'
- pngname <-'random_chiplot_low_vs_hibias.png'
- myp <- do.permute(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,
-                   mytitle,pngname)
+#Same routine will be used for various comparisons; each calls the do.permute function above
 
- mydata<-gp.sctlow
- 
- 
- 
- 
+#Analysis 1: compare the 3 low bias SCT groups
+mydata<-filter(pca.dat,group8level<4)
+k.cols <- c("socaw_ss","soccog_ss","soccomm_ss","socmot_ss","autfeat_ss",
+            "emotional","conduct","hyperactivity","peer","prosocial" ,"sas_total")
+mycolrange<-which(colnames(mydata) %in% k.cols)
+gpcolumn<-which(colnames(mydata)=='group8level')
+gpvalues<-unique(mydata$group8level)
+mylabs<-c('SRS: Social Awareness','SRS: Social Cognition','SRS: Social Communication','SRS: Social Motivation','SRS: Autistic Features',
+          'SDQ: Emotional','SDQ: Conduct','SDQ: Hyperactivity','SDQ: Peer Problems','SDQ: Prosocial',
+          'Social Aptitude Scale')
+n.iter<-0 #set to 0 if you want to use a saved file; otherwise 10000
+prevfile<-myp1 #if n.iter is > 0, this is ignored and new data will be generated
+mytitle<-'Comparing three Low Bias SCT groups' #This was used on plot but currently ignored
+pngname <-'random99_chiplot_LowBias_karyotype.png'
+upperquant <- .99 #specifies upper fins on boxplot
+myp1 <- do.permute(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,
+                   mytitle,pngname,prevfile,upperquant)
+#the function returns the generated dataset (or just repeats the specified one)
+
+#Next compare high bias and low bias SCTs
+#Most parameters are unchanged, but need to specify new dataset and group code
+mydata <-filter(pca.dat,group8level<7)
+gpcolumn<-which(colnames(mydata)=='bias')
+gpvalues<-unique(mydata$bias)
+mytitle<-'Low Bias vs High Bias SCT groups'
+pngname <-'random99_chiplot_low_vs_hibias.png'
+prevfile<-myp2
+myp2 <- do.permute(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,
+                   mytitle,pngname,prevfile,upperquant)
+
+mydata <- filter(pca.dat,group8level %in% c(1:3,8))
+gpcolumn<-which(colnames(mydata)=='bias') #low bias vs twin, so proxy for sct/twin
+gpvalues<-unique(mydata$bias)
+mytitle<-'Low Bias SCT vs Language Concern twins'
+pngname <-'random99_chiplot_lowbias_twin.png'
+prevfile<-myp3
+myp3 <- do.permute(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,
+                   mytitle,pngname,prevfile,upperquant)
+
+mydata <- filter(mydata,bicode2 !='ASD')
+mydata <- filter(mydata,bicode2 !='ASD+SocAnx')
+
+gpcolumn<-which(colnames(mydata)=='bias') #low bias vs twin, so proxy for sct/twin
+gpvalues<-unique(mydata$bias)
+mytitle<-'Low Bias SCT vs Language Concern twins, excluding autistic'
+pngname <-'random99_chiplot_lowbias_twin_notASD.png'
+prevfile<-myp4
+myp4 <- do.permute(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,
+                   mytitle,pngname,prevfile,upperquant)
+
+#since it took a while to make these randomised files (about 7 min each), we'll save them
+#save(myp1,myp2,myp3,myp4, file = "xyz.Rdata")
+#these variables can then be loaded in with 'load("xyz.Rdata")' and used for prevfile
+
+
 ```
 
 
@@ -1141,8 +1173,8 @@ for (i in 1:8){
   mymean[i]<-paste0('Mean = ',round(mysum[i,2],1))
 }     
 if(dopng==1){
-pngname1<-'joyplot_cgas.png'
-png(pngname1,width=300,height=400)
+  pngname1<-'joyplot_cgas.png'
+  png(pngname1,width=300,height=400)
 }
 
 g<-ggplot(my.dawba, aes(x = CGAS, y = group8,fill=group8)) 
@@ -1401,7 +1433,7 @@ flow2 %>% export_svg %>% charToRaw %>% rsvg_png("twins_flow_dawba.png")
 #Abstract
 
 **Background**: Early studies of children with sex chromosome trisomies documented an association with language disorder, but more recent research has suggested an elevated risk for autism spectrum disorder (ASD), especially in males with 47,XXY (Klinefelter syndrome) and 47,XYY karyotypes. However, there is also evidence that an additional X chromosome is associated with high levels of social anxiety disorder, raising the question of how far this is distinct from ASD. **Aims**: (1) To compare rates of social impairments in children with an extra X chromosome, i.e. girls with trisomy X (47,XXX karyotype) and boys with Klinefelter syndrome, versus those with an additional Y chromosome (boys with XYY syndrome); (2) To consider how far social impairments in all three groups are linked to ASD. **Methods**: We compared three sources of information: existing diagnoses, diagnoses from an online psychiatric assessment (DAWBA) and an autism-sensitive questionnaire, the Social Responsiveness Scale, completed by parents in children with 47,XXX (N = `r n.K+n.N`), 47,XXY (N = `r n.L+n.O`) and 47,XYY (N = `r n.M+n.P`) karyotypes to consider how prevalent social impairments were in the three trisomy types, and how far they could be attributed to ASD. **Results**: We distinguished between a High Bias subgroup, whose trisomy was discovered when investigating behavioural or neurodevelopmental concerns, and a Low Bias subgroup who were diagnosed prenatally or on the basis of other medical concerns in childhood. Only three children (both from Low Bias group, two with XXX and one with XXY) had social anxiety without an ASD diagnosis. A further seven boys had a joint diagnosis of social anxiety and ASD: five were XXY cases, and four of these came from the High Bias group. Rates of ASD diagnosis on DAWBA in children with an extra X chromosome were higher than general population prevalence, but nevertheless only a minority of children were affected. In cases of XYY, however, ASD was substantially higher, affecting x% of the Low Bias group, and x% of the High Bias group. When parental report of ASD diagnosis was included as well as DAWBA diagnosis, these rates rose to x% of the Low Bias group affected, and `x% of the High Bias group. **Discussion and Conclusions**: Social anxiety is relatively rare in non-autistic children with sex chromosome trisomies: numbers were too small to give confident conclusions, but, in line with prediction, the three cases with this diagnosis all had an extra X chromosome. In boys with an extra Y chromosome, ASD was found in around half the Low Bias sample, although outcomes were very variable, with some boys having no indication of any autistic features. It is important to note that where an extra chromosome is identified in the course of investigating behavioural or neurodevelopmental problems, rates of ASD will be artificially inflated.
- 
+
 
 # Introduction
 Chromosome trisomies arise from an error of cell division during meiosis, so that either the egg or sperm contains two rather than one copy of the chromosome. When a trisomy affects one of the autosomes, this is often lethal, or causes severe physical and mental abnormalities. Trisomies of the sex chromosomes, however, have much milder effects, and often go undetected. This makes study of the impact of sex chromosome trisomies difficult, because those cases who do come to attention may be atypical, with genetic testing being prompted by developmental abnormalities.
@@ -1426,14 +1458,17 @@ It may, therefore, be productive to identify, not only the SRS subscales that ar
 
 Taken together, these studies indicate that an increased likelihood of a clinical range score is seen in children who have an extra X or Y chromosome, but the pattern of results suggests there may be a different profile depending on karyotype. Studies of children who do not have trisomies have shown that many children and young people with anxiety score within the clinically significant range of the SRS. Indeed, the specificity of the SRS, when Youden’s factor (ref) is used to calculate an optimal cut-off on ROC curves, indicates that when differentiating between ASD and anxiety, about 1 in every 4 young people is classified as having ASD by the SRS when their existing diagnosis is anxiety not ASD. Notably, these cut-offs are invariably around 75, suggesting that to differentiate between anxiety and autism in clinical samples, the screening threshold suggested by the SRS manual (i.e. 60) is too low. Of course, the high SRS scores in those with social anxiety could reflect undiagnosed autistic deficits in social interaction; however, they could also reflect a miscategorisation of anxiety-related social behaviours that look like autism, but are cognitively different {Tyson, 2012 #39118}.
 
+A related question is how far any behavioural and psychiatric difficulties of children with sex chromosome trisomies might be attributed to their language problems. Language disorders are one of the most consistent deficits associated with all three sex chromosome trisomies, a finding confirmed for the current sample in our companion paper (Bishop et al, 2018). Developmental language disorder is commonly comorbid with psychiatric problems in children who do not have any known neurobiological condition (Beitchman & Brownlie, 2014) though it can be hard to establish how far language deficits play a causal role, and how ar the association reflects shared risk factors (Cohen, 2001).  
+
 The goal of the current study was to evaluate profiles of social impairment and autistic features in children with an extra sex chromosome, using information from prior diagnosis, parental interview, an online diagnostic instrument (the DAWBA) and the SRS.
 
 Specific hypotheses were: 
 1. In line with previous research, we expected to find an increased rate of autistic features in all three trisomies, but with confirmed autism diagnoses elevated only in boys with XXY or XYY. 
 2. Social anxiety symptoms were expected to be higher in children with an extra X chromosome (XXY and XXX) than in boys with an extra Y.
 3. Consistent with previous findings, we anticipate that ascertainment bias will affect results, and levels of social and psychiatric impairment will be substantially higher in children identified in the course of investigation for developmental disorders, than in other children with sex chromosome trisomies.
-4. Extending the work by Joseph et al (2018), we expected that children with all three types of trisomy will have elevated scores on the SRS, but this will not necessarily be indicative of ASD.
-5. Finally, we predict that social impairment and autistic features in children with sex chromosome trisomies will be consistent with the level of language impairment. To test this idea we will consider how well language level predicts SRS scores, both within the group with trisomies, and in relation to a comparison group of children with language difficulties of unknown origin.
+4. We predicted that social impairment and autistic features in children with sex chromosome trisomies are consistent with the level of language impairment. To test this idea we compared the profile of social impairment and autistic features with that seen in a comparison group of children with language difficulties of unknown origin.
+5. Finally, extending the work by Joseph et al (2018), we expected that children with all three types of trisomy will have elevated scores on the SRS, but this will not necessarily be indicative of ASD.
+
 
 # Methods
 We report how we determined our sample size, all data exclusions, all manipulations, and all measures in the study. <!-- 21-word solution (Simmons, Nelson & Simonsohn, 2012; retrieved from http://ssrn.com/abstract=2160588) -->
@@ -1495,7 +1530,7 @@ Ethical approval was obtained for the study in 2011 from the Berkshire NHS Resea
 
 ## Data analysis  
 Study data were analysed using R software (R Core Team, 2016), with the main database managed using REDCap electronic data capture tools hosted at the University of Oxford {Harris, 2009 #19562}. 
- 
+
 
 
 
@@ -1591,24 +1626,32 @@ Although the odds ratio of ASD/SCD were elevated in all three trisomies, and the
 
 ![<b>Figure `r thisfig`</b>. Beeswarm plots on SRS scales for the three trisomy groups, subdivided by bias group, together with the Language Concerns twin comparison group. The yellow shaded area denotes the +/- 1 SD limits around the mean for the No Concerns twin comparison group.](beeswarm_srs.png)
 
-We had planned to use Multivariate Analysis of Variance (MANOVA) to compare groups on the SDQ and SRS scales, but many of the variables suffered from floor and ceiling effects or skew, and so nonparametric Kruskal-Wallis tests were used instead. Since the dependent variables were correlated, permutation was used to estimate probability of obtained results under the null hypothesis. A series of analyses was conducted to address the specific questions raised in the Introduction.
+We had planned to use Multivariate Analysis of Variance (MANOVA) to compare groups on the SDQ and SRS scales, but many of the variables suffered from floor and ceiling effects or skew, and so nonparametric Kruskal-Wallis tests were used instead. A randomisation test with 10000 iterations was used to estimate the range chi square values that would be obtained  under the null hypothesis, where group identity was assigned at random. A series of analyses was conducted to address the specific questions raised in the Introduction.
 
-**Test of hypotheses 1-2**. The first two hypotheses were that there would be karyotype-specific differences in profiles, with autistic features more prominent in boys with XYY karyotype, and social anxiety in the XXX girls and XXY boys. To reduce the effects of ascertainment bias, these predictions were tested using data from the Low Bias groups only. Distributions of scores for the three karyotypes were compared on the five SDQ scales, the five SRS scales, and the Social Aptitudes Scale. We predicted that the XYY boys would score lower than the XXX and XXY groups on the two scales measuring positive aspects of social behaviour (SDQ Prosocial and SAS), and higher (i.e., more impaired) on the SRS scales. We further predicted that the XXX girls and XXY boys would score higher (more impaired) on the SDQ emotional scale. `r thistab<-thistab+1`. Results are summarised in Table `r thistab`. The only scale to show an effect in line with prediction was the SDQ prosocial scale (p = `r round(min(allk),3)`), but permutation testing (10000 iterations) indicated that a result this extreme would occur by chance with p  = `r round(perm.p,3)`. Given the small sample sizes, the power is low to detect subtle effects, but it is worth noting that the lack of difference reflects wide variation within each of the karyotype groups, with some children scoring well within normal limits. 
+**Test of hypotheses 1-2**. The first two hypotheses were that there would be karyotype-specific differences in profiles, with autistic features more prominent in boys with XYY karyotype, and social anxiety in the XXX girls and XXY boys. To reduce the effects of ascertainment bias, these predictions were tested using data from the Low Bias groups only. Scores for the three karyotypes were compared on the five SDQ scales, the five SRS scales, and the Social Aptitudes Scale. We predicted that the XYY boys would score lower than the XXX and XXY groups on the two scales measuring positive aspects of social behaviour (SDQ Prosocial and SAS), and higher (i.e., more impaired) on the SRS scales. We further predicted that the XXX girls and XXY boys would score higher (more impaired) on the SDQ emotional scale. `r thisfig<-thisfig+1`. Results are summarised in Figure `r thisfig`, which shows the obtained chi square values in relation to those from the randomised data, with the upper fin of each boxplot corresponding to the 99th centile. The only scale to show an effect in line with prediction was the SDQ prosocial scale (p = `r round(min(allk),3)`), where the obtained chi square was outside the 99% limit, reflecting the fact that the XYY boys scored on average below the normal range, whereas XXX girls were well within normal limits. Given the small sample sizes, and wide variation within each karyotype, the power is low to detect subtle effects. It is evident from Figures `r (thisfig-2)` and `r(thisfig-1)` that, while the overall rate of impairment is raised relative to the general population, many children with sex chromosome trisomies score within normal limits.
 
-**Test of hypothesis 3**. Hypothesis 3 predicts that children in the High Bias group will have more evidence of impairment than those in the Low Bias group. Again, multiple Kruskal Wallis tests were used to test this prediction (with the three karyotypes combined)
+![<b>Figure `r thisfig`</b>. Plot of chi square values obtained on Kruskal-Wallis test comparing the three Low Bias sex chromosome trisomy groups, relative to the range of chi square values when group is randomised. The upper fin of the boxplot corresponds to the 99th centile for randomised values.](random99_chiplot_LowBias_karyotype.png)
 
-```{r, echo=FALSE} 
-#echo statement is essential for kable to work
-options(knitr.kable.NA = '')
-file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_Files/data/"
-filename<-c("nicetab_srs.csv") 
-tab3data<-data.frame(read_csv(paste0(file.loc,filename)))
-kable(tab3data,caption='Means (SD) for SRS subscales')
+**Test of hypothesis 3**. `r thisfig<thisfig+1` Hypothesis 3 predicts that children in the High Bias group will have more evidence of impairment than those in the Low Bias group. Again, multiple Kruskal Wallis tests were used to test this prediction, this time with the three karyotypes combined. Results are shown in Figure `r thisfig`. This analysis confirms the substantial differences between the Low Bias and High Bias groups, who differ markedly on all the SRS subscales, the SDQ Peer Problems and Hyperactivity scales, and the Social Aptitude Scale.
+
+![<b>Figure `r thisfig`</b>. Plot of chi square values obtained on Kruskal-Wallis test comparing Low Bias vs High Bias sex chromosome trisomy cases (all trisomies combined), relative to the range of chi square values when group is randomised. The upper fin of the boxplot corresponds to the 99th centile for randomised values.](random99_chiplot_low_vs_hibias.png)
+**Test of hypothesis 4**. `r thisfig<thisfig+1` Hypothesis 4 is concerned with the extent to which psychiatric problems in children with sex chromosome trisomies are consistent with the level of language impairment. To test this hypothesis, we restricted consideration to the Low Bias trisomy group. We had previously shown that language impairments in this group were comparable to those seen in the twin comparison group with Language Concerns. As shown in Figure `r thisfig`, the two groups were similar on many of the SDQ scales, but the trisomy group had more evidence of problems in the domains of Peer Relationships and Emotional Difficulties. 
+
+```{r twinasd}
+asdtwin<-table(my.dawba$group8level,my.dawba$bicode2)
+nasd<-asdtwin[8,5]+asdtwin[8,6]
+nscd<-asdtwin[8,3]+asdtwin[8,4]
+ntwin8<-sum(asdtwin[8,])
+
 ```
 
 
+![<b>Figure `r thisfig`</b>. Plot of chi square values obtained on Kruskal-Wallis test comparing Low Bias sex chromosome trisomy cases (all trisomies combined) with the Language Concerns twin comparison group, relative to the range of chi square values when group is randomised. The upper fin of the boxplot corresponds to the 99th centile for randomised values.](random99_chiplot_lowbias_twin.png)
+`r thisfig<thisfig+1`The comparison with the Language Concerns twin group is subject to some selection bias, because children with a pre-existing diagnosis of ASD had been explicitly excluded from that group. Nevertheless, `r numnames[nasd]` child in the Language Concerns group met diagnostic criteria for ASD on DAWBA, and `r numnames[nscd]` met criteria for SCD. When the analysis was re-run excluding all children with a DAWBA diagnosis of ASD, the group differences were less striking, though there was still a trend for more impairment on the Peer Relationships and Emotional Problems scales of the SDQ (see Figure `r thisfig`).
 
-Analysis of diagnoses and DAWBA in relation to (a) trisomies and (b) SRS
+![<b>Figure `r thisfig`</b>. Plot of chi square values obtained on Kruskal-Wallis test comparing Low Bias sex chromosome trisomy cases (all trisomies combined) with the Language Concerns twin comparison group, after excluding all cases with DAWBA diagnosis of ASD. The upper fin of the boxplot corresponds to the 99th centile for randomised values.](random99_chiplot_lowbias_twin_notASD.png)
+
+Analysis of diagnoses and DAWBA in relation to SRS
 # Discussion
 Limitations: Rates of social anxiety could be underestimated in this study because participation required the child to assent to an assessment. It is likely that children with significant levels of social anxiety will have declined to take part.
 
