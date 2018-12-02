@@ -76,7 +76,7 @@ library(ggplot2)
 library(ggridges) #for joyplot
 library(mvnormtest) #check assumptions for MANOVA
 library(ggpubr)
-
+library(yarrr) #for pirateplot
 
 dopng <- 0 #toggle for png figures
 numnames<-c('no','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve')
@@ -899,7 +899,7 @@ make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngd
 ```
 
 ```{r data_reduction}
-#retained for historical interest, but this was not v illuminating!
+#PCA was not v illuminating but the reduced file pca.dat used later on for nonparametric
 #Most variance accounted for by one component explaining around 68% variance
 my.dawba$sdq_totaldiff <- sqrt(my.dawba$emotional+my.dawba$conduct+my.dawba$hyperactivity+my.dawba$peer)
 #sqrt transform helps normalise
@@ -913,6 +913,8 @@ add.cols <- c("ageband","group8level","langfactor","srs_t_score","sdq_totaldiff"
 colnums2<-which(colnames(my.dawba)%in%add.cols) #find corresponding column numbers - but they will be in 
 colnums  <-c(colnums,colnums2)
 pca.dat <- my.dawba[,colnums]
+w<-which(is.na(pca.dat$bias))
+pca.dat$bias[w]<-999 #need missing code to avoid twins being excluded at next step
 pca.dat <-pca.dat[complete.cases(pca.dat),]
 pca.dat$langz <- scale(pca.dat$langfactor)[,1]
 
@@ -933,8 +935,7 @@ namelist<-c('langz','PC1','PC2','PC3','PC4')
 mylims<-c(-3.5,2.5,-1,0,1) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
 groupcol<-which(colnames(pca.dat)=='group8level')
 subgroupcol <- which(colnames(pca.dat)=='ageband')
-#make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
- #                         groupcolor,mylims,dodiffmean,addtext,yaxislabel)
+make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight, groupcolor,mylims,dodiffmean,addtext,yaxislabel)
 
 ```
 
@@ -1028,32 +1029,11 @@ mymanova.fit<-do.manova(gp.sctlow,mycolrange,gpcolumn,gpvalues,covcolumns)
   plot(fit, which=4, cook.levels=cutoff)
  #Further testing shows big problems with floor and ceiling effects, as well as some skew.
   #I've tried addressing these by taking sdq total score: if you take sqrt you get a reasonably normal variable, but then you lose the differentiation betweewn social /ASD.
+      #So go instead for many nonparametric tests and use permutation if necessary to establish pvalue
 ```
- 
- 
-```{r kruskal}
-    #So go instead for many nonparametric tests and use permutation if necessary to establish pvalue
- allk1<-vector()
-allk2<-vector()
-allk3<-vector()
-k.cols <- c("socaw_ss","soccog_ss","soccomm_ss","socmot_ss","autfeat_ss",
-              "emotional","conduct","hyperactivity","peer","prosocial" ,"sas_total")
- mycolrange<-which(colnames(pca.dat) %in% k.cols)
- gp.sctlow<-filter(pca.dat,group8level<4)
- gp.allsct <-filter(pca.dat,group8level<7)
-
- for (k in mycolrange){
-  # print(colnames(gp.sctlow[k]))
-   myk1<- kruskal.test(gp.sctlow[,k]~gp.sctlow$group8level) # low bias only: compare trisomies
-   myk2<- kruskal.test(gp.allsct[,k]~gp.allsct$bias) # compare all with vs without bias 
- 
- allk1<-c(allk1,myk1$p.value)
- allk2<-c(allk2,myk2$p.value)
- }
-```
- 
+  
 ```{r permutekruskalfunction}
- do.permute <- function(mydata,mycolrange,gpcolumn,gpvalues,n.iter){
+ do.permute <- function(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,mytitle,pngname){
  #allocate group at random for permutation test
  n.forgp <-table(mydata[,gpcolumn])
  range1start<-1
@@ -1061,253 +1041,85 @@ k.cols <- c("socaw_ss","soccog_ss","soccomm_ss","socmot_ss","autfeat_ss",
  range3start<-nrow(mydata)+1 #dummy value for case where just 2 groups
  if(length(gpvalues)>2){
  range3start <-n.forgp[1]+n.forgp[2]+1}
- myp<-data.frame(matrix(NA,nrow=n.iter,ncol=length(mycolrange)))
+ myp<-data.frame(matrix(NA,nrow=n.iter*length(mycolrange),ncol=2))
+ thisrow <- 0
+ mydata$nugp <-mydata[,gpcolumn] #default is correct group value.
  for (i in 1:n.iter){
+   if (i>1){ #first run retains correct group value but then shuffled for subsequent runs
    mydata$thisr<-rank(runif(nrow(mydata)))
    mydata$nugp <- 3
    w1<-which(mydata$thisr < range3start)
    w2<-which(mydata$thisr < range2start)
    mydata$nugp[w1]<-2
    mydata$nugp[w2]<-1
-   thisk<-0
+   }
+   thisk <- 0
     for (k in mycolrange){
-      thisk<-thisk+1
+      thisrow<-thisrow+1
+      thisk <- thisk+1
     simk<- kruskal.test(mydata[,k]~mydata$nugp) 
-    myp[i,thisk]<-simk$p.value#
+    myp[thisrow,1]<-thisk
+    myp[thisrow,2]<-simk$statistic
     }
  }
- return(myp)
+ myptrue<-myp[1:length(mycolrange),]
+ mypsim<-myp[-(1:length(mycolrange)),]
+ 
+png(pngname,width=2000,height=1200,res=300)
+par(mar=c(4, 12, 1, 1) + 0.1)#bottom, left, top and right margins
+
+boxplot(myp$X2~myp$X1,yaxt='n',xlab='Chi square from randomisation',
+horizontal=TRUE,las=1,outcol='#FFFFFF',outcex=.1,
+main='')
+axis(2, at=1:11,labels=mylabs,las=2)
+for (i in 1:length(mycolrange)){
+   text(myptrue[i,2],i,'*',col='red',cex=2.5)
+}
+dev.off()
+
+
+  return(myp)
  }
 ```
  
+ 
+```{r get.kruskal.realdata}
+
+
+k.cols <- c("socaw_ss","soccog_ss","soccomm_ss","socmot_ss","autfeat_ss",
+              "emotional","conduct","hyperactivity","peer","prosocial" ,"sas_total")
+ mycolrange<-which(colnames(pca.dat) %in% k.cols)
+ gp.sctlow<-filter(pca.dat,group8level<4)
+ gp.allsct <-filter(pca.dat,group8level<7)
+ gp.scttwin <-filter(pca.dat,group8level%in%c(1:3,8)) #lowbias sct and langconc twins
+ gp.scttwin2 <-filter(gp.scttwin,bicode2!='ASD')
+ gp.scttwin2 <-filter(gp.scttwin2,bicode2!='ASD+SocAnx')
+ 
+
+```
+
 ```{r run.kruskal.permute}
- mydata <- gp.sctlow
+ 
+ mydata <- gp.allsct
  k.cols <- c("socaw_ss","soccog_ss","soccomm_ss","socmot_ss","autfeat_ss",
               "emotional","conduct","hyperactivity","peer","prosocial" ,"sas_total")
- mycolrange<-which(colnames(gp.sctlow) %in% k.cols)
- gpcolumn<-which(colnames(gp.sctlow)=='group8level')
- gpvalues<-unique(gp.sctlow$group8level)
-  n.iter<-10000
- myp <- do.permute(mydata,mycolrange,gpcolumn,gpvalues,n.iter)
- w<-which(myp<min(allk1))
- perm.p<- length(w)/n.iter
+ mycolrange<-which(colnames(mydata) %in% k.cols)
+ gpcolumn<-which(colnames(mydata)=='bias')
+ gpvalues<-unique(mydata$bias)
+ mylabs<-c('SRS: Social Awareness','SRS: Social Cognition','SRS: Social Communication','SRS: Social Motivation','SRS: Autistic Features',
+           'SDQ: Emotional','SDQ: Conduct','SDQ: Hyperactivity','SDQ: Peer Problems','SDQ: Prosocial',
+           'Social Aptitude Scale')
+ n.iter<-10000
+ mytitle<-'Low Bias vs High Bias SCT groups'
+ pngname <-'random_chiplot_low_vs_hibias.png'
+ myp <- do.permute(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,
+                   mytitle,pngname)
 
- mydata<-gp.allsct
- gpcolumn<-which(colnames(gp.allsct)=='bias')
- gpvalues<-c(0,1)
-  myp2 <- do.permute(mydata,mycolrange,gpcolumn,gpvalues,n.iter)
- w<-which(myp2<min(allk2))
- perm.p2<- length(w)/n.iter
+ mydata<-gp.sctlow
  
-```
-
-print('Manova on the psychometric measures for the 3 Low Bias SCT groups only')
-mymanova.sum
-mytab<-table(gp.sctlow$trisomy)
-names(mytab)<-c('XXX','XXY','XYY')
-print('Ns for analysis:')
-print(mytab)
-
-#select values to pass to manova.write function
-mycomparison<-paste0('A. Low Bias: XXX (',mytab[1],
-                     ') vs XXY (',mytab[2],
-                     ') vs XYY (',mytab[3],')')
-
-manova.stats<-mymanova.sum$stats
-effectnames<-c('Group','Mo. education','Neighbourhood Advantage')
-offset<-0
-manova.dataframe<-manova.write(mycomparison,effectnames,offset,manova.stats,manova.dataframe)
-#summary.aov(gp.sctlow.fit) - if you want to inspect individual language measures
-
-print('ANOVA on N tests low')
-lowtest.aov<-aov(gp.sctlow$Ntestlow~gp.sctlow$Group)
-summary(lowtest.aov)
-```
-
-
-```{r sct.vs.dld, include=FALSE}
-#for comparison with twin group, need to restrict to those aged 6-11
-w<-c(which(lobias.sct2$ageband==2))
-lobias.agematch<-lobias.sct2[w,]
-
-psychrange<-which(colnames(gp.sctlow) %in% c('piq','genlang','verbmem','literacy'))
-gpcolumn<-which(colnames(gp.sctlow)=='is_twin')
-gpvalues<-c(0,1)
-covcolumns<-which(colnames(gp.sctlow) %in% c('mo_educ','neighborz'))
-mymanova.fit<-do.manova(lobias.agematch,psychrange,gpcolumn,gpvalues,covcolumns)
-mymanova.sum<-summary(mymanova.fit, test="Wilks")
-print('Manova on the psychometric measures for the SCT vs DLD groups age matched')
-mymanova.sum
-
-mytab<-table(lobias.agematch$is_twin)
-names(mytab)<-c('Trisomy','Twin')
-print('Ns for analysis:')
-print(mytab)
-print('Manova on the summary psychometric measures for the SCT vs twin (language disordered) group, aged 6-11;11')
-mymanova.sum
-
-mycomparison<-paste0('B. Trisomies (',mytab[1],') vs. Lang concern twins (',mytab[2],'): aged 6-11')
-manova.stats<-mymanova.sum$stats
-offset<-nrow(manova.dataframe)
-manova.dataframe<-manova.write(mycomparison,effectnames,offset,manova.stats,manova.dataframe)
-#summary.aov(gp.sctlow.fit) - if you want to inspect individual language measures
-
-print('ANOVA on N tests low')
-lowtest2.aov<-aov(lobias.agematch$Ntestlow~lobias.agematch$Group)
-summary(lowtest2.aov)
-
-#NB correlation with mother's education, so compute this to check direction of effect
-
-psych.vars<-rowMeans(lobias.agematch[psychrange])
-cor(lobias.agematch$mo_educ,psych.vars)
-moedreg<-lm(psych.vars~lobias.agematch$mo_educ)
-plot(lobias.agematch$mo_educ,psych.vars)
-mymoedreg<-summary(moedreg)
-my.moedregb<-mymoedreg$coefficients[2]
-
-#lang concern twin only
-wt<-which(lobias.agematch$group8level==8)
-moedregt<-lm(psych.vars[wt]~lobias.agematch$mo_educ[wt])
-
-```
-
-
-```{r manova.bias, include=FALSE}
-trisomy.only<-filter(trisomy.only,ageband>1) #remove youngest bcs missing data
-trisomy.only<-filter(trisomy.only,langdata_complete==1)
-
-
-psychrange<-which(colnames(trisomy.only) %in% c('piq','genlang','verbmem','literacy'))
-gpcolumn<-which(colnames(trisomy.only)=='bias')
-gpvalues<-c(0,1)
-covcolumns<-which(colnames(trisomy.only) %in% c('mo_educ','neighborz'))
-mymanova.fit<-do.manova(trisomy.only,psychrange,gpcolumn,gpvalues,covcolumns)
-mymanova.sum<-summary(mymanova.fit, test="Wilks")
-print('Manova on the psychometric measures for the High vs Low Bias groups')
-mymanova.sum
-
-mytab<-table(trisomy.only$bias)
-names(mytab)<-c('Low','High')
-print('Ns for analysis:')
-print(mytab)
-print('Manova on the summary psychometric measures for the low vs High Bias SCT')
-mymanova.sum
-
-mycomparison<-paste0('C. Low Bias (',mytab[1],') vs. High Bias (',mytab[2],')')
-manova.stats<-mymanova.sum$stats
-offset<-nrow(manova.dataframe)
-manova.dataframe<-manova.write(mycomparison,effectnames,offset,manova.stats,manova.dataframe)
-
-summary.aov(mymanova.fit) #- if you want to inspect individual language measures
-```
-
-
-```{r lme}
-# #---------------------------------------------------------------------
-# # Test for impact of trisomy on the 5 SRS subscales
-# #---------------------------------------------------------------------
-# 
-# library(lme4)
-# library(lmerTest) #Adding this extra package provides p-values (if you want them) for your fixed effects.
-# myfit <- lmer(SRS.score ~ trisomy + SRS.subscale + trisomy*SRS.subscale + (1 | record_id),  
-#               data = lowbias.long)
-# summary(myfit)
-# plot(myfit) # residuals check - look ok 
-# qqnorm(residuals(myfit)) #check residuals - look fine.
-# #Test of unequal variance in trisomy groups.
-# library(car)
-# leveneTest(residuals(myfit) ~ lowbias.long$trisomy) # not significant so equality of variance in trisomy groups.
-# 
-# 
-# #Look at summary stats for score data by trisomy group
-# require(psych)
-# socaw<-describeBy(lowbias$socaw_ss,lowbias$trisomy) # some summary statistics to confirm.
-# soccog<-describeBy(lowbias$soccog_ss,lowbias$trisomy)
-# soccomm<-describeBy(lowbias$soccomm_ss,lowbias$trisomy)
-# socmot<-describeBy(lowbias$socmot_ss,lowbias$trisomy)
-# autfeat<-describeBy(lowbias$autfeat_ss,lowbias$trisomy)
-# 
-# mysrs.summary<-data.frame(matrix(rep(NA,33),nrow=3))
-# rownames(mysrs.summary)<-c('XXX','XXY','XYY')
-# colnames(mysrs.summary)<-c('N','Soc Aware','(SD)','Soc Cog','(SD)','Soc Comm','(SD)','Soc Motiv','(SD)','Aut feat','(SD)')
-# #write.csv(lowbias.long, "lowbias.long.csv",row.names=FALSE) 
-# for (i in 1:3){
-#  mysrs.summary[i,]<-c(unlist(socaw[i])[2],unlist(socaw[i])[3],unlist(socaw[i])[4],
-#                       unlist(soccog[i])[3],unlist(soccog[i])[4],
-#                       unlist(soccomm[i])[3],unlist(soccomm[i])[4],
-#                       unlist(socmot[i])[3],unlist(socmot[i])[4],
-#                       unlist(autfeat[i])[3],unlist(autfeat[i])[4])
-#   
-# }
-# mysrs.summary<-round(mysrs.summary,2)
-# file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_Files/data/"
-# write.csv(mysrs.summary, file = paste0(file.loc,"nicetab_srs.csv"))
-# 
-# write.csv(my.dawba,file=paste0(file.loc,'my_dawba_short.csv'))
-# 
-# #---------------------------------------------------------------------
-# # Test for impact of trisomy on the 5 SDQ subscales
-# #---------------------------------------------------------------------
-# myfit2 <- lmer(SDQ.score ~ trisomy + SDQ.subscale + trisomy*SDQ.subscale + (1 | record_id),  
-#               data = lowbias.long)
-# summary(myfit2)
-# plot(myfit2) # residuals check - look ok 
-# qqnorm(residuals(myfit2)) #check residuals - look fine.
-# #Test of unequal variance in trisomy groups.
-# leveneTest(residuals(myfit2) ~ lowbias.long$trisomy) # not significant so equality of variance in trisomy groups.
-# 
-# #---------------------------------------------------------------------
-# # Means on the 5 SDQ subscales
-# #---------------------------------------------------------------------
-# 
-# emotional<-describeBy(lowbias$emotional,lowbias$trisomy) # some summary statistics to confirm.
-# conduct<-describeBy(lowbias$conduct,lowbias$trisomy)
-# hyperactive<-describeBy(lowbias$hyperactivity,lowbias$trisomy)
-# peer<-describeBy(lowbias$peer,lowbias$trisomy)
-# prosocial<-describeBy(lowbias$prosocial,lowbias$trisomy)
-# 
-# mysdq.summary<-data.frame(matrix(rep(NA,33),nrow=3))
-# rownames(mysdq.summary)<-c('XXX','XXY','XYY')
-# colnames(mysdq.summary)<-c('N','Emotional','(SD)','Conduct','(SD)','Hyperactive','(SD)','Peer','(SD)','Prosocial','(SD)')
-# for (i in 1:3){
-#   mysdq.summary[i,]<-c(unlist(emotional[i])[2],unlist(emotional[i])[3],unlist(emotional[i])[4],
-#                        unlist(conduct[i])[3],unlist(conduct[i])[4],
-#                        unlist(hyperactive[i])[3],unlist(hyperactive[i])[4],
-#                        unlist(peer[i])[3],unlist(peer[i])[4],
-#                        unlist(prosocial[i])[3],unlist(prosocial[i])[4])
-#   
-# }
-# mysdq.summary<-round(mysdq.summary,2)
-# file.loc<-"~/Dropbox/ERCadvanced/Project SCT analysis/SCT_ASD_analysis/Project_Files/data/"
-# write.csv(mysdq.summary, file = paste0(file.loc,"nicetab_sdq.csv"))
-# 
-# ##################################################################################
-# #analysis of social anx and sep anx symptoms
-# ##################################################################################
-# socialanx<-describeBy(lowbias$socanx_concerns,lowbias$trisomy)
-# 
-# #social anxiety symptoms
-# table(lowbias$socanx_concerns,lowbias$trisomy)
-# table(lowbias$sepanx_concern,lowbias$trisomy)
-# table(lowbias$soc_vs_sep,lowbias$trisomy)
-# table(lowbias$socfear_level,lowbias$trisomy)
-# lowbias$sep_or_soc<-lowbias$socanx_concerns
-# w<-which(lowbias$sepanx_concern==1)
-# lowbias$sep_or_soc[w]<-1
-# sepsoctable<-table(lowbias$sep_or_soc,lowbias$trisomy)
-# 
-# #social anxiety symptoms whole sample
-# table(my.dawba1$socanx_concerns,my.dawba1$trisomy)
-# table(my.dawba1$sepanx_concern,my.dawba1$trisomy)
-# table(my.dawba1$soc_vs_sep,my.dawba1$trisomy)
-# table(my.dawba1$socfear_level,my.dawba1$trisomy)
-# my.dawba1$sep_or_soc<-my.dawba1$socanx_concerns
-# w<-which(my.dawba1$sepanx_concern==1)
-# my.dawba1$sep_or_soc[w]<-1
-# sepsoctable<-table(my.dawba1$sep_or_soc,my.dawba1$trisomy)
-# 
-# 
-
+ 
+ 
+ 
 ```
 
 
