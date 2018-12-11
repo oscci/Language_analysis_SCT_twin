@@ -1,5 +1,5 @@
 ---
-title             : "Can we distinguish between autism spectrum disorder and social anxiety in children with sex chromosome trisomies?"
+title             : "Autism spectrum disorder and social anxiety in children with sex chromosome trisomies"
 shorttitle        : "ASD and social anxiety in trisomies"
 author: 
   - name          : "Alexander Wilson"
@@ -701,17 +701,17 @@ my.dawba1$adhd <-my.dawba1$adhd_comb_dsm_r1+my.dawba1$adhd_hyp_dsm_r1+my.dawba1$
 w<-which(my.dawba1$adhd>1)
 my.dawba1$adhd[w]<-1
 
-#compute yes/no score for presence of ASD and SCD
-my.dawba1$asd <-my.dawba1$asd_dsm_agree #initialise _ this includes values 1 and 4 for SCD
+#compute yes/no score for presence of ASD and ASD- (here called SCD)
+my.dawba1$asd <-my.dawba1$asd_dsm_agree #initialise _ this includes values 1 and 4 for ASD-
 my.dawba1$scd=0
 
-w<-c(which(my.dawba1$asd==1),which(my.dawba1$asd==4)) #find the SCD cases
-my.dawba1$scd[w]<-1 #assign SCD cases to 1
-my.dawba1$asd[w]<-0 #assign SCD cases to 0 for the ASD column
+w<-c(which(my.dawba1$asd==1),which(my.dawba1$asd==4)) #find the ASD- cases
+my.dawba1$scd[w]<-1 #assign ASD- cases to 1
+my.dawba1$asd[w]<-0 #assign ASD- cases to 0 for the ASD column
 w<-which(my.dawba1$asd==2) #ASD coded as 2 - needs recoding to 1
 my.dawba1$asd[w]<-1
 
-#create a 5 digit code for ASD/SCD/ADHD/Emot/Conduct
+#create a 5 digit code for ASD/ASD-/ADHD/Emot/Conduct
 my.dawba1$alldsm <-10000*my.dawba1$asd+
                     1000*my.dawba1$scd+
                      100*my.dawba1$adhd+
@@ -721,8 +721,8 @@ my.dawba1$alldsm <-10000*my.dawba1$asd+
 my.dawba1$alldsm_factor <-as.factor(my.dawba1$alldsm)
 levels(my.dawba1$alldsm_factor)<- c('None','Conduct','Emotion','Conduct+Emotion',
                                     'ADHD','ADHD+Conduct','ADHD+Emotion',
-                                    'ADHD+Conduct+Emotion','SCD','SCD+ADHD',
-                                    'SCD+ADHD+Conduct','SCD+ADHD+Emotion',
+                                    'ADHD+Conduct+Emotion','ASD-','ASD-+ADHD',
+                                    'ASD-+ADHD+Conduct','ASD-+ADHD+Emotion',
                                     'ASD','ASD+Conduct','ASD+Emotion',
                                     'ASD+ADHD','ASD+ADHD+Conduct',
                                     'ASD+ADHD+Emotion','ASD+ADHD+Emotion+Conduct'
@@ -780,29 +780,30 @@ rownames(origstudy)<-c('Low Bias','High Bias')
 #Unsure for soc phobia is rare, and so recoded here to 0
 w<-which(my.dawba$socphob_dsm_agree==1)
 my.dawba$socphob_dsm_agree[w]<-0
-w<-which(my.dawba$asd_dsm_agree==4) #code used for SCD 
+w<-which(my.dawba$asd_dsm_agree==4) #code used for Asperger (old def) = ASD-
 my.dawba$asd_dsm_agree[w]<-1
 my.dawba$bicode<- 10*my.dawba$asd_dsm_agree+my.dawba$socphob_dsm_agree
 my.dawba$bicode2<-as.factor(my.dawba$bicode)
 
-levels(my.dawba$bicode2)  <- c('Neither','SocAnx','SCD','SCD+SocAnx','ASD','ASD+SocAnx')                                                      
+levels(my.dawba$bicode2)  <- c('Neither','SocAnx','ASD-','ASD- +SocAnx','ASD','ASD+SocAnx')                                                      
 mytab<-table(my.dawba$bicode2,my.dawba$group8) 
 mytab<-mytab[,1:6] #omit twins
 myprop<-prop.table(mytab,2) #proportions by column (2nd parameter denotes row =1 or col=2)
 # mytab<-as.data.frame.matrix(mytab)
 # myprop<-as.data.frame.matrix(myprop)
-nicetab <- data.frame(matrix(NA,nrow=8,ncol=6))
-rownames(nicetab)<-c('Diagnosis','N','Neither','SCD','ASD','SocAnx','SCD+SocAnx','ASD+SocAnx')
-colnames(nicetab)<-c('.','Low Bias','..','...','High Bias','....')
-nicetab[1,] <- c('XXX','XXY','XYY','XXX','XXY','XYY')
-nicetab[2,]<-colSums(mytab)
+nicetab <- data.frame(matrix(NA,nrow=8,ncol=7))
+#can't have blank colnames, so using dots for now. Each must be unique
+colnames(nicetab)<-c('.','-','Low Bias','..','...','High Bias','....')
+nicetab[1,] <- c('Diagnosis','XXX','XXY','XYY','XXX','XXY','XYY')
+nicetab[2,]<-c('N',colSums(mytab))
 myorder<-c(1,4,2,5,3,6) #reorder the rows to be more logical
 for (thisrow in 1:6){
-  for (thiscol in 1:6){
-    nicetab[(2+myorder[thisrow]),thiscol]<-paste0(mytab[thisrow,thiscol],' (',
-                                                  round(100*myprop[thisrow,thiscol],1),'%)')
+  for (thiscol in 2:7){
+    nicetab[(2+myorder[thisrow]),thiscol]<-paste0(mytab[thisrow,(thiscol-1)],' (',
+                                                  round(100*myprop[thisrow,(thiscol-1)],1),'%)')
   }
 }
+nicetab[3:8,1]<-c('Neither','ASD-','ASD','SocAnx','SocAnx+ASD-','SocAnx+ASD')
 #rate of SocAnx
 forchi<-matrix(c(22,21,31,0,7,1),nrow=2,byrow=TRUE)
 chisq.test(forchi)
@@ -1262,7 +1263,7 @@ my.dawba2$bicode2[myn+1]<-NA #NA so won't plot
 #recode the diagnostic groups to numbers
 #the 2 digit number is ASD*10 then SocAnx
 
-#We want this order "None","SocAnx","ASD","SCD","ASD+SocAnx","SCD+SocAnx")
+#We want this order "None","SocAnx","ASD","ASD-","SocAnx+ASD","SocAnx+ASD-")
 diaglist<-c(0,2,20,10,22,12)
 
 my.dawba2$bicode3<-my.dawba2$bicode #initialise
@@ -1297,7 +1298,7 @@ mylegendcols<- mycols
 
 mysrsnames<-c('T-score')
 plot(x=NULL, y=NULL , type = "n", axes = F, xlab = "", ylab = "", xlim=c(0,20), ylim=c(0,250)) #set up the plot?
-mylabels <- c("None","SocAnx","ASD","SCD","ASD+SocAnx","SCD+SocAnx")
+mylabels <- c("None","SocAnx","ASD","ASD-","SocAnx+ASD","SocAnx+ASD-")
 #draw rectangles with labels
 for (i in 1:6){
   x1<-0;x2<-2;y1<-(i-1)*41;y2<-y1+31;
@@ -1494,7 +1495,7 @@ flow2<-DiagrammeR::grViz("
             # node definitions with substituted label text
             node [shape = plaintext, fontname = Helvetica]
             X[label='@@1']
-             Y[label= 'Exclude:\\n ASD, IQ, hearing']
+             Y[label= 'Exclude:\\n ASD (DAWBA), \\nlow IQ, hearing']
             Z[label= 'Total N twin children']
             Q[label='DAWBA\\n available']
             
@@ -1537,131 +1538,11 @@ flow2<-DiagrammeR::grViz("
 flow2 %>% export_svg %>% charToRaw %>% rsvg_png("twins_flow_dawba.png")
 
 ```
-
-
-
-
-#Abstract (needs rewriting!)
-
-**Background**: Early studies of children with sex chromosome trisomies documented an association with language disorder, but more recent research has suggested an elevated risk for autism spectrum disorder (ASD), especially in males with 47,XXY (Klinefelter syndrome) and 47,XYY karyotypes. However, there is also evidence that an additional X chromosome is associated with high levels of social anxiety disorder, raising the question of how far this is distinct from ASD. **Aims**: (1) To compare rates of social impairments in children with an extra X chromosome, i.e. girls with trisomy X (47,XXX karyotype) and boys with Klinefelter syndrome, versus those with an additional Y chromosome (boys with XYY syndrome); (2) To consider how far social impairments in all three groups are linked to ASD. **Methods**: We compared three sources of information: existing diagnoses, diagnoses from an online psychiatric assessment (DAWBA) and an autism-sensitive questionnaire, the Social Responsiveness Scale, completed by parents in children with 47,XXX (N = `r n.K+n.N`), 47,XXY (N = `r n.L+n.O`) and 47,XYY (N = `r n.M+n.P`) karyotypes to consider how prevalent social impairments were in the three trisomy types, and how far they could be attributed to ASD. **Results**: We distinguished between a High Bias subgroup, whose trisomy was discovered when investigating behavioural or neurodevelopmental concerns, and a Low Bias subgroup who were diagnosed prenatally or on the basis of other medical concerns in childhood. Only x children (x from Low Bias group) had social anxiety without an ASD diagnosis. A further x boys had a joint diagnosis of social anxiety and ASD: x were XXY cases, and four of these came from the High Bias group. Rates of ASD diagnosis on DAWBA in children with an extra X chromosome were higher than general population prevalence, but nevertheless only a minority of children were affected. In cases of XYY, however, ASD was substantially higher, affecting x% of the Low Bias group, and x% of the High Bias group. **Discussion and Conclusions**: Social anxiety is relatively rare in non-autistic children with sex chromosome trisomies: numbers were too small to give confident conclusions, but, in line with prediction, all but one of the cases with this diagnosis all had an extra X chromosome. In boys with an extra Y chromosome, ASD was found in around half the Low Bias sample, although outcomes were very variable, with some boys having no indication of any autistic features. It is important to note that where an extra chromosome is identified in the course of investigating behavioural or neurodevelopmental problems, rates of ASD will be artificially inflated.
-
-
-# Introduction
-Chromosome trisomies arise from an error of cell division during meiosis, so that either the egg or sperm contains two rather than one copy of the chromosome. When a trisomy affects one of the autosomes, this is often lethal, or causes severe physical and mental abnormalities. Trisomies of the sex chromosomes, however, have much milder effects, and often go undetected. This makes study of the impact of sex chromosome trisomies difficult, because those cases who do come to attention may be atypical, with genetic testing being prompted by developmental abnormalities.
-
-In the 1960s, several centres came together with the aim of evaluating the impact of sex chromosome trisomies in samples identified on newborn screening. The three kinds of trisomy - trisomy X (47,XXX), Klinefelter's syndrome (47,XXY) and 47,XYY karotypes were all found to be associated with neurodevelopmental problems, particularly affecting language and motor functions, though varying in profile and severity both within and between the three karyotypes {Leggett, 2010 #17405}. 
-
-More recent studies, however, have noted an increased risk of autism spectrum disorder (ASD) in males: both those with Klinefelter's syndrome and those with XYY karyotype {Van Rijn, 2008 #16706}, {Bishop, 2011 #17168},{Ross, 2012 #18868},{Joseph, 2018 #38796}. Furthermore, in all three trisomies, communication problems affecting pragmatic as well as structural domains of communication can be found on the Children's Communication Checklist-2 {Bishop, 2003 #13641},{Bishop, 2018 #38799}, even after excluding those with a diagnosis of ASD. 
-
-The question arises as to why an increased risk of ASD was not identified in  earlier studies. It is important to note that the early studies reviewed by Leggett et al {Leggett, 2010 #17405} focused on cases identified on neonatal screening, who tend to have milder difficulties than children with trisomies identified in the course of investigation for neurodevelopmental problems. Nevertheless, the sample by Bishop et al (2011) included a substantial proportion of cases identified on prenatal screening: although rates of neurodevelopmental disorder in general were lower in these cases than in those identified postnatally, ASD rates were nevertheless elevated in boys identified before birth. It was suggested that the most likely explanation was 'diagnostic substitution' - i.e., the broadening of diagnostic criteria for ASD between DSM-III and DSM-IV would mean that children who had hitherto been regarded as language-disordered would now be eligible for an ASD diagnosis. Other possibilities that cannot be ruled out include a genuine increase in ASD as a consequence of increased parental age, and/or an unknown environmental factor. 
-
-Other research, however, suggests another possibility, namely that there may be a tendency to give a diagnosis of ASD when a child has problems with social interaction, even if other features of autism such as pragmatic oddities in communication, restricted interests and repetitive behaviours, and sensory abnormalities are absent. Of particular interest is the idea that social anxiety, which has been described in children with an extra X chromosome, might be misdiagnosed as ASD. 
-
-Van Rijn and colleagues {Van Rijn, 2014 #38662} compared a sample of young people (aged 9 – 18) with an extra X chromosome to those with an ASD diagnosis, using the Social Responsiveness Scale (SRS) {Constantino, 2005 #14237}. The rationale behind the SRS is that ASD is not a qualitatively distinct disorder, but is the extreme point on a continuum of impairment. The SRS  was developed to quantify social and related impairments characteristic of autism in the broader population, and is scored so that the population mean is 50 (SD = 10), with high scores corresponding to impairment. Van Rijn et al found that the extra X group (XXX M = 63.8, SD = 31.7; XXY M = 68.7, SD = 31.7) showed significantly higher total SRS T-scores than a control group (M = 26.3, SD = 16.3), but lower scores than an ASD comparison group (M = 97.6, SD = 28.8). 44.2% of the extra X group scored above the threshold indicating clinically significant impairment (defined here as 65). However, the extra X group also showed significantly higher social anxiety on all five subscales of the Social Anxiety Scale (SAS) than both the ASD and the control group. In terms of mean SAS scores, Cohen’s d for the difference between the extra X and the control group was 0.8, and between the extra X and the ASD group was 0.2. 
-
-At first glance, these results might suggest that an extra X chromosome creates an increased risk of both ASD and social anxiety. However, there is mounting evidence that while the SRS may be sensitive to ASD, it is not very specific. A number of studies have shown that high scores on the SRS are not restricted to those with a diagnosis of autism, but are also reported for young people with a range of diagnoses, including conduct disorder, ADHD and anxiety (e.g., {Pine, 2008 #39110}; {Towbin, 2005 #39111}; {Bölte, 2011 #39115}; {Settipani, 2012 #39113}; {Cholemkery, 2014 #39112}; {South, 2017 #39114}).In a study of males with XYY karyotype, Joseph et al (2018) found that elevated SRS scores were characteristic of this group, especially those identied postnatally, but the specificity of the SRS was poor, with high scores seen in those with a range of types of psychiatric symptomatology.
-
-This raises the question of whether there may be specific items on the SRS that are more sensitive to autism symptoms. Moul and colleagues {Moul, 2015 #38800} attempted to address this in a mixed clinical sample (N = 522), though with limited success. They found mean SRS total T-scores above the normal range in all their groups, including ASD (N = 18, M = 83.9), anxiety (N = 22, M = 61.7), and co-morbid diagnoses, of whom 38 had an ASD diagnosis (N = 298, M = 72.4). Notably, 73% of those with “pure” anxiety and 82% of the co-morbid sample were in the ‘autism likely’ range, defined as a T-score of 60 or above. At the cut-off of 60, the full-scale SRS showed a sensitivity of .96, but a very high false positive rate of .75, for ASD in the whole sample. The authors went to on create a SRS-brief scale based on 16 items from the SRS on which the “pure” ASD group scored higher than the other groups with “pure diagnoses”. The SRS-brief showed the same sensitivity as the full SRS total, and a marginally better, though still inadequate, specificity of .56. 
-
-Most of the focus of studies of children with sex chromosome trisomies using the SRS have focused on the impact of an additional X chromosome. In contrast, Cordeiro and colleagues {Cordeiro, 2012 #38802} compared groups of children with XXY and XYY chromosome complements, and found that the XXY group had significantly less impairment than the XYY group by total SRS T-score (XXY M = 62.0, SD = 15.4; XYY M = 72.8, SD = 15.8). There was evidence of ascertainment bias in this study, with prenatally diagnosed children (XXY M = 58.6, SD = 14.2; XYY = 63.5, SD = 15.6) having lower total SRS T-scores than postnatally diagnosed children (XXY M = 66.3, SD = 16.1; XYY M = 77.3, SD = 14.1). 47.1% of all the XXY children and 85% of the XYY children scored above the threshold for social impairment (defined as 60). Scores on individual SRS subscales were very similar to total scores, with significantly more impairment for XXY children compared to XYY children on all subscales, except Social Motivation, on which they scored the same; this scale represented a relative strength for the XYY group in terms of their overall profile. For the XXY group, means were above the 60 cut-off on all subscales expect Social Awareness, which represented a relative strength for this group. Interestingly, these patterns for XXY boys to score relatively better on Social Awareness than other subscales and for XYY boys to score relatively better on Social Motivation than other subscales have been replicated in other studies (XXY: Tartaglia et al., 2010; XYY: Ross et al., 2015). This pattern indicates that there may be ‘characteristic profiles’ of social difficulties in children with SCTs, which is an interesting echo of earlier work that suggested that Klinefelter’s Syndrome was associated with a particular personality style (characterised as shy, sensitive and passive, Herlihy et al, 2011). 
-
-It may, therefore, be productive to identify, not only the SRS subscales that are sensitive to problems experienced by children with SCTs, but also specific items that are commonly endorsed at the group level to establish whether there is a characteristic phenotype. 
-
-Taken together, these studies indicate that an increased likelihood of a clinical range score is seen in children who have an extra X or Y chromosome, but the pattern of results suggests there may be a different profile depending on karyotype. Studies of children who do not have trisomies have shown that many children and young people with anxiety score within the clinically significant range of the SRS. Indeed, the specificity of the SRS, when Youden’s factor (ref) is used to calculate an optimal cut-off on ROC curves, indicates that when differentiating between ASD and anxiety, about 1 in every 4 young people is classified as having ASD by the SRS when their existing diagnosis is anxiety not ASD. Notably, these cut-offs are invariably around 75, suggesting that to differentiate between anxiety and autism in clinical samples, the screening threshold suggested by the SRS manual (i.e. 60) is too low. Of course, the high SRS scores in those with social anxiety could reflect undiagnosed autistic deficits in social interaction; however, they could also reflect a miscategorisation of anxiety-related social behaviours that look like autism, but are cognitively different {Tyson, 2012 #39118}.
-
-A related question is how far any behavioural and psychiatric difficulties of children with sex chromosome trisomies might be attributed to their language problems. Language disorders are one of the most consistent deficits associated with all three sex chromosome trisomies, a finding confirmed for the current sample in our companion paper (Bishop et al, 2018). Developmental language disorder is commonly comorbid with psychiatric problems in children who do not have any known neurobiological condition (Beitchman & Brownlie, 2014) though it can be hard to establish how far language deficits play a causal role, and how ar the association reflects shared risk factors (Cohen, 2001).  
-
-The goal of the current study was to evaluate profiles of social impairment and autistic features in children with an extra sex chromosome, using information from prior diagnosis, parental interview, an online diagnostic instrument (the DAWBA) and the SRS.
-
-Specific hypotheses were: 
-1. In line with previous research, we expected to find an increased rate of autistic features in all three trisomies, but with confirmed autism diagnoses elevated only in boys with XXY or XYY.  
-2. Social anxiety symptoms were expected to be higher in children with an extra X chromosome (XXY and XXX) than in boys with an extra Y. 
-3. We predicted that social impairment and autistic features in children with sex chromosome trisomies are consistent with the level of language impairment. To test this idea we compared the profile of social impairment and autistic features with that seen in a comparison group of children with language difficulties of unknown origin. 
-4. Consistent with previous findings, we anticipate that ascertainment bias will affect results, and levels of social and psychiatric impairment will be substantially higher in children identified in the course of investigation for developmental disorders, than in other children with sex chromosome trisomies. 
-5. Finally, extending the work by Joseph et al (2018), we expected that children with all three types of trisomy will have elevated scores on the SRS, but this will not necessarily be indicative of ASD.
-
-
-# Methods
-We report how we determined our sample size, all data exclusions, all manipulations, and all measures in the study. <!-- 21-word solution (Simmons, Nelson & Simonsohn, 2012; retrieved from http://ssrn.com/abstract=2160588) -->
-
-## Participants 
-### Children with sex chromosome trisomies 
-The analysis was conducted on data from `r n.K+n.L+n.M+n.N+n.O+n.P` children (`r n.K+n.N` with XXX, `r n.L+n.O` with XXY and `r n.M+n.P` with XYY) whose parents had completed the Development and Wellbeing Assessment (DAWBA). As shown in Figure 1, these came from a larger sample of `r n.C+n.D` children who participated in a study of language and laterality in sex chromosome trisomies, whose genetic, laterality and language characteristics have been reported in previous papers (xxx). Children were recruited from National Health Service Clinical Genetics centres, from two support groups: Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association, or from self-referral via social media. A criterion for inclusion was that the child was aware of their trisomy status. Figure 1 distinguishes between cases where the trisomy was discovered in childhood during investigations for behavioural or neurodevelopmental problems, as the latter group suffer from ascertainment bias and are likely to a high rate of disorder that is not  representative of that karyotype. These are referred to as the 'High Bias' subgroup. An unexpected feature of the sample was that the majority of girls with trisomy X were in the Low Bias subgroup, whereas the majority of boys with XXY or XYY were in the High Bias subgroup, suggesting that these karyotypes were more likely to be associated with neurodevelopmental problems. 
-`r Norig` children had taken part in the previous study by Bishop et al (2011). Information on these children was available only from parental report: two of them (8.7%) had been reported by their parents to have a diagnosis of ASD, closely similar to the rate of 13/136 (9.5%) for the whole 2011 sample. 
-In a previous report based on this sample (Bishop et al, 2018), we noted that the likelihood of parents completing checklists for this study was lower if the child had significant language problems. This prompted us to compare children whose parents did and did not complete the DAWBA, using a language factor score (see below) as an indicator of language level. A t-test revealed that, as before with checklist completion, parents who completed the DAWBA had children with milder language problems: mean for those who completed DAWBA was `r round(my.t.dawba$estimate[2],1)` versus `r round(my.t.dawba$estimate[1],1)` for the remainder, t (`r round(my.t.dawba$parameter,1)`) = `round(my.t.dawba$statistic,1)`. `r thisfig <- thisfig+1`
-
-![<b>Figure `rthisfig`</b>. Flowchart showing numbers of children with each karyotype in the study, in relation to whether prenatally or postnatally diagnosed, whether high ascertainment bias, and whether DAWBA was completed.](SCT_asd_flow.png)
-
-### Comparison sample 
-A comparison sample of twin children was recruited via fliers sent to primary schools around the UK, advertisements on our group's website and via twins' clubs. The age range for this sample was narrower than for the sex chromosome trisomy cases: 6 years 0 months to 11 years 11 months. The sample was recruited to be over-representative of cases where parents were concerned about the language development of one or both twins. Further details are provided in Wilson and Bishop {Wilson, 2018 #38731} and Bishop et al (2018). 
-As in our previous analysis (Bishop et al, 2018), we selected one twin at random to avoid dependencies in the data, and we excluded three children with evidence of autism spectrum disorder, significant hearing loss or intellectual disability. Children were then subdivided according to whether parents had expressed concern about persisting mild or severe language problems, or where the child had had speech and language therapy beyond 4 years of age. The remaining children were in a 'No Concerns' group, which was used to provide a normative range for some of the assessments. Figure 2 shows a flowchart indicating how twins were selected. The DAWBA was completed for `r dawba_LI_Y+dawba_TD_Y` of `r inc1` (`r round(100*(dawba_LI_Y+dawba_TD_Y)/inc1,1)`%) of these children. `r thisfig<-thisfig+1`
-
-![<b>Figure `r thisfig`</b>. Flowchart showing numbers of children in comparison group, in relation to whether there was parental concern about language, and whether DAWBA was completed.](twins_flow_dawba.png)
-
-## Material\
-
-### Psychiatric evaluation
-\
-In an initial telephone interview, parents were asked about the child's medical and educational history, including a question about whether anyone had diagnosed the child with a neurodevelopmental disorder such as ASD, developmental language disorder (DLD) or specific language impairment (SLI), dyslexia or dyspraxia. 
-In addition, one or both parents were asked to complete the online Development and Wellbeing Assessment (DAWBA){Goodman, 2000 #18146} in their own time. 86 families (one with two affected children) complied with this request. The DAWBA includes a range of questions relating to DSM5 and ICD10 diagnostic criteria, risk factors, and impact on the family, which are supplemented by optional free text. In addition, the DAWBA incorporates the Strength and Difficulties Questionnaire (SDQ) (Goodman, 1997), and the Social Aptitudes Scale (Liddle, 2009), which are described more fully below. 
-The DAWBA software codes the items relevant to different diagnoses to give a score indicating the likelihood of the child meeting criteria for a range of psychiatric diagnoses, with the final diagnosis being made by a trained rater who assimilates all the quantitative and qualitative information. DAWBA has been used to obtain prevalence estimates for psychiatric disorders for a representative sample of over 10,000 children in the UK (Meltzer et al., 2000). Validity of DAWBA for diagnosis of autism has been shown to be acceptable (McEwen et al, 2016).  
-All interviews with SCT cases were coded against DSM5 criteria by the first author (AW), and a further 30 interviews were coded by a second independent rater (JK) to check on diagnostic agreement. The rater doing the coding was blind to the trisomy status of the child, although occasionally this was mentioned by parents in free text comments. Cases of disagreement were resolved by the last author (DVMB), who gave a final consensus rating that was used here. All interviews with comparison twins were coded by the last author (DVMB). *(This is not ideal as it gives a confound) *. As well as assigning diagnoses, the rater completed two checklists that capture overall severity of problems:  the Children's Global Assessment Scale (CGAS) (Shaffer et al., 1983), and the Health of the Nation Outcome Scales for Children and Adolescents (HoNOSCA) (Gowers et al., 1999).
-*(Not sure if we will use these here)*. 
-For this analysis, we focused on DSM5 diagnoses of Autism Spectrum Disorder (ASD) and Social Anxiety Disorder. ASD was coded as absent (0) or present (2), with a code of 1 given for significant autism symptoms that fell short of diagnostic criteria. Most of the latter group would qualify as cases of Social Communication Disorder (SCD), in that they showed evidence of social and communicative difficulties, but did not have repetitive behaviours and restricted interests to a sufficient level to merit an ASD diagnosis. Accordingly, we will refer to those scoring 1 on this domain as cases of SCD.
-The criteria for Social Anxiety Disorder (SocAnx) include a marked and persistent fear of one or more social situations where the individual may be subject to scrutiny by others. For a diagnosis of SocAnx the symptoms must significantly with everyday life. In children, the anxiety must occur in peer settings, not just with adults, must be disproportionate to the situation, and not better explained by another disorder such as ASD. SocAnx is differentiated from Separation Anxiety and General Anxiety Disorder by the situational specificity of the anxiety.
-
-## Parental questionnaires 
-
-_Strength and Difficulties Questionnaire (SDQ) (Goodman, 1997)._
-The SDQ was incorporated in the online DAWBA assessment. SDQ is a questionnaire used to screen children's behaviour on five dimensions: 1) emotional symptoms (5 items); 2) conduct problems (5 items); 3) hyperactivity/inattention (5 items); 4) peer relationship problems (5 items); 5) prosocial behaviour (5 items). Norms are available for a representative sample of over 10,000 British children aged from 5 to 15 years (Meltzer et al., 2000). 
-
-_Social Aptitudes Scale (SAS) (Liddle et al, 2009)._
-This 10-item scale forms part of the DAWBA and was designed to tap skills in social understanding and behaviour that vary substantially in the general population. The behaviours surveyed in SAS relate to aspects of social understanding rather than to social anxiety, and the parent is asked to rate positive rather than negative attributes, such as 'able to compromise and be felxible'.
-
-_The Children's Communication Checklist-2 (CCC-2)._
-\ 
-*(more info to be added here - if we decide to include it)* 
-
-_The Social Responsiveness Scale (SRS)._ 
-\ 
-The SRS is a 70-item scale designed to measure autism-related impairments as quantitative trait. It is composed of five subscales: social cognition, social awareness, social motivation, social communication and autistic features. Score on each subscale, and on the total scale, can be represented as T-scores with mean 50 and SD of 10, with impairment represented as a positive score. More information on previous research with SRS is provided in the introduction.
-
-
-
-### Language, literacy and cognitive assessments
-\
-
-All children were seen for a detailed neurocognitive assessment and language assessment lasting around 1.5 to 2 hours. The test battery and results from these assessments are described in a companion paper (Bishop et al., 2018). In addition, handedness and language laterality were assessed, the latter involving a child-friendly functional transcranial Doppler ultrasound paradigm {Groen, 2012 #18663}. Results from these assessments have been described elsewhere (Wilson & Bishop, 2018). 
-For the current paper, we will focus on two composite measures from the neurocognitive assessement: a measure of nonverbal ability (Performance IQ or PIQ) derived from the Block Design and Matrices subtests of the Wechsler Abbreviated Scale of Intelligence (WASI, Wechsler, 1999), and a language factor derived by Newbury et al (2018) from factor analysis of four language measures: a) Vocabulary scale of the WASI; b) Verbal Comprehension scale of the Woodcock Johnson III Tests of Cognitive Abilities {Woodcock, 2007 #19530}; c) Sentence Repetition and d) Oromotor Sequences from 
-NEPSY: A Developmental Neuropsychological Assessment {Korkman, 1998 #11973}. 
-
-## Procedure  
-\
-Ethical approval was obtained for the study in 2011 from the Berkshire NHS Research Ethics Committee (reference 11/SC/0096), and data collection started in August of that year, finishing in October 2016. Families who had expressed interest in the study were interviewed by telephone to assess whether the child met inclusion criteria, and if so, an appointment was made to see the child at home or at school, depending on parental preference. Families were widely dispersed around the UK, including Northern Ireland, Scotland, Wales and England. During the course of recruitment, which lasted for a period of five years, a total of eight research assistants as well as the senior author were involved in assessing children. The assessment was conducted in a single session lasting between 2-3 hours per child, with breaks where needed.
-
-## Data analysis  
-Study data were analysed using R software (R Core Team, 2016), with the main database managed using REDCap electronic data capture tools hosted at the University of Oxford {Harris, 2009 #19562}. 
-
-
-
-
-# Results
-
-Our research questions focused on the rates of ASD and SocAnx in XXX, XXY and XYY karyotypes. Because we also predicted that these rates would be influenced by ascertainment bias, the data were analysed separately for the Low Bias and High Bias subgroups. Table `r thistab+1` shows the numbers of children with DSM-5 diagnoses of ASD, SCD or SocAnx on the Development and Wellbeing Assessment (DAWBA).
-
-**Table `r thistab+1`** 
-```{r diagtable,echo=FALSE}
-regulartable(nicetab) %>% 
-  theme_zebra() %>% 
-  autofit()
-thistab<-thistab+1 #increment table counter
-#nicetab has to have distinct column names - currently these are just dots.
-```
 ```{r socanxN,include=FALSE}
 socanx.xxy1 <- sum(mytab[c(2,4,6),2]) #low bias xxy cases with SocAnx
-socanxplus.xxy1 <- sum(mytab[c(4,6),2])#low bias xxy cases with SocAnx+ASD/SCD
+socanxplus.xxy1 <- sum(mytab[c(4,6),2])#low bias xxy cases with SocAnx+ASD/ASD-
 socanx.xxy2 <- sum(mytab[c(2,4,6),5])#hi bias xxy cases with SocAnx
-socanxplus.xxy2 <- sum(mytab[c(4,6),5])#hi bias xxy cases with SocAnx+ASD/SCD
+socanxplus.xxy2 <- sum(mytab[c(4,6),5])#hi bias xxy cases with SocAnx+ASD/ASD-
 
 MeltzN <- 5219 #size of population from which population estimate BOYS
 Meltzp <-.4 #percentage prevalence from Meltzer sample BOYS
@@ -1677,18 +1558,16 @@ se.logoddsr <-sqrt(1/Meltzaff+1/Meltznon+1/socanx.xxy1+1/xxynon)
 ci.low <-round(logoddsr-1.96*se.logoddsr,2)
 ci.hi <- round(logoddsr+1.96*se.logoddsr,2)
 ```
-Considering first those with a diagnosis of SocAnx, there were `r numnames[socanx.xxy1+1]` in the XXY-Low Bias group and `r numnames[socanx.xxy2+1]` in the XXY-High Bias group, as well as one child in the XYY-High Bias group. All but `r numnames[mytab[2,2]+1]` of these children had additional diagnoses of SCD or ASD. In the epidemiological sample of Meltzer et al. (2000), the prevalence of SocAnx was 0.3% in girls and 0.4% in boys. Although the numbers of boys with XXY studied here is very small, the finding that 21% in the Low Bias group and 28% in the High Bias group met diagnostic criteria for this condition is well above the prevalence in the general population (log odds ratio for Low Bias group = `r round(logoddsr,2)`, 95% CI = `r ci.low`-`r ci.hi`). 
-
 
 ```{r asd.dawba, include=FALSE}
 #
-#For this we combine the SCD and ASD diagnoses
-asd.xxx1 <- sum(mytab[3:6,1])#low bias xxx cases with ASD/SCD
-asd.xxx2 <- sum(mytab[3:6,4])#hi bias xxx cases with ASD/SCD
-asd.xxy1 <- sum(mytab[3:6,2])#low bias xxy cases with ASD/SCD
-asd.xxy2 <- sum(mytab[3:6,5])#hi bias xxy cases with ASD/SCD
-asd.xyy1 <- sum(mytab[3:6,3])#low bias xyy cases with ASD/SCD
-asd.xyy2 <- sum(mytab[3:6,6])#hi bias xyy cases with ASD/SCD
+#For this we combine the ASD- and ASD diagnoses
+asd.xxx1 <- sum(mytab[3:6,1])#low bias xxx cases with ASD/ASD-
+asd.xxx2 <- sum(mytab[3:6,4])#hi bias xxx cases with ASD/ASD-
+asd.xxy1 <- sum(mytab[3:6,2])#low bias xxy cases with ASD/ASD-
+asd.xxy2 <- sum(mytab[3:6,5])#hi bias xxy cases with ASD/ASD-
+asd.xyy1 <- sum(mytab[3:6,3])#low bias xyy cases with ASD/ASD-
+asd.xyy2 <- sum(mytab[3:6,6])#hi bias xyy cases with ASD/ASD-
 #Odds ratio for low bias only
 xxxnon<-(sum(mytab[,1])-asd.xxx1)
 xxynon<-(sum(mytab[,2])-asd.xxy1)
@@ -1726,25 +1605,158 @@ ci.low.xyy <-round(logoddsr.xyy-1.96*se.logoddsr.xyy,2)
 ci.hi.xyy <- round(logoddsr.xyy+1.96*se.logoddsr.xyy,2)
 ```
 
-Meltzer et al (2000) reported prevalence rates for 'Pervasive Developmental Disorder' (encompassing ASD and SCD) of 0.5% for boys and 0.1% for girls. Compared with these figures, there are elevated rates in all three trisomies. We consider here just the Low Bias groups: the log odds ratio (with 95% confidence interval) is `r logoddsr.xxx` (`r ci.low.xxx` - `r ci.hi.xxx`) for XXX girls; `r logoddsr.xxy` (`r ci.low.xxy` - `r ci.hi.xxy`) for XXY boys; and `r logoddsr.xyy` (`r ci.low.xyy` - `r ci.hi.xyy`) for XYY boys. None of these affected children had been in the original 2011 study. 
 
-Although the odds ratio of ASD/SCD were elevated in all three trisomies, and the rate of SocAnx was high in the XXY boys, the majority of children in the Low Bias groups did not have either diagnosis. However, DAWBA categorical diagnoses only detect more severe levels of impairment associated with burden to families. We next considered the possibility that there might be distinctive subclinical features associated with an additional X or Y chromosome. To investigate this question we first considered the profile of scores on the two questionnaires incorporated into the DAWBA: SDQ and the SAS. `r thisfig<-thisfig+1` Note that a high score on the Emotional, Conducct, Hyperactivity, and Peer Relations scales indicates impairment, whereas a high score on Prosocial and Social Aptitude Scale corresponds to social skills. Figure `r thisfig` shows individual data points as well as means on the five SDQ scales and the SAS. 
+#Abstract (needs rewriting!)
 
-![<b>Figure `r thisfig`</b>. Beeswarm plots: SDQ and SAS scales for the three trisomy groups, subdivided by bias group, together with the Language Concerns twin comparison group. The yellow shaded area denotes the +/- 1 SD limits around the mean for the No Concerns twin comparison group. Note that SAS raw scores are divided by two, so they can be shown on a similar scale to the SDQ scales..](beeswarm_sdq.png)
-
-
-`r thisfig <- thisfig+1`Figure `r thisfig` shows the T-scores on the SRS scales in an analogous fashion. SRS T-scores are scaled with mean of 50 and SD of 10. A cutoff of total score of 75 has been been reported as giving sensitivity and specificity are 0.85 and 0.75 for ASD diagnosis (Bölte et al. 2011; Constantino 2002). 
-
-![<b>Figure `r thisfig`</b>. Beeswarm plots on SRS scales for the three trisomy groups, subdivided by bias group, together with the Language Concerns twin comparison group. The yellow shaded area denotes the +/- 1 SD limits around the mean for the No Concerns twin comparison group.](beeswarm_srs.png)
-
-We had planned to use Multivariate Analysis of Variance (MANOVA) to compare groups on the SDQ and SRS scales, but many of the variables suffered from floor and ceiling effects or skew, and so nonparametric Kruskal-Wallis tests were used instead. A randomisation test with 10000 iterations was used to estimate the range chi square values that would be obtained  under the null hypothesis, where group identity was assigned at random. A series of analyses was conducted to address the specific questions raised in the Introduction.
-
-**Test of hypotheses 1-2**. The first two hypotheses were that there would be karyotype-specific differences in profiles, with autistic features more prominent in boys with XYY karyotype, and social anxiety in the XXX girls and XXY boys. To reduce the effects of ascertainment bias, these predictions were tested using data from the Low Bias groups only. Scores for the three karyotypes were compared on the five SDQ scales, the five SRS scales, and the Social Aptitudes Scale. We predicted that the XYY boys would score lower than the XXX and XXY groups on the two scales measuring positive aspects of social behaviour (SDQ Prosocial and SAS), and higher (i.e., more impaired) on the SRS scales. We further predicted that the XXX girls and XXY boys would score higher (more impaired) on the SDQ emotional scale. `r thisfig<-thisfig+1`. Results are summarised in Figure `r thisfig`, which shows the obtained chi square values in relation to those from the randomised data, with the upper fin of each boxplot corresponding to the 99th centile. The only scale to show an effect in line with prediction was the SDQ prosocial scale, where the obtained chi square was outside the 99% limit, reflecting the fact that the XYY boys scored on average below the normal range, whereas XXX girls were well within normal limits. Given the small sample sizes, and wide variation within each karyotype, the power is low to detect subtle effects. It is evident from Figures `r (thisfig-2)` and `r(thisfig-1)` that, while the overall rate of impairment is raised relative to the general population, many children with sex chromosome trisomies score within normal limits.
-
-![<b>Figure `r thisfig`</b>. Plot of chi square values obtained on Kruskal-Wallis test comparing the three Low Bias sex chromosome trisomy groups (red asterisks), relative to the range of chi square values when group is randomised. The box shows the interquartile range, and the upper fin of the boxplot corresponds to the 99th centile for randomised values.](random99_chiplot_LowBias_karyotype.png)
+**Background**: Early studies of children with sex chromosome trisomies documented an association with language disorder, but more recent research has suggested an elevated risk for autism spectrum disorder (ASD), especially in males with 47,XXY (Klinefelter syndrome) and 47,XYY karyotypes. However, there is also evidence that an additional X chromosome is associated with high levels of social anxiety disorder, raising the question of how far this is distinct from ASD. **Aims**: (1) To compare rates of social impairments in children with an extra X chromosome, i.e. girls with trisomy X (47,XXX karyotype) and boys with Klinefelter syndrome, versus those with an additional Y chromosome (boys with 47,XYY syndrome); (2) To consider whether rates of social impairment are increased in all three groups, independent of ASD. **Methods**: We considered data from diagnoses from an online psychiatric assessment (DAWBA) and an autism-sensitive questionnaire, the Social Responsiveness Scale, completed by parents in children with 47,XXX (N = `r n.K+n.N`), 47,XXY (N = `r n.L+n.O`) and 47,XYY (N = `r n.M+n.P`) karyotypes. **Results**: We distinguished between a High Bias subgroup, whose trisomy was discovered when investigating behavioural or neurodevelopmental concerns, and a Low Bias subgroup who were diagnosed prenatally or on the basis of other medical concerns in childhood. A diagnosis of Social Anxiety Disorder was made for `r numnames[socanx.xxy1+1]` in the XXY-Low Bias group and `r numnames[socanx.xxy2+1]` in the XXY-High Bias group, as well as one child in the XYY-High Bias group. All but `r numnames[mytab[2,2]+1]` of these children met diagnostic criteria for ASD or had significant autistic features (ASD-). In boys with an extra Y chromosome, ASD was found in around half the Low Bias sample, although outcomes were very variable, with some boys having no indication of any autistic features. **Discussion and Conclusions**: Social anxiety is relatively rare in non-autistic children with sex chromosome trisomies: numbers were too small to give confident conclusions, but, in line with prediction, all but one of the cases with this diagnosis all had an extra X chromosome. It is important to note that where an extra chromosome is identified in the course of investigating behavioural or neurodevelopmental problems, rates of ASD will be artificially inflated.
 
 
-**Test of hypothesis 3**. `r thisfig<thisfig+1` Hypothesis 3 is concerned with the extent to which psychiatric problems in children with sex chromosome trisomies are consistent with the level of language impairment. To test this hypothesis, we restricted consideration to the Low Bias trisomy group. We had previously shown that language impairments in this group were comparable to those seen in the twin comparison group with Language Concerns. As shown in Figure `r thisfig`, the two groups were similar on many of the SDQ scales, but the trisomy group had more evidence of problems in the domains of Peer Relationships and Emotional Difficulties. 
+# Introduction
+Chromosome trisomies arise from an error of cell division during meiosis, so that either the egg or sperm contains two rather than one copy of the chromosome. When a trisomy affects one of the autosomes, this is often lethal, or causes severe physical and mental abnormalities. Trisomies of the sex chromosomes, however, have much milder effects, and often go undetected. This makes study of the impact of sex chromosome trisomies difficult, because those cases who do come to attention may be atypical, with genetic testing being prompted by developmental abnormalities.
+
+In the 1960s, several centres came together with the aim of evaluating the impact of sex chromosome trisomies in samples identified on newborn screening. The three kinds of trisomy - trisomy X (47,XXX), Klinefelter's syndrome (47,XXY) and 47,XYY karotypes (henceforth referred to as XXX, XXY and XYY) were all found to be associated with neurodevelopmental problems, particularly affecting language and motor functions, though varying in profile and severity both within and between the three karyotypes {Leggett, 2010 #17405}. 
+
+More recent studies, however, have noted an increased risk of autism spectrum disorder (ASD) in males: both those with Klinefelter's syndrome and boys with an extra Y chromosome {Van Rijn, 2008 #16706}, {Bishop, 2011 #17168},{Ross, 2012 #18868},{Joseph, 2018 #38796}. Furthermore, in all three trisomies, communication problems affecting pragmatic as well as structural domains of communication were found on the Children's Communication Checklist-2 {Bishop, 2003 #13641},{Bishop, 2018 #38799}, even after excluding those with a diagnosis of ASD. 
+
+The question arises as to why an increased risk of ASD was not identified in  earlier studies. The early studies reviewed by Leggett et al {Leggett, 2010 #17405} focused on cases identified on neonatal screening, who tend to have milder difficulties than children with trisomies identified in the course of investigation for neurodevelopmental problems. Nevertheless, the sample by Bishop et al (2011) included a substantial proportion of cases identified on prenatal screening: although rates of neurodevelopmental disorder in general were lower in these cases than in those identified postnatally, parent-reported ASD diagnoses were nevertheless elevated in boys identified before birth. It was suggested that the most likely explanation was 'diagnostic substitution' - i.e., the broadening of diagnostic criteria for ASD between DSM-III and DSM-IV would mean that children who had hitherto been regarded as language-disordered would now be eligible for an ASD diagnosis. Other possibilities that cannot be ruled out include a genuine increase in ASD as a consequence of increased parental age, and/or an unknown environmental factor. 
+
+Other research, however, suggests another possibility, namely that there may be a tendency to give a diagnosis of ASD when a child has problems with social interaction, even if other features of autism such as pragmatic oddities in communication, restricted interests and repetitive behaviours, and sensory abnormalities are absent. Of particular interest is the idea that social anxiety, which has been described in children with an extra X chromosome, might be misdiagnosed as ASD. This could not be ruled out in the study by Bishop et al (2011), which relied on parental report of an ASD diagnosis, rather than direct assessment of the child.
+
+Van Rijn and colleagues {Van Rijn, 2014 #38662} compared a sample of young people (aged 9 – 18) with an extra X chromosome to those with an ASD diagnosis, using the Social Responsiveness Scale (SRS) {Constantino, 2005 #14237}. The rationale behind the SRS is that ASD is not a qualitatively distinct disorder, but is the extreme point on a continuum of impairment. The SRS  was developed to quantify social and related impairments characteristic of autism in the broader population, and is scored so that the population mean is 50 (SD = 10), with high scores corresponding to impairment. Van Rijn et al found that the extra X group (XXX M = 63.8, SD = 31.7; XXY M = 68.7, SD = 31.7) showed significantly higher total SRS T-scores than a control group (M = 26.3, SD = 16.3), but lower scores than an ASD comparison group (M = 97.6, SD = 28.8). 44.2% of the extra X group scored above the threshold indicating clinically significant impairment (defined here as 65). However, the extra X group also showed significantly higher social anxiety on all five subscales of the Social Anxiety Scale (SAS) than both the ASD and the control group. In terms of mean SAS scores, Cohen’s d for the difference between the extra X and the control group was 0.8, and between the extra X and the ASD group was 0.2. 
+
+At first glance, these results might suggest that an extra X chromosome creates an increased risk of both ASD and social anxiety. However, there is mounting evidence that while the SRS may be sensitive to ASD, it is not very specific. A number of studies have shown that high scores on the SRS are not restricted to those with a diagnosis of autism, but are also reported for young people with a range of diagnoses, including conduct disorder, ADHD and anxiety (e.g., {Pine, 2008 #39110}; {Towbin, 2005 #39111}; {Bölte, 2011 #39115}; {Settipani, 2012 #39113}; {Cholemkery, 2014 #39112}; {South, 2017 #39114}).In a study of males with XYY karyotype, Joseph et al (2018) found that elevated SRS scores were characteristic of this group, especially those identied postnatally, but the specificity of the SRS was poor, with high scores seen in those with a range of types of psychiatric symptomatology.
+
+This raises the question of whether there may be specific items on the SRS that are more sensitive to autism symptoms. Moul and colleagues {Moul, 2015 #38800} attempted to address this in a mixed clinical sample (N = 522), though with limited success. They found mean SRS total T-scores above the normal range in all their groups, including ASD (N = 18, M = 83.9), anxiety (N = 22, M = 61.7), and co-morbid diagnoses, of whom 38 had an ASD diagnosis (N = 298, M = 72.4). Notably, 73% of those with “pure” anxiety and 82% of the co-morbid sample were in the ‘autism likely’ range, defined as a T-score of 60 or above. At the cut-off of 60, the full-scale SRS showed a sensitivity of .96, but a very high false positive rate of .75, for ASD in the whole sample. The authors went to on create a SRS-brief scale based on 16 items from the SRS on which the “pure” ASD group scored higher than the other groups with “pure diagnoses”. The SRS-brief showed the same sensitivity as the full SRS total, and a marginally better, though still inadequate, specificity of .56. 
+
+Most of the focus of studies of children with sex chromosome trisomies using the SRS have focused on the impact of an additional X chromosome. In contrast, Cordeiro and colleagues {Cordeiro, 2012 #38802} compared groups of children with XXY and XYY chromosome complements, and found that the XXY group had significantly less impairment than the XYY group by total SRS T-score (XXY M = 62.0, SD = 15.4; XYY M = 72.8, SD = 15.8). There was evidence of ascertainment bias in this study, with prenatally diagnosed children (XXY M = 58.6, SD = 14.2; XYY = 63.5, SD = 15.6) having lower total SRS T-scores than postnatally diagnosed children (XXY M = 66.3, SD = 16.1; XYY M = 77.3, SD = 14.1). 47.1% of all the XXY children and 85% of the XYY children scored above the threshold for social impairment (defined as 60). Scores on individual SRS subscales were very similar to total scores, with significantly more impairment for XXY children compared to XYY children on all subscales, except Social Motivation, on which they scored the same; this scale represented a relative strength for the XYY group in terms of their overall profile. For the XXY group, means were above the 60 cut-off on all subscales expect Social Awareness, which represented a relative strength for this group. Interestingly, these patterns for XXY boys to score relatively better on Social Awareness than other subscales and for XYY boys to score relatively better on Social Motivation than other subscales have been replicated in other studies (XXY: Tartaglia et al., 2010; XYY: Ross et al., 2015). This pattern indicates that there may be ‘characteristic profiles’ of social difficulties in children with SCTs, which is an interesting echo of earlier work that suggested that Klinefelter’s Syndrome was associated with a particular personality style (characterised as shy, sensitive and passive, Herlihy et al, 2011). 
+
+It may, therefore, be productive to identify, not only the SRS subscales that are sensitive to problems experienced by children with SCTs, but also specific items that are commonly endorsed at the group level to establish whether there is a characteristic phenotype. 
+
+Taken together, these studies indicate that an increased likelihood of a clinical range score is seen in children who have an extra X or Y chromosome, but the pattern of results suggests there may be a different profile depending on karyotype. Studies of children who do not have trisomies have shown that many children and young people with anxiety score within the clinically significant range of the SRS. Indeed, the specificity of the SRS, when Youden’s factor (ref) is used to calculate an optimal cut-off on ROC curves, indicates that when differentiating between ASD and anxiety, about 1 in every 4 young people is classified as having ASD by the SRS when their existing diagnosis is anxiety not ASD. Notably, these cut-offs are invariably around 75, suggesting that to differentiate between anxiety and autism in clinical samples, the screening threshold suggested by the SRS manual (i.e. 60) is too low. Of course, the high SRS scores in those with social anxiety could reflect undiagnosed autistic deficits in social interaction; however, they could also reflect a miscategorisation of anxiety-related social behaviours that look like autism, but are cognitively different {Tyson, 2012 #39118}.
+
+A related question is how far any behavioural and psychiatric difficulties of children with sex chromosome trisomies might be attributed to their language problems. Language disorders are one of the most consistent deficits associated with all three sex chromosome trisomies, a finding confirmed for the current sample in our companion paper (Bishop et al, 2018). Developmental language disorder is commonly comorbid with psychiatric problems in children who do not have any known neurobiological condition (Beitchman & Brownlie, 2014) though it can be hard to establish how far language deficits play a causal role, and how ar the association reflects shared risk factors (Cohen, 2001).  
+
+The goal of the current study was to evaluate profiles of social impairment and autistic features in children with an extra sex chromosome, using information from prior diagnosis, parental interview, an online diagnostic instrument (the DAWBA) and the SRS.
+
+Specific hypotheses were: 
+
+1. In line with previous research, we expected to find an increased rate of autistic features in all three trisomies, but with confirmed autism diagnoses elevated only in boys with XXY or XYY.  
+
+2. Social anxiety symptoms were expected to be higher in children with an extra X chromosome (XXY and XXX) than in boys with an extra Y. 
+
+3. We predicted that social impairment and autistic features in children with sex chromosome trisomies are consistent with the level of language impairment. To test this idea we compared the profile of social impairment and autistic features with that seen in a comparison group of children with language difficulties of unknown origin. 
+
+4. Consistent with previous findings, we anticipated that ascertainment bias will affect results, and levels of social and psychiatric impairment will be substantially higher in children identified in the course of investigation for developmental disorders, than in other children with sex chromosome trisomies. 
+
+5. Finally, extending the work by Joseph et al (2018), we expected that children with all three types of trisomy will have elevated scores on the SRS, but this will not necessarily be indicative of ASD.
+
+
+# Methods
+We report how we determined our sample size, all data exclusions, all manipulations, and all measures in the study. <!-- 21-word solution (Simmons, Nelson & Simonsohn, 2012; retrieved from http://ssrn.com/abstract=2160588) -->
+
+## Participants 
+### Children with sex chromosome trisomies 
+The analysis was conducted on data from `r n.K+n.L+n.M+n.N+n.O+n.P` children (`r n.K+n.N` with XXX, `r n.L+n.O` with XXY and `r n.M+n.P` with XYY) whose parents had completed the Development and Wellbeing Assessment (DAWBA). As shown in Figure 1, these came from a larger sample of `r n.C+n.D` children who participated in a study of language and laterality in sex chromosome trisomies, whose genetic, laterality and language characteristics have been reported in previous papers {Bishop, 2018 #38799};{Newbury, 2018 #38821};{Wilson, 2018 #38820}. Children were recruited from National Health Service Clinical Genetics centres, from two support groups: Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association, or from self-referral via social media. A criterion for inclusion was that the child was aware of their trisomy status. Figure 1 distinguishes between cases where the trisomy was discovered in childhood during investigations for behavioural or neurodevelopmental problems, as the latter group suffer from ascertainment bias and are likely to a high rate of disorder that is not  representative of that karyotype. These are referred to as the 'High Bias' subgroup. An unexpected feature of the sample was that the majority of girls with trisomy X were in the Low Bias subgroup, whereas the majority of boys with XXY or XYY were in the High Bias subgroup, suggesting that these karyotypes were more likely to be associated with neurodevelopmental problems. 
+
+`r Norig` children had taken part in the previous study by Bishop et al (2011). Information about ASD in that study was available only from parental report: two of the children (8.7%) had been reported by their parents to have a diagnosis of ASD, closely similar to the rate of 13/136 (9.5%) for the whole 2011 sample. 
+
+In a previous report based on this sample (Bishop et al, 2018), we noted that the likelihood of parents completing checklists for this study was lower if the child had significant language problems. This prompted us to compare children whose parents did and did not complete the DAWBA, using a language factor score (see below) as an indicator of language level. A t-test revealed that, as before with checklist completion, parents who completed the DAWBA had children with milder language problems: mean for those who completed DAWBA was `r round(my.t.dawba$estimate[2],1)` versus `r round(my.t.dawba$estimate[1],1)` for the remainder, t (`r round(my.t.dawba$parameter,1)`) = `r round(my.t.dawba$statistic,1)`. `r thisfig <- thisfig+1`
+
+![<b>Figure `r thisfig`</b>. Flowchart showing numbers of children with each karyotype in the study, in relation to whether prenatally or postnatally diagnosed, whether high ascertainment bias, and whether DAWBA was completed.](SCT_asd_flow.png)
+
+### Comparison sample 
+A comparison sample of twin children was recruited via fliers sent to primary schools around the UK, advertisements on our group's website and via twins' clubs. The age range for this sample was narrower than for the sex chromosome trisomy cases: 6 years 0 months to 11 years 11 months. The sample was recruited to be over-representative of cases where parents were concerned about the language development of one or both twins. Further details are provided in Wilson and Bishop {Wilson, 2018 #38731} and Bishop et al (2018). 
+As in our previous analysis (Bishop et al, 2018), we selected one twin at random to avoid dependencies in the data, and we excluded three children with evidence of autism spectrum disorder, significant hearing loss or intellectual disability. Children were then subdivided according to whether parents had expressed concern about persisting mild or severe language problems, or where the child had had speech and language therapy beyond 4 years of age. The remaining children were in a 'No Concerns' group, which was used to provide a normative range for some of the assessments. Figure 2 shows a flowchart indicating how twins were selected. The DAWBA and questionnaire assessments were completed for `r dawba_LI_Y+dawba_TD_Y` of `r inc1` (`r round(100*(dawba_LI_Y+dawba_TD_Y)/inc1,1)`%) of these children. `r thisfig<-thisfig+1`
+
+![<b>Figure `r thisfig`</b>. Flowchart showing numbers of children in comparison group, in relation to whether there was parental concern about language, and whether DAWBA was completed.](twins_flow_dawba.png)
+
+## Material\
+
+### Psychiatric evaluation
+\
+In an initial telephone interview, parents were asked about the child's medical and educational history, including a question about whether anyone had diagnosed the child with a neurodevelopmental disorder such as ASD, developmental language disorder (DLD) or specific language impairment (SLI), dyslexia or dyspraxia. 
+In addition, one or both parents were asked to complete the online Development and Wellbeing Assessment (DAWBA){Goodman, 2000 #18146} in their own time. `r (n.K+n.L+n.M+n.N+n.O+n.P-1)` families of children with SCT (one with two affected children) complied with this request. The DAWBA was also completed by `r dawba_TD_Y+dawba_LI_Y` parents of twins. 
+
+The DAWBA includes a range of questions relating to DSM5 and ICD10 diagnostic criteria, risk factors, and impact on the family, which are supplemented by optional free text. In addition, the DAWBA incorporates the Strength and Difficulties Questionnaire (SDQ) (Goodman, 1997), and the Social Aptitudes Scale (Liddle, 2009), which are described more fully below. 
+
+The DAWBA software codes the items relevant to different diagnoses to give a score indicating the likelihood of the child meeting criteria for a range of psychiatric diagnoses, with the final diagnosis being made by a trained rater who assimilates all the quantitative and qualitative information. DAWBA has been used to obtain prevalence estimates for psychiatric disorders for a representative sample of over 10,000 children in the UK (Meltzer et al., 2000). Validity of DAWBA for diagnosis of autism has been shown to be acceptable (McEwen et al, 2016).  
+
+All interviews with SCT cases were coded against DSM5 criteria by the first author (AW), and a further 30 interviews were coded by a second independent rater (JK) to check on diagnostic agreement. The rater doing the coding was blind to the trisomy status of the child, although occasionally this was mentioned by parents in free text comments. Cases of disagreement were resolved by the last author (DVMB), who gave a final consensus rating that was used here. All interviews with comparison twins were coded by the last author (DVMB). *(This is not ideal as it gives a confound) *. As well as assigning diagnoses, the rater completed two checklists that capture overall severity of problems:  the Children's Global Assessment Scale (CGAS) (Shaffer et al., 1983), and the Health of the Nation Outcome Scales for Children and Adolescents (HoNOSCA) (Gowers et al., 1999).
+*(Not sure if we will use these here)*. 
+
+To address our questions of interest, we focused on DSM5 diagnoses of Autism Spectrum Disorder (ASD) and Social Anxiety Disorder. ASD was coded as absent (0) or present (2), with a code of 1 given for significant autism symptoms that fell short of diagnostic criteria. Most of the latter group, which we refer to as the ASD- group, showed evidence of social and communicative difficulties, but did not have repetitive behaviours and restricted interests to a sufficient level to merit an ASD diagnosis. 
+
+The criteria for Social Anxiety Disorder (SocAnx) include a marked and persistent fear of one or more social situations where the individual may be subject to scrutiny by others. For a diagnosis of SocAnx the symptoms must interfere significantly with everyday life. In children, the anxiety must occur in peer settings, not just with adults, must be disproportionate to the situation, and not better explained by another disorder such as ASD. SocAnx is differentiated from Separation Anxiety and General Anxiety Disorder by the situational specificity of the anxiety.
+
+## Parental questionnaires 
+
+_Strength and Difficulties Questionnaire (SDQ) (Goodman, 1997)._
+The SDQ was incorporated in the online DAWBA assessment. SDQ is a questionnaire used to screen children's behaviour on five dimensions: 1) emotional symptoms (5 items); 2) conduct problems (5 items); 3) hyperactivity/inattention (5 items); 4) peer relationship problems (5 items); 5) prosocial behaviour (5 items). Norms are available for a representative sample of over 10,000 British children aged from 5 to 15 years (Meltzer et al., 2000). 
+
+_Social Aptitudes Scale (SAS) (Liddle et al, 2009)._
+This 10-item scale forms part of the DAWBA and was designed to tap skills in social understanding and behaviour that vary substantially in the general population. The behaviours surveyed in SAS relate to aspects of social understanding rather than to social anxiety, and the parent is asked to rate positive rather than negative attributes, such as 'able to compromise and be flexible'. 
+
+_The Social Responsiveness Scale (SRS)._ 
+\ 
+The SRS is a 70-item scale designed to measure autism-related impairments as quantitative trait. It is composed of five subscales: social cognition, social awareness, social motivation, social communication and autistic features. Score on each subscale, and on the total scale, can be represented as T-scores with mean 50 and SD of 10, with impairment represented as a positive score. More information on previous research with SRS is provided in the introduction.
+
+
+
+### Language, literacy and cognitive assessments
+\
+
+All children were seen for a detailed neurocognitive assessment and language assessment lasting around 1.5 to 2 hours. The test battery and results from these assessments are described in a companion paper (Bishop et al., 2018). In addition, handedness and language laterality were assessed, the latter involving a child-friendly functional transcranial Doppler ultrasound paradigm {Groen, 2012 #18663}. Results from these assessments have been described elsewhere (Wilson & Bishop, 2018). 
+
+For the current paper, we will focus on two composite measures from the neurocognitive assessement: a measure of nonverbal ability (Performance IQ or PIQ) derived from the Block Design and Matrices subtests of the Wechsler Abbreviated Scale of Intelligence (WASI, Wechsler, 1999), and a language factor derived by Newbury et al (2018) from factor analysis of four language measures: a) Vocabulary scale of the WASI; b) Verbal Comprehension scale of the Woodcock Johnson III Tests of Cognitive Abilities {Woodcock, 2007 #19530}; c) Sentence Repetition and d) Oromotor Sequences from 
+NEPSY: A Developmental Neuropsychological Assessment {Korkman, 1998 #11973}. 
+
+## Procedure  
+\
+Ethical approval was obtained for the study in 2011 from the Berkshire NHS Research Ethics Committee (reference 11/SC/0096), and data collection started in August of that year, finishing in October 2016. Families who had expressed interest in the study were interviewed by telephone to assess whether the child met inclusion criteria, and if so, an appointment was made to see the child at home or at school, depending on parental preference. Families were widely dispersed around the UK, including Northern Ireland, Scotland, Wales and England. During the course of recruitment, which lasted for a period of five years, a total of eight research assistants as well as the senior author were involved in assessing children. The assessment was conducted in a single session lasting between 2-3 hours per child, with breaks where needed.
+
+## Data analysis  
+Study data were analysed using R software (R Core Team, 2016), with the main database managed using REDCap electronic data capture tools hosted at the University of Oxford {Harris, 2009 #19562}. 
+
+
+
+# Results
+
+Our research questions focused on the rates of ASD and SocAnx in XXX, XXY and XYY karyotypes. Because we also predicted that these rates would be influenced by ascertainment bias, the data were analysed separately for the Low Bias and High Bias subgroups. Table `r thistab+1` shows the numbers of children with DSM-5 diagnoses of ASD, ASD- or SocAnx on the Development and Wellbeing Assessment (DAWBA).
+
+**Table `r thistab+1`** 
+```{r diagtable,echo=FALSE}
+regulartable(nicetab) %>%
+  theme_zebra() %>%
+  autofit()
+# kable(nicetab) %>%
+#   kable_styling(bootstrap_options = c("striped", "hover"))
+thistab<-thistab+1 #increment table counter
+#nicetab has to have distinct column names - currently these are just dots.
+```
+
+
+
+Our first prediction was that there would be a high prevalence of ASD or ASD- specifically in boys with XXY or XYY. Meltzer et al (2000) reported prevalence rates for 'Pervasive Developmental Disorder' (encompassing ASD and ASD-) of 0.5% for boys and 0.1% for girls. Compared with these figures, there are elevated rates in all three trisomies. We consider here just the Low Bias groups: the log odds ratio (with 95% confidence interval) is `r logoddsr.xxx` (`r ci.low.xxx` - `r ci.hi.xxx`) for XXX girls; `r logoddsr.xxy` (`r ci.low.xxy` - `r ci.hi.xxy`) for XXY boys; and `r logoddsr.xyy` (`r ci.low.xyy` - `r ci.hi.xyy`) for XYY boys. None of these affected children had been in the original 2011 study. Thus, our prediction of an increased prevalence of ASD was confirmed, but this extended to girls with XXX as well as the two groups of boys. Nevertheless, those with an ASD diagnosis were in the minority in all three trisomies. Note that because ASD had been an exclusionary criterion for those in the twin comparison group, they could not provide comparative data for this diagnosis. 
+
+Our second prediction was that there would be a raised prevalence of SocAnx in those with an extra X chromosome. As shown in Table `r (thistab-1)`,there were `r numnames[socanx.xxy1+1]` with this diagnosis in the XXY-Low Bias group and `r numnames[socanx.xxy2+1]` in the XXY-High Bias group, as well as one child in the XYY-High Bias group. All but `r numnames[mytab[2,2]+1]` of these children had additional diagnoses of ASD- or ASD. In the epidemiological sample of Meltzer et al. (2000), the prevalence of SocAnx was 0.3% in girls and 0.4% in boys. Although the numbers of boys with XXY studied here is very small, the finding that 21% in the Low Bias group and 28% in the High Bias group met diagnostic criteria for this condition is well above the prevalence in the general population (log odds ratio for Low Bias group = `r round(logoddsr,2)`, 95% CI = `r ci.low`-`r ci.hi`). 
+
+Although the odds ratio of ASD/ASD- were elevated in all three trisomies, and the rate of SocAnx was above normative levels in the XXY boys, the majority of children in the Low Bias groups did not have either diagnosis. However, DAWBA categorical diagnoses only detect more severe levels of impairment associated with burden to families. We next considered the possibility that there might be distinctive subclinical features associated with an additional X or Y chromosome. To investigate this question we first considered the profile of scores on the two questionnaires incorporated into the DAWBA: SDQ and the SAS. `r thisfig<-thisfig+1` Note that a high score on the Emotional, Conducct, Hyperactivity, and Peer Relations scales indicates impairment, whereas a high raw score on Prosocial and Social Aptitude Scale corresponds to social skills. Figure `r thisfig` shows individual data points as well as means on the five SDQ scales and the SAS. 
+
+![**Figure `r thisfig`**. *Beeswarm plots: SDQ and SAS scales for the three trisomy groups, subdivided by bias group, together with the Language Concerns twin comparison group. The yellow shaded area denotes the +/- 1 SD limits around the mean for the No Concerns twin comparison group. Note that SAS raw scores are divided by two, so they can be shown on a similar scale to the SDQ scales.*](beeswarm_sdq.png)
+
+
+`r thisfig <- thisfig+1`Figure `r thisfig` shows the T-scores on the SRS scales in an analogous fashion. SRS T-scores are scaled with mean of 50 and SD of 10. A cutoff of total score of 75 has been been reported as giving sensitivity and specificity of 0.85 and 0.75 for ASD diagnosis (Bölte et al. 2011; Constantino 2002). 
+
+![**Figure `r thisfig`**. *Beeswarm plots on SRS scales for the three trisomy groups, subdivided by bias group, together with the Language Concerns twin comparison group. The yellow shaded area denotes the +/- 1 SD limits around the mean for the No Concerns twin comparison group.*](beeswarm_srs.png)
+
+We had planned to use Multivariate Analysis of Variance (MANOVA) to compare groups on the SDQ and SRS scales, but many of the variables suffered from floor and ceiling effects or skew, and so nonparametric Kruskal-Wallis tests were used instead. A randomisation test with 10000 iterations was used to estimate the range of chi square values that would be obtained  under the null hypothesis, where group identity was assigned at random. A series of analyses was conducted to address the specific questions raised in the Introduction.
+
+**Test of hypotheses 1-2** (Low Bias group only). The first two hypotheses were that there would be karyotype-specific differences in profiles, with autistic features more prominent in boys with XYY karyotype, and social anxiety in the XXX girls and XXY boys. To reduce the effects of ascertainment bias, these predictions were tested using data from the Low Bias groups only. Scores for the three karyotypes were compared on the five SDQ scales, the five SRS scales, and the Social Aptitudes Scale. We predicted that the XYY boys would score lower than the XXX and XXY groups on the two scales measuring positive aspects of social behaviour (SDQ Prosocial and SAS), and higher (i.e., more impaired) on the SRS scales. We further predicted that the XXX girls and XXY boys would score higher (more impaired) on the SDQ emotional scale. `r thisfig<-thisfig+1` Results are summarised in Figure `r thisfig`, which shows the obtained chi square values in relation to those from the randomised data, with the upper fin of each boxplot corresponding to the 99th centile. The only scale to show an effect in line with prediction was the SDQ prosocial scale, where the obtained chi square was outside the 99% limit, reflecting the fact that the XYY boys scored on average below the normal range, whereas XXX girls were well within normal limits. Given the small sample sizes, and wide variation within each karyotype, the power is low to detect subtle effects. It is evident from Figures `r (thisfig-2)` and `r (thisfig-1)` that, while the overall rate of impairment is raised relative to the general population, many children with sex chromosome trisomies score within normal limits.
+
+![**Figure `r thisfig`**. *Plot of chi square values obtained on Kruskal-Wallis test comparing the three Low Bias sex chromosome trisomy groups (red asterisks), relative to the range of chi square values when group is randomised. The box shows the interquartile range, and the upper fin of the boxplot corresponds to the 99th centile for randomised values.*](random99_chiplot_LowBias_karyotype.png)
+
+
+**Test of hypothesis 3** (Low Bias groups combined vs Language Concerns comparison group). `r thisfig<thisfig+1` Hypothesis 3 is concerned with the extent to which psychiatric problems in children with sex chromosome trisomies are consistent with the level of language impairment. To test this hypothesis, we restricted consideration to the Low Bias trisomy group. We had previously shown that language impairments in this group were comparable to those seen in the twin comparison group with Language Concerns (Bishop et al., 2018). As shown in Figure `r thisfig`, the two groups were similar on many of the SDQ scales, but the trisomy group had more evidence of problems in the domains of Peer Relationships and Emotional Difficulties. 
 
 ```{r twinasd,include=FALSE}
 asdtwin<-table(my.dawba$group8level,my.dawba$bicode2)
@@ -1757,27 +1769,26 @@ ntwin8<-sum(asdtwin[8,])
 
 ![<b>Figure `r thisfig`</b>. Plot of chi square values obtained on Kruskal-Wallis test comparing Low Bias sex chromosome trisomy cases (all trisomies combined) with the Language Concerns twin comparison group (red asterisks), relative to the range of chi square values when group is randomised. The upper fin of the boxplot corresponds to the 99th centile for randomised values.](random99_chiplot_lowbias_twin.png) 
 
-`r thisfig<thisfig+1`The comparison with the Language Concerns twin group is subject to some selection bias, because children with a pre-existing diagnosis of ASD had been explicitly excluded from that group. Nevertheless, `r numnames[nasd+1]` child in the Language Concerns group met diagnostic criteria for ASD on DAWBA, and `r numnames[nscd+1]` met criteria for SCD. When the analysis was re-run excluding all children with a DAWBA diagnosis of ASD, the group differences were less striking, though there was still a trend for more impairment on the Peer Relationships and Emotional Problems scales of the SDQ (see Figure `r thisfig`).
+`r thisfig<thisfig+1`The comparison with the Language Concerns twin group is subject to some selection bias, because children with a pre-existing diagnosis of ASD had been explicitly excluded from that group. Nevertheless, `r numnames[nasd+1]` child in the Language Concerns group met diagnostic criteria for ASD on DAWBA, and `r numnames[nscd+1]` met criteria for ASD-. When the analysis was re-run excluding all children with a DAWBA diagnosis of ASD, the group differences were less striking, though there was still a trend for more impairment on the Peer Relationships and Emotional Problems scales of the SDQ (see Figure `r thisfig`).
 
-![<b>Figure `r thisfig`</b>. Plot of chi square values obtained on Kruskal-Wallis test comparing Low Bias sex chromosome trisomy cases (all trisomies combined) with the Language Concerns twin comparison group (red asterisks), after excluding all cases with DAWBA diagnosis of ASD. The upper fin of the boxplot corresponds to the 99th centile for randomised values.](random99_chiplot_lowbias_twin_notASD.png)
+![**Figure `r thisfig`**. *Plot of chi square values obtained on Kruskal-Wallis test comparing Low Bias sex chromosome trisomy cases (all trisomies combined) with the Language Concerns twin comparison group (red asterisks), after excluding all cases with DAWBA diagnosis of ASD. The upper fin of the boxplot corresponds to the 99th centile for randomised values.*](random99_chiplot_lowbias_twin_notASD.png)
 
-**Test of hypothesis 4**. `r thisfig<thisfig+1` Hypothesis 4 predicts that children in the High Bias group will have more evidence of impairment than those in the Low Bias group. Again, multiple Kruskal Wallis tests were used to test this prediction, this time with the three karyotypes combined. Results are shown in Figure `r thisfig`. This analysis confirms the substantial differences between the Low Bias and High Bias groups, who differ markedly on all the SRS subscales, the SDQ Peer Problems and Hyperactivity scales, and the Social Aptitude Scale.
+**Test of hypothesis 4**.(Low Bias vs High Bias trisomy groups) `r thisfig<thisfig+1` Hypothesis 4 predicts that children in the High Bias group will have more evidence of impairment than those in the Low Bias group. Again, multiple Kruskal Wallis tests were used to test this prediction, this time with the three karyotypes combined. Results are shown in Figure `r thisfig`. This analysis confirms the substantial differences between the Low Bias and High Bias groups, who differ markedly on all the SRS subscales, the SDQ Peer Problems and Hyperactivity scales, and the Social Aptitude Scale.
 
-![<b>Figure `r thisfig`</b>. Plot of chi square values obtained on Kruskal-Wallis test comparing Low Bias vs High Bias sex chromosome trisomy cases (all trisomies combined), relative to the range of chi square values when group is randomised. The upper fin of the boxplot corresponds to the 99th centile for randomised values.](random99_chiplot_low_vs_hibias.png)
+![**Figure `r thisfig`**. *Plot of chi square values obtained on Kruskal-Wallis test comparing Low Bias vs High Bias sex chromosome trisomy cases (all trisomies combined), relative to the range of chi square values when group is randomised. The upper fin of the boxplot corresponds to the 99th centile for randomised values.*](random99_chiplot_low_vs_hibias.png) 
 
 
-**Test of hypothesis 5**. `r thisfig<thisfig+1`
-Hypothesis 5 proposed that elevated scores on the SRS would be seen in children with sex chromosome trisomies, but these would not necessarily be indicative of ASD. As shown in Figure 3, the odds of having a score outside the normal range on the SRS scales is elevated in all three trisomies, especially for children from the High Bias Group.  Figure `r thisfig` shows T-scores on the SRS total for children with sex chromosome trisomies in relation to DAWBA diagnoses of ASD, SCD and SocAnx. These data show that all but one child with a diagnosis of ASD or SCD score above the 'Severe' cutoff of 75, but most children in the 'Mild' range of 60-74 do not have a diagnosis of either ASD or SCD. Children shown as grey points in Figure `r thisfig` may have had other diagnoses: four of those in the Severe range and eight in the Mild range had diagnoses of Attention Deficit Hyperactivity Disorder. 
+**Test of hypothesis 5**. `r thisfig<-thisfig+1`
+Hypothesis 5 proposed that elevated scores on the SRS would be seen in children with sex chromosome trisomies, but these would not necessarily be indicative of ASD. As shown in Figure 3, the odds of having a score outside the normal range on the SRS scales is elevated in all three trisomies, especially for children from the High Bias Group.  Figure `r thisfig` shows T-scores on the SRS total for children with sex chromosome trisomies in relation to DAWBA diagnoses of ASD, ASD- and SocAnx. These data show that all but one child with a diagnosis of ASD or ASD- score above the 'Severe' cutoff of 75, but most children in the 'Mild' range of 60-74 do not have a diagnosis of either ASD or ASD-. Children shown as grey points in Figure `r thisfig` may have had other diagnoses: four of those in the Severe range and eight in the Mild range had diagnoses of Attention Deficit Hyperactivity Disorder. 
 
 *(need to check these figures vs other beeswarms, tables etc)
 
-![<b>Figure `r thisfig`</b>. Beeswarm plot of SRS T-scores with colours denoting DAWBA diagnoses.](beeswarm_SRS_T_2018.png)
+![**Figure `r thisfig`**. Beeswarm plot of SRS T-scores with colours denoting DAWBA diagnoses.](beeswarm_SRS_T_2018.png)
 
 # Discussion
 
-Points to include: (currently just a rough list - to be fleshed out)
-
-ASD: Had anticipated finding elevated rates in boys only, but here find girls also meeting diagnostic criteria. SCD also common: (should this term be used here though) 
+On the basis of previous results by Bishop et al (2011), we predicted that elevated rates of ASD would be found only in boys with XXY and XYY. However, in the current sample, two of 25 girls with XXX in the Low Bias group, as well as one of four girls in the High Bias group met DSM5 criteria for ASD; although these are a minority of children, and the sample is too small to give a confident estimate of prevalence, these results show that the increased prevalence of ASD applies to all three trisomies. 
+The discrepancy with prior literature probably arises because of the difficulty of obtaining reliable estimates of prevalence of a relatively rare condition in small samples. The notion that supplementary X and Y chromosomes might have complementary effects (more social anxiety with an extra X and more ASD with an extra Y) provides an attractive narrative {Green, 2019 #38822}, but the current data indicate that insofar as such effects occur, they are buried within other influences that lead to a highly heterogeneous picture.
 
 Social Anxiety: 
 Initial idea was that some children with social anxiety disorder may be misdiagnosed as ASD, given previous reports of elevated social anxiety in those with extra X chromosome. However, very few children met diagnostic criteria for social anxiety: those who did tended to be cases of XXY. 
@@ -1787,9 +1798,9 @@ When we consider milder levels of impairment, as assessed via SDQ and SRS, wide 
 
 As anticipated on the basis of previous research, and as might be expected in terms of ascertainment bias, children from the High Bias group had much more severe problems than those from the Low Bias group.
 
-A number of studies have found that the SRS, which is intended as a screening tool for ASD, has low specificity relative to high sensitivity for detection of ASD. The current study found that high sensitivity if a high cutoff of 75 was used, especially if both SCD and ASD were treated as true positives. However, a lower cutoff of 60 was neither sensitive nor specific with this population.
+A number of studies have found that the SRS, which is intended as a screening tool for ASD, has low specificity relative to high sensitivity for detection of ASD. The current study found that high sensitivity if a high cutoff of 75 was used, especially if both ASD- and ASD were treated as true positives. However, a lower cutoff of 60 was neither sensitive nor specific with this population.
 
-General conclusion: Children with SCTs are at risk for both ASD and SCD - girls as well as boys. Relatively high rates of Social Anxiety occurred in boys with XXY, but nevertheless it was a small minority who met DSM diagnostic criteria.
+General conclusion: Children with SCTs are at risk for both ASD and ASD- - girls as well as boys. Relatively high rates of Social Anxiety occurred in boys with XXY, but nevertheless it was a small minority who met DSM diagnostic criteria.
 
 \newpage
 # Acknowledgements
