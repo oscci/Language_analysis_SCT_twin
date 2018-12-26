@@ -15,7 +15,7 @@ author:
 
 affiliation:
   - id            : "1"
-    institution   : "Oxford University"
+    institution   : "University of Oxford"
 
 author_note: |
 
@@ -83,7 +83,7 @@ options(scipen=999)
 
 ```{r, echo=FALSE} 
 # Seed for random number generation
-set.seed(42)
+#set.seed(42)
 
 ```
 
@@ -91,7 +91,12 @@ set.seed(42)
 #########################################################################################
 ## Step 1 - this is identical to script for language phenotype paper
 #Read in latest SCT from redcap.
-#Do the same for the twins.
+#Do the same for the twins. 
+
+#N.B. Original idea was to use twins as comparison group for psychiatric symptoms.
+#This is difficult, though, because they have ASD as exclusion, and so are not very comparable.
+#For the present, the twin data are still read in and combined in case they may be useful, but the main analysis is just with SCT
+
 #Select variables to be used.
 
 #redcap.dir <-"c:/Users/pthompson/Dropbox/project SCT analysis/Data from Redcap/"
@@ -175,6 +180,8 @@ plot(sct.data$gcc,sct.data$ccc_gcc_2009,pch=(sct.data$trisomy-1),col=(1+sct.data
 #Focus on columns to be used in this analysis 
 #(includes DAWBA etc, cf. language pheno paper)
 
+#Also now reading in DAWBA bands: Goodman, A., Heiervang, E., Collishaw, S., & Goodman, R. (2010). The 'DAWBA bands' as an ordered-categorical measure of child mental health: description and validation in British and Norwegian samples. Social Psychiatry and Psychiatric Epidemiology, 46, 521-532. doi:10.1007/s00127-010-0219-x
+
 #Specify columns to retain that are common to both sct and twin
 #NB we are using oromotor_ss2, which is renormed against the TD twin group
 #NB also include SRS items that form short scale
@@ -229,7 +236,8 @@ keepcols <- c('record_id','fam_id','female','age_at_test','parent_conc','partial
               'repcliche', 'strongroutine', 'changeroutine', 'flapping', 'parconcern', 'distress',
               'impactfam', 'impactfriend', 'impactlearn', 'impactleisur', 'asd_burden',
               'suddenonset', 'ageonset','asd_dsm_r2','autism_icd_r2','social_anx_dsm_r2',
-              'social_anx_icd_r2','sophband')
+              'social_anx_icd_r2',
+              'sepaband',  'spphband', 'sophband',  'panband', 'agoband',  'ptsdband', 'ocdband',  'genaband', 'depband',  'adhdbandd', 'adhdtype',  'oddband', 'cdband',  'eatband',  'ticbandd',  'asdband')
 
 
 twin.short <- select(twin.data,keepcols)
@@ -315,7 +323,10 @@ all.short$ageSDQ[w]<-1
 sdqnorm<- read.csv('dawba diagnosis/sdqcentiles_longform_forR.csv')
 sasnorm<- read.csv('dawba diagnosis/sas_norms.csv')
 #sas norms are T-scores: raw scores seem reasonably normal
-#See Liddle2008 article for more info
+#See Liddle2008 article for more info - these norms from
+#dawba.info/SAS/psastscore.pdf
+
+
 
 sdqscales<-c('emotional','conduct','hyperactivity','peer','prosocial','sas_total')
 sdqscalesT<-paste0(sdqscales,'.T')
@@ -469,7 +480,7 @@ all.short$langfactor <- as.vector(predict(fit.mod.E2)) #factor scores
 
 ```{r rescalelang, include=FALSE}
 #Rescale all variables to mean 100 and SD 15 and save in new columns
-#This is taken from language phenotypes Rmd script
+#This is taken from language phenotypes Rmd script; probably not needed here
 short.langnames<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','NwdRep','Oromotor',
                    'ReadAcc','ReadComp','ReadRate','TOWREwd','TOWREnwd',
                    'PicName','DigitName')
@@ -661,7 +672,9 @@ for (i in mcx1:mcx2){
   
 }
 
+
 ```
+
 
 ```{r get.covariates, include=FALSE}
 ## Again - this is from language phenotypes rmd.
@@ -796,7 +809,7 @@ my.dawba1$bias[w]<-999
 diagtableSRS<-table(my.dawba1$alldsm_factor,my.dawba1$srs_range,my.dawba1$is_twin)
 
 
-my.dawba<-select(my.dawba1,record_id,female,trisomy,orig_famcode,bias,why_tested,asd,
+my.dawba<-select(my.dawba1,record_id,Age,female,trisomy,orig_famcode,bias,why_tested,asd,
                  srs_t_score,socaw_ss,soccog_ss,
                  soccomm_ss,socmot_ss,autfeat_ss,srsbrief,
                  dawba_emot,dawba_conduct,
@@ -805,13 +818,22 @@ my.dawba<-select(my.dawba1,record_id,female,trisomy,orig_famcode,bias,why_tested
                  social_anx_icd_r1,asd_dsm_r2,autism_icd_r2,social_anx_dsm_r2,
                  social_anx_icd_r2,emotional.T,conduct.T,hyperactivity.T,peer.T,prosocial.T,socapt.T,
                  sepanx_concern,socanx_concerns,soc_vs_sep,socfear_level,
-                 group8,group8level,ageband,ageSDQ,langfactor,alldsm,alldsm_factor,sophband)
+                 group8,group8level,ageband,ageSDQ,langfactor,alldsm,alldsm_factor,
+                 sepaband,  spphband, sophband,  panband, agoband,  ptsdband, ocdband,  genaband, depband,  adhdbandd, adhdtype,  oddband, cdband,  eatband,  ticbandd,  asdband)
 
 #group of 5 from 'emotional' etc are SDQ scales, added Nov 2017; also social anxiety and sep anxiety added. Sas_total is social awareness scale
 #These now converted to T-scores from Goodman norms - see above
 my.dawba$Group <- my.dawba$group8 #for compatibility with later routines
 ```
 
+```{r getages}
+#Add information about mean age for each group, as well as % in ageSDQ bands
+mymeanages <- aggregate(my.dawba$Age, by=list(my.dawba$group8level),
+  FUN=mean, na.rm=TRUE)
+mysdages <- aggregate(my.dawba$Age, by=list(my.dawba$group8level),
+  FUN=sd, na.rm=TRUE)
+agetab<-table(my.dawba$group8,my.dawba$ageSDQ)
+```
 ```{r in.prev.study, include=FALSE}
 #count how many SCT cases were in the earlier 2009 study (Bishop et al 2011 paper)
 print('')
@@ -871,9 +893,88 @@ mat.for.chi<-matrix(c(byprevious[1,1],byprevious[1,2],
 chisq.test(mat.for.chi)
 ```
 
+```{r dawbabands}
+bandtable <- table(sct.only$sophband,sct.only$asdband,sct.only$group8level)
+
+sct.only$extraX<-1
+w<-c(which(sct.only$trisomy==3),which(sct.only$trisomy==6))
+sct.only$extraX[w] <-0
+
+
+#NB unclear why some cases have NA for asdband. Must be missing data - checked: 
+#Yes, these are cases where DAWBA only partially completed
+#treat them as zero for ASD
+w<-which(is.na(sct.only$asdband))
+sct.only$asdband[w]<-0
+sct.only$socanxvsasd<-sct.only$sophband-sct.only$asdband
+#subtract one from the other to get a measure of bias to anxiety vs ASD
+
+lorisk <-filter(sct.only,group8level<4) #analysis applies only to lorisk cases
+
+#These are all pretty exploratory analyses
+kruskal.test(lorisk$sophband~lorisk$group8level) 
+kruskal.test(lorisk$asdband~lorisk$group8level) 
+kruskal.test(lorisk$sophband~lorisk$extraX) #prediction is regarding extra X?
+kruskal.test(lorisk$asdband~lorisk$extraX)
+kruskal.test(lorisk$socanxvsasd~lorisk$extraX) #measure contrasting ASD/socanx 
+beeswarm(lorisk$socanxvsasd~lorisk$group8level)
+
+```
+```{r make.oddsratio}
+do.OR <- function(MeltzN,Meltzp,sctN,sctaff){
+
+Meltzaff <- round(MeltzN*Meltzp/100,0)
+Meltznon <-MeltzN-Meltzaff
+odds1 <-Meltzaff/Meltznon
+
+odds2 <-sctaff/(sctN-sctaff)
+oddsr <-odds2/odds1
+logoddsr <-log(oddsr)
+se.logoddsr <-sqrt(1/Meltzaff+1/Meltznon+1/sctaff+1/(sctN-sctaff))
+ci.low <-round(logoddsr-1.96*se.logoddsr,2)
+ci.hi <- round(logoddsr+1.96*se.logoddsr,2)
+return(c(oddsr,logoddsr,ci.low,ci.hi))
+}
+```
+
+```{r diagnoses}
+#Consider whether prevalence of disorder is above population levels for DAWBA diagnoses, using Table 4.1 of Meltzer and Gatward
+
+mymeltz <- read.csv('dawba diagnosis/meltzer_prevalence.csv',stringsAsFactors=FALSE)
+mymt<-table(lorisk$ageSDQ,lorisk$group8level)
+nboy_young<-mymt[1,2]+mymt[1,3]
+ngirl_young<-mymt[1,1]
+nboy_old<-mymt[2,2]+mymt[2,3]
+ngirl_old<-mymt[2,1]
+
+meltzdat<-filter(all.short,group8level<4)
+meltzrows<-c(21,10,5,3,11,4,12,16,19,18,17,26,27)
+meltzcolnames<-c("hyperkinetic_icd_r1","generalized_anx_icd_r1","social_anx_icd_r1",
+             "separation_anx_icd_r1","other_anx_icd_r1","phobia_icd_r1", "mod_depression_icd_r1" ,                    "opp_def_icd_r1","soc_conduct_icd_r1",
+             "unsoc_conduct_icd_r1" ,"fam_conduct_icd_r1" ,"chronic_tic_icd_r1", "anorexia_icd_r1")
+
+alldiag<-length(meltzrows)
+or.output <-data.frame(matrix(NA,nrow=alldiag,ncol=5))
+colnames(or.output)<- c('Diagnosis','OR','logOR','loCI','hiCI')
+for (i in 1:alldiag){
+thiscol<-which(colnames(meltzdat)==meltzcolnames[i])
+myrow<-meltzrows[i]
+sctN <- sum(mymt)
+sctaff<-length(which(meltzdat[,thiscol]==2))
+
+MeltzN <- mymeltz[29,4]+mymeltz[29,7]
+Meltzp <- (mymeltz[myrow,2]*nboy_young+mymeltz[myrow,3]*ngirl_young
+           +mymeltz[myrow,5]*nboy_old+mymeltz[myrow,6]*ngirl_old)/sum(mymt)
+trueMeltzaff <- round((mymeltz[myrow,4]*mymeltz[29,4]+mymeltz[myrow,7]+mymeltz[29,7])/100,0)
+ORresult<-do.OR(MeltzN,Meltzp,sctN,sctaff)
+or.output[i,1]<-meltzcolnames[i]
+or.output[i,2:5]<-ORresult
+}
+```
+
 
 ```{r beeswarm.function, include=FALSE}
-make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,pngname,pngdim,
+make.beeswarm <- function(mydata,groupcol,subgroupcol,colvalues,varlist,namelist,pngname,pngdim,
                           pngwidth,pngheight,groupcolor,mylims,dodiffmean,addtext,yaxislabel){
   #Now do a grid of beeswarm plots
   
@@ -890,7 +991,7 @@ make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,pngname,p
   
   ngroup<-length(grouplevel)
   
-  pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3 (or for m/f)
+  pointcol<-c(16,17) #use filled circle then triangle for ageband 1-2 
   min.val<-min(mydata[,subgroupcol]) #because m/f is coded 0/1 need to check minimum value, so can 
   #add one to code for points if we are using m/f
   min.offset<-0
@@ -905,7 +1006,7 @@ make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,pngname,p
     }
     
     beeswarm(jitter(mydata[,testrange[i]],3)~mydata[,groupcol] , xlab='Group',ylab=mylabel,spacing=.8,
-             pch = 16,pwpch=agebit,cex=1.5,col=groupcolor,main=mytitle,ylim=mylims[1:2],
+             pch = 16,pwpch=agebit,cex=1.5,pwcol = colvalues,main=mytitle,ylim=mylims[1:2],
              cex.axis=1.21,cex.lab=1.5,cex.main=1.5,xaxt='n')
     
     #add means
@@ -935,8 +1036,8 @@ make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,pngname,p
     polygon(c(0,0,(ngroup+1),(ngroup+1)), c(up.lim, low.lim, low.lim, up.lim),
             col=adjustcolor("yellow",alpha.f=0.3), border = NA)
     if(addtext==1){
-      text(2,mylims[2],'<---------Low Bias--------->')
-      text(5,mylims[2],'<---------High Bias--------->')
+      text(2,mylims[1],'<------Low Bias------>',cex=1.5)
+      text(5,mylims[1],'<------High Bias------>',cex=1.5)
     }
     axis(1,at=1:6,labels=c('XXX','XXY','XYY','XXX','XXY','XYY'))
   }
@@ -947,28 +1048,41 @@ make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,pngname,p
 
 ```{r beeswarm_sdq, include=F,message=FALSE}
 #call the make.beeswarm function - this creates a png file
-pngname<-'beeswarm_sdq_SAS'
+pngname<-'beeswarm_sdq_dec2018'
 varlist<-c('emotional.T','conduct.T','hyperactivity.T','peer.T','prosocial.T','socapt.T')
-#To have things on comparable scale, SAS is divided by two.
+
 namelist<-c('Emotional','Conduct','Hyperactivity','Peer Relations',
             'Prosocial','Social Aptitude')
-mylims<-c(20,80,50,40,30) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
+mylims<-c(20,80,50,60,70) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
 yaxislabel <- 'T-score (high = impairment)'
 groupcol<-which(colnames(my.dawba)=='group8')
-subgroupcol<-which(colnames(my.dawba)=='female')
-pngname<-'beeswarm_sdq_T'
+subgroupcol<-which(colnames(my.dawba)=='ageSDQ')
+
 pngdim<-c(3,2)
 pngwidth<-3000
 pngheight<-3000
-groupcolor<-c(2,2,2,4,4,4) #specify colours for each group - 3 trisomies the same
+
+#We want this order "None","SocAnx","ASD","ASD-","SocAnx+ASD","SocAnx+ASD-")
+diaglist<-c(0,2,20,10,22,12)
+
+my.dawba$bicode3<-my.dawba$bicode #initialise
+for (d in 1:length(diaglist)){
+  w<-which(my.dawba$bicode3==diaglist[d])
+  my.dawba$bicode3[w]<-d
+}
+
+mycols<- c("grey66", "cornflowerblue","red", "hotpink1","purple","blue")
+
 dodiffmean<-0
 addtext<-0
 w<-which(my.dawba$group8level <7)
 mydata<-my.dawba[w,]
 mydata$group8<-droplevels(mydata$group8)#need this to stop it remembering empty level!
 #levels(mydata$Group)[4]<-'Twin +\nConcerns'
+colvalues<-mycols[mydata$bicode3]
 addtext<-1
-make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,pngname,pngdim,pngwidth,pngheight,
+make.beeswarm(mydata,groupcol,subgroupcol,colvalues,
+              varlist,namelist,pngname,pngdim,pngwidth,pngheight,
               groupcolor,mylims,dodiffmean,addtext,yaxislabel)
 
 ```
@@ -992,48 +1106,7 @@ make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,pngname,pngdim,pngwid
 
 ```
 
-```{r data_reduction,include=FALSE}
-#PCA was not v illuminating but the reduced file pca.dat used later on for nonparametric
-#Most variance accounted for by one component explaining around 68% variance
-dopca<-0
-if(dopca==1){
-my.dawba$sdq_totaldiff <- sqrt(my.dawba$emotional+my.dawba$conduct+my.dawba$hyperactivity+my.dawba$peer)
-#sqrt transform helps normalise
 
-pca.cols <- c("record_id","socaw_ss","soccog_ss","soccomm_ss","socmot_ss","autfeat_ss",
-              "emotional","conduct","hyperactivity","peer","prosocial" ,"sas_total")
-colnums<-which(colnames(my.dawba)%in%pca.cols) #find corresponding column numbers - but they will be in rank order, so better do in two bites, so don't get group8level in wrong place!
-
-
-add.cols <- c("ageband","group8level","langfactor","srs_t_score","sdq_totaldiff","bicode2","bias") #srs t score used in manova later; also sdq_totaldiff
-colnums2<-which(colnames(my.dawba)%in%add.cols) #find corresponding column numbers - but they will be in 
-colnums  <-c(colnums,colnums2)
-pca.dat <- my.dawba[,colnums]
-w<-which(is.na(pca.dat$bias))
-pca.dat$bias[w]<-999 #need missing code to avoid twins being excluded at next step
-pca.dat <-pca.dat[complete.cases(pca.dat),]
-pca.dat$langz <- scale(pca.dat$langfactor)[,1]
-
-#try with regular pca
-pca.result<- prcomp(pca.dat[,2:12], center = TRUE,scale. = TRUE)
-#summary(pca.result)
-
-pca.comps<-pca.result$x[,1:4]
-pca.dat<-cbind(pca.dat,pca.comps)
-pngname<-'beeswarm_pca'
-pngdim<-c(3,2)
-pngwidth<-3000
-pngheight<-3000
-mydata<-filter(pca.dat,group8level != 7)
-meanfile<-filter(pca.dat,group8level==7)
-varlist<-c('langz','PC1','PC2','PC3','PC4')
-namelist<-c('langz','PC1','PC2','PC3','PC4')
-mylims<-c(-3.5,2.5,-1,0,1) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
-groupcol<-which(colnames(pca.dat)=='group8level')
-subgroupcol <- which(colnames(pca.dat)=='ageband')
-make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight, groupcolor,mylims,dodiffmean,addtext,yaxislabel)
-}
-```
 
 ```{r MANOVAfunctions, include=FALSE, echo=FALSE}
 ######################################################################################
@@ -1090,41 +1163,27 @@ manova.dataframe<-data.frame(matrix(NA,nrow=3,ncol=7))
 colnames(manova.dataframe)<-c('Comparison','Effect','Wilks','F','df1','df2','p')
 manova.sdqetc.df<-manova.dataframe #just copying basic file
 
-#To run the analyses, can use the pca.dat file that was created above 
+#To run the analyses, can use the sct.only file that was created above 
 #First convert values to z-scores in same direction.
 
 #find col numbers for columns to use
 #NB intercorrelations within SRS are high and cause problems, so use overall SRS t-score
-mycolrange<-which(colnames(pca.dat) %in% c(
-  "sdq_totaldiff","srs_t_score"))
+mycolrange<-which(colnames(sct.only) %in% c("emotional.T","conduct.T", "hyperactivity.T" ,  "peer.T", "prosocial.T"))
+#ignore soc aptitude as it has some missing data
 
-gpcolumn<-which(colnames(pca.dat)=='group8level')
+gpcolumn<-which(colnames(sct.only)=='group8level')
 gpvalues<-c(1,2,3)
-covcolumns<-which(colnames(pca.dat) %in% c('langz'))
-for (c in mycolrange){
-  pca.dat[,c]<-scale(pca.dat[,c])[,1]
-}
-# poscols<-which(colnames(pca.dat) %in% c("prosocial" ,"sas_total"))
-# pca.dat[,poscols]<- -pca.dat[,poscols]
+covcolumns<-which(colnames(sct.only) %in% c('langfactor'))
 
 #First just do groups 1-3
 #NB cases with missing data are excluded, so doesn't matter if you use lobias.sct or lobias.sct2
 #Result will be the same, but use lobias.sct2 to get numbers to report
-gp.sctlow<-filter(pca.dat,group8level<4)
-covcolumns <- 0 
+gp.sctlow<-filter(sct.only,group8level<4)
+
 mymanova.fit<-do.manova(gp.sctlow,mycolrange,gpcolumn,gpvalues,covcolumns)
 mymanova.sum<-summary(mymanova.fit, test="Wilks")
 
 #Massive failure of multivariate normality in all 3 groups!
-#Look at distributions to try to understand this  
-#get cook's distance from regression - predict N Y chroms form test battery
-fit <- lm(group8level~sas_total+sdq_totaldiff,
-          data = gp.sctlow)
-avPlots(fit)
-cutoff <- 4/((nrow(gp.sctlow)-length(fit$coefficients)-2))
-plot(fit, which=4, cook.levels=cutoff)
-#Further testing shows big problems with floor and ceiling effects, as well as some skew.
-#I've tried addressing these by taking sdq total score: if you take sqrt you get a reasonably normal variable, but then you lose the differentiation betweewn social /ASD.
 #So go instead for many nonparametric tests and use permutation if necessary to establish pvalue
 ```
 
@@ -1234,51 +1293,7 @@ save(myp1,myp2, file = "p1p2.Rdata")
 ```
 
 
-```{r cgas, include=FALSE}
-#########################################################################
-#Look at CGAS and social anx dawba rating
-#NB preliminary look at the data on the social anx banding from DAWBA
-#as well. This needs tidying up, relabelling etc. 
-#For now just modified the code I'd used for CGAS
-#########################################################################
-#First check rater agreement
-myr<-rcorr(my.dawba1$cgas_r1,my.dawba1$cgas_r2)
-my.dawba$CGAS<-as.integer(my.dawba1$cgas_r1/10)
-toprange<-12 #range for joyplot
-do.socanx<-1 #just recycling this bit of script for social anxiety (sophband)
-#need to rewrite this to make it less confusing
-toprange<-6
-if(do.socanx==1){
-my.dawba$CGAS<-my.dawba$sophband
 
-cgast<-table(my.dawba$CGAS,my.dawba$group8)
-mysum<-summaryBy(CGAS ~ group8, data=my.dawba,
-                 FUN = function(x) { c(m = mean(x))})
-mymean<-rep(NA,8)
-for (i in 1:8){
-  mymean[i]<-paste0('Mean = ',round(mysum[i,2],1))
-}     
-if(dopng==1){
-  pngname1<-'joyplot_cgas.png'
-  png(pngname1,width=300,height=400)
-}
-
-g<-ggplot(my.dawba, aes(x = CGAS, y = group8,fill=group8)) 
-g1<-g+ geom_density_ridges(rel_min_height = 0.01)
-g2<-g1+ ylab('Low Bias             High Bias           ')
-g3<-g2+theme(axis.text.y= element_text( color="black", size=18))
-g4<-g3+theme(axis.text.x= element_text( color="black", size=14))
-g5<-g4+ theme(axis.title= element_text( color="black", size=18))
-g6<-g5+scale_x_continuous(breaks=seq(2,toprange,2))
-g7<-g6+scale_fill_cyclical(values = c("deeppink","darkorchid1", "deepskyblue","deeppink","darkorchid1", "deepskyblue","yellow","green"))
-g8<-g7+ annotate("text", x=10,y = seq(1.1,8.1,1), label =mymean, size=6)
-if(dopng==1){
-  dev.off()
-}
-}
-g8
-#file.show(pngname1) 
-```
 
 ```{r beeswarm.SRSt.with.diagnoses,include=FALSE}
 #########################################################################
@@ -1700,7 +1715,9 @@ We report how we determined our sample size, all data exclusions, all manipulati
 
 ## Participants 
  
-The analysis was conducted on data from `r n.K+n.L+n.M+n.N+n.O+n.P` children (`r n.K+n.N` with XXX, `r n.L+n.O` with XXY and `r n.M+n.P` with XYY) whose parents had completed the Development and Wellbeing Assessment (DAWBA). As shown in Figure 1, these came from a larger sample of `r n.C+n.D` children who participated in a study of language and laterality in sex chromosome trisomies, whose genetic, laterality and language characteristics have been reported in previous papers {Bishop, 2018 #38799};{Newbury, 2018 #38821};{Wilson, 2018 #38820}. Children were recruited from National Health Service Clinical Genetics centres, from two support groups: Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association, or from self-referral via social media. A criterion for inclusion was that the child was aware of their trisomy status. Figure 1 distinguishes between cases where the trisomy was discovered in childhood during investigations for behavioural or neurodevelopmental problems, as the latter group suffer from ascertainment bias and are likely to a high rate of disorder that is not  representative of that karyotype. These are referred to as the 'High Bias' subgroup. An unexpected feature of the sample was that the majority of girls with trisomy X were in the Low Bias subgroup, whereas the majority of boys with XXY or XYY were in the High Bias subgroup, suggesting that these karyotypes were more likely to be associated with neurodevelopmental problems. 
+The analysis was conducted on data from `r n.K+n.L+n.M+n.N+n.O+n.P` children (`r n.K+n.N` with XXX, `r n.L+n.O` with XXY and `r n.M+n.P` with XYY) whose parents had completed the Development and Wellbeing Assessment (DAWBA). As shown in Figure 1, these came from a larger sample of `r n.C+n.D` children aged from 5 to 16 years who participated in a study of language and laterality in sex chromosome trisomies; genetic, laterality and language characteristics of these children have been reported in previous papers {Bishop, 2018 #38799};{Newbury, 2018 #38821};{Wilson, 2018 #38820}. Children were recruited from National Health Service Clinical Genetics centres, from two support groups: Unique: the Rare Chromosome Support Group, and the Klinefelter Syndrome Association, or from self-referral via social media. A criterion for inclusion was that the child was aware of their trisomy status. Figure 1 distinguishes between cases where the trisomy was discovered in childhood during investigations for behavioural or neurodevelopmental problems, as the latter group suffer from ascertainment bias and are likely to a high rate of disorder that is not  representative of that karyotype. These are referred to as the 'High Bias' subgroup. An unexpected feature of the sample was that the majority of girls with trisomy X were in the Low Bias subgroup, whereas the majority of boys with XXY or XYY were in the High Bias subgroup, suggesting that these karyotypes were more likely to be associated with neurodevelopmental problems. 
+
+In order to compare rates of psychiatric problems with population prevalence figures from Meltzer et al (2000), the sample was subdivided into a younger (age 5-10 years) and older (age 11-16 years) age group. Numbers in these two age bands were roughly equal for all karyotype groups -  Low Bias: XXX (`r agetab[1,1]` younger,`r agetab[1,2]` older); XXY (`r agetab[2,1]` younger,`r agetab[2,2]` older), XYY (`r agetab[3,1]` younger,`r agetab[3,2]` older); High Bias:   XXX (`r agetab[4,1]` younger,`r agetab[4,2]` older); XXY (`r agetab[5,1]` younger,`r agetab[5,2]` older), XYY (`r agetab[6,1]` younger,`r agetab[6,2]` older).
 
 `r Norig` children had taken part in the previous study by Bishop et al (2011). Information about ASD in that study was available only from parental report: two of the children (8.7%) had been reported by their parents to have a diagnosis of ASD, closely similar to the rate of 13/136 (9.5%) for the whole 2011 sample. 
 
@@ -1719,7 +1736,7 @@ In addition, one or both parents were asked to complete the online Development a
 
 The DAWBA includes a range of questions relating to DSM5 and ICD10 diagnostic criteria, risk factors, and impact on the family, which are supplemented by optional free text. In addition, the DAWBA incorporates the Strength and Difficulties Questionnaire (SDQ) (Goodman, 1997), and the Social Aptitudes Scale (Liddle, 2009), which are described more fully below. 
 
-The DAWBA software codes the items relevant to different diagnoses to give a score indicating the likelihood of the child meeting criteria for a range of psychiatric diagnoses, with the final diagnosis being made by a trained rater who assimilates all the quantitative and qualitative information. DAWBA has been used to obtain prevalence estimates for psychiatric disorders for a representative sample of over 10,000 children in the UK (Meltzer et al., 2000). Validity of DAWBA for diagnosis of autism has been shown to be acceptable (McEwen et al, 2016).  
+The DAWBA software codes the items relevant to different diagnoses into bands that indicate the likelihood of the child meeting criteria for a range of psychiatric diagnoses (Goodman et al, 2011), with the final diagnosis being made by a trained rater who assimilates all the quantitative and qualitative information. DAWBA has been used to obtain prevalence estimates for psychiatric disorders for a representative sample of over 10,000 children in the UK (Meltzer et al., 2000). Validity of DAWBA for diagnosis of autism has been shown to be acceptable (McEwen et al, 2016).
 
 All interviews with SCT cases were coded against DSM-IV criteria by the first author (AW), and a further 30 interviews were coded by a second independent rater (JK) to check on diagnostic agreement. The rater doing the coding was blind to the trisomy status of the child, although occasionally this was mentioned by parents in free text comments. Cases of disagreement were resolved by the last author (DVMB), who gave a final consensus rating that was used here. As well as assigning diagnoses, the rater completed two checklists that capture overall severity of problems:  the Children's Global Assessment Scale (CGAS) (Shaffer et al., 1983), and the Health of the Nation Outcome Scales for Children and Adolescents (HoNOSCA) (Gowers et al., 1999).
 *(Not sure if we will use these here)*. 
@@ -1731,10 +1748,10 @@ The criteria for Social Anxiety Disorder (SocAnx) include a marked and persisten
 ## Parental questionnaires 
 
 _Strength and Difficulties Questionnaire (SDQ) (Goodman, 1997)._
-The SDQ was incorporated in the online DAWBA assessment. SDQ is a questionnaire used to screen children's behaviour on five dimensions: 1) emotional symptoms (5 items); 2) conduct problems (5 items); 3) hyperactivity/inattention (5 items); 4) peer relationship problems (5 items); 5) prosocial behaviour (5 items). Norms are available for a representative sample of over 10,000 British children aged from 5 to 15 years (Meltzer et al., 2000). 
+The SDQ was incorporated in the online DAWBA assessment. SDQ is a questionnaire used to screen children's behaviour on five dimensions: 1) emotional symptoms (5 items); 2) conduct problems (5 items); 3) hyperactivity/inattention (5 items); 4) peer relationship problems (5 items); 5) prosocial behaviour (5 items). Norms are available for a representative sample of over 10,000 British children aged from 5 to 15 years (Meltzer et al., 2000). These were used to convert scores to T-scores with mean of 50 and SD of 10, where a high score indicates impairment.
 
 _Social Aptitudes Scale (SAS) (Liddle et al, 2009)._
-This 10-item scale forms part of the DAWBA and was designed to tap skills in social understanding and behaviour that vary substantially in the general population. The behaviours surveyed in SAS relate to aspects of social understanding rather than to social anxiety, and the parent is asked to rate positive rather than negative attributes, such as 'able to compromise and be flexible'. 
+This 10-item scale forms part of the DAWBA and was designed to tap skills in social understanding and behaviour that vary substantially in the general population. The behaviours surveyed in SAS relate to aspects of social understanding rather than to social anxiety, and the parent is asked to rate positive rather than negative attributes, such as 'able to compromise and be flexible'. T-scores were computed using tables provided on the DAWBA website (dawba.info/SAS/psastscore.pdf), but were flipped so that a high score represented impairment, for consistency with the other scales.
 
 _The Social Responsiveness Scale (SRS)._ 
 \ 
@@ -1774,11 +1791,11 @@ thistab<-thistab+1 #increment table counter
 #nicetab has to have distinct column names - currently these are just dots.
 ```
 
-Our first prediction was that there would be a high prevalence of ASD or ASD- specifically in boys with XXY or XYY. Meltzer et al (2000) reported prevalence rates for 'Pervasive Developmental Disorder' (encompassing ASD and ASD-) of 0.5% for boys and 0.1% for girls. Compared with these figures, there are elevated rates in all three trisomies. We consider here just the Low Bias groups: the log odds ratio (with 95% confidence interval) is `r logoddsr.xxx` (`r ci.low.xxx` - `r ci.hi.xxx`) for XXX girls; `r logoddsr.xxy` (`r ci.low.xxy` - `r ci.hi.xxy`) for XXY boys; and `r logoddsr.xyy` (`r ci.low.xyy` - `r ci.hi.xyy`) for XYY boys. None of these affected children had been in the original 2011 study. Thus, our prediction of an increased prevalence of ASD was confirmed, but this extended to girls with XXX as well as the two groups of boys. Nevertheless, those with an ASD diagnosis were in the minority in all three trisomies. Note that because ASD had been an exclusionary criterion for those in the twin comparison group, they could not provide comparative data for this diagnosis. 
+Our first prediction was that there would be a high prevalence of ASD or ASD- specifically in boys with XXY or XYY. Meltzer et al (2000) reported prevalence rates for 'Pervasive Developmental Disorder' (encompassing ASD and ASD-) of 0.5% for boys and 0.1% for girls. Compared with these figures, there are elevated rates in all three trisomies. We consider here just the Low Bias groups: the log odds ratio (with 95% confidence interval) is `r logoddsr.xxx` (`r ci.low.xxx` - `r ci.hi.xxx`) for XXX girls; `r logoddsr.xxy` (`r ci.low.xxy` - `r ci.hi.xxy`) for XXY boys; and `r logoddsr.xyy` (`r ci.low.xyy` - `r ci.hi.xyy`) for XYY boys. None of these affected children had been in the original 2011 study. Thus, our prediction of an increased prevalence of ASD was confirmed, but this extended to girls with XXX as well as the two groups of boys. Nevertheless, those with an ASD diagnosis were in the minority in all three trisomies. 
 
-Our second prediction was that there would be a raised prevalence of SocAnx in those with an extra X chromosome. As shown in Table `r (thistab-1)`,there were `r numnames[socanx.xxy1+1]` with this diagnosis in the XXY-Low Bias group and `r numnames[socanx.xxy2+1]` in the XXY-High Bias group, as well as one child in the XYY-High Bias group. All but `r numnames[mytab[2,2]+1]` of these children had additional diagnoses of ASD- or ASD. In the epidemiological sample of Meltzer et al. (2000), the prevalence of SocAnx was 0.3% in girls and 0.4% in boys. Although the numbers of boys with XXY studied here is very small, the finding that 21% in the Low Bias group and 28% in the High Bias group met diagnostic criteria for this condition is well above the prevalence in the general population (log odds ratio for Low Bias group = `r round(logoddsr,2)`, 95% CI = `r ci.low`-`r ci.hi`). 
+Our second prediction was that there would be a raised prevalence of SocAnx in those with an extra X chromosome. As shown in Table `r (thistab-1)`,there were `r numnames[socanx.xxy1+1]` with this diagnosis in the XXY-Low Bias group and `r numnames[socanx.xxy2+1]` in the XXY-High Bias group, as well as one child in the XYY-High Bias group. All but `r numnames[mytab[2,2]+1]` of these children had additional diagnoses of ASD- or ASD. In the epidemiological sample of Meltzer et al. (2000), the prevalence of SocAnx was 0.3% in girls and 0.4% in boys. Although the numbers of boys with XXY studied here is very small, the finding that 21% in the Low Bias group and 28% in the High Bias group met diagnostic criteria for this condition is well above the prevalence in the general population (log odds ratio for Low Bias group = `r round(logoddsr,2)`, 95% CI = `r ci.low`-`r ci.hi`). It may seem plausible that SocAnx would be a condition that develops with age, as the demands on children to be independent increase. However, there was no obvious association with age in this sample: the three XXY boys with SocAnx in the Low Risk group were aged 6, 10 and 14 years.
 
-Although the odds ratio of ASD/ASD- were elevated in all three trisomies, and the rate of SocAnx was above normative levels in the XXY boys, the majority of children in the Low Bias groups did not have either diagnosis. However, DAWBA categorical diagnoses only detect more severe levels of impairment associated with burden to families. We next considered the possibility that there might be distinctive subclinical features associated with an additional X or Y chromosome. To investigate this question we first considered the profile of scores on the two questionnaires incorporated into the DAWBA: SDQ and the SAS. `r thisfig<-thisfig+1` Note that a high score on the Emotional, Conducct, Hyperactivity, and Peer Relations scales indicates impairment, whereas a high raw score on Prosocial and Social Aptitude Scale corresponds to social skills. Figure `r thisfig` shows individual data points as well as means on the five SDQ scales and the SAS. 
+Although the odds ratio of ASD/ASD- were elevated in all three trisomies, and the rate of SocAnx was above normative levels in the XXY boys, the majority of children in the Low Bias groups did not have either diagnosis. However, DAWBA categorical diagnoses only detect more severe levels of impairment associated with burden to families. We next considered the possibility that there might be distinctive subclinical features associated with an additional X or Y chromosome. To investigate this question we  considered the profile of scores on the two questionnaires incorporated into the DAWBA: SDQ and the SAS. `r thisfig<-thisfig+1` Note that scores have been converted to T-scores, where a indicates impairment. Figure `r thisfig` shows individual data points as well as means on the five SDQ scales and the SAS. 
 
 ![**Figure `r thisfig`**. *Beeswarm plots: SDQ and SAS scales for the three trisomy groups, subdivided by bias group. Note that SAS raw scores are divided by two, so they can be shown on a similar scale to the SDQ scales.*](beeswarm_sdq.png)
 
