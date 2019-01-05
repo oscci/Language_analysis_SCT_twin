@@ -1,11 +1,12 @@
 ---
 output:
   word_document: default
+  pdf_document: default
   html_document: default
 ---
-# Language phenotypes in children with sex chromosome trisomies
+# Language phenotypes in children with sex chromosome trisomies - revised
 ## Script for main analyses
-
+## By Dorothy Bishop, 5th January 2019
 
 These scripts create the tables and figures reported in the paper from the deposited data set. These are shown at the end of the markdown file. Earlier output from Markdown shows exploratory visualisations, etc.
 
@@ -14,7 +15,7 @@ The R Markdown can be used to create word or html outputs; it does not work with
 N.B. The deposited data differs in minor ways from original data. 
 
 To maintain confidentiality, age has been recoded into 6 monthly chunks, rather than exact months. 
-Original neighborhood codes are removed, as well as variables on family structure.
+Original neighborhood codes are removed, as well as variables on family structure and reason for diagnosis in SCTs
 There are therefore some minor discrepancies with the published tables that use these variables, but the overall pattern is not changed.
 
 ```{r global_options, include=FALSE}
@@ -67,7 +68,7 @@ library(plotly)
 all.short <- read.csv('bishop_sct_twin_opendata.csv',stringsAsFactor=FALSE)
 ```
 
-```{r missingcheck}
+```{r missingcheck, include=FALSE}
 
 #Deal with missing data
 #Codes are
@@ -82,7 +83,7 @@ all.short <- read.csv('bishop_sct_twin_opendata.csv',stringsAsFactor=FALSE)
 all.short$pass_hearing[all.short$pass_hearing==9]<-NA #change 9 to NA for pass_hearing
 #NB these include both refusal and equipment failure
 
-all.short$piq[all.short$piq==999]<-NA
+all.short$piq[all.short$piq>900]<-NA
 
 #missing data has codes of 996-999 for language tests
 w <- which(all.short$nonword_rep_ss>900)
@@ -164,7 +165,7 @@ all.short$fh_langprob[w]<-NA
 
 ```
 
-```{r rescalelang}
+```{r rescalelang, include=FALSE}
 #Rescale all variables to mean 100 and SD 15 and save in new columns
 short.langnames<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','NwdRep','Oromotor',
                    'ReadAcc','ReadComp','ReadRate','TOWREwd','TOWREnwd',
@@ -201,7 +202,7 @@ for (i in c(5,6)){
 
 ```
 
-```{r interpolatemissing}
+```{r interpolatemissing, include=FALSE}
 #If just one value is missing in lang or reading groups, substitute the mean for others
 langrange<-(n.col+1):(n.col+7)
 readrange<-(n.col+8):(n.col+13)
@@ -235,222 +236,7 @@ all.short$verbmem<-rowMeans(all.short[,(n.col+5):(n.col+7)])
 #create an averaged verbalmem measure 
 ```
 
-
-```{r ncheck}
-## Step 3
-
-# #Check that Ns match those in the protocol
-# Should have three groups with N = 140, SCT, 176 twin pairs (these are randomly assigned twin 1 and 2), - but Ns less for twins because of exclusions
-# Numbers are greater than for Newbury et al, as some children did not feature in that study because of lack of DNA.
-# 
-# Twins recruited in relation to splang_conc, which is coded as
-# 0, never
-# 1, preschool only
-# 2, continuing, mild
-# 3, continuing, severe
-# 4, reading concerns only
-# 9, unclear
-# We will be using this categorisation to subdivide twins; categories 2 and 3 distinguished.
-# 
-# Trisomies - divided according to reason for diagnosis
-# why tested used to make bias column: coded as: 
-# 0, maternal age
-# 1, medical concerns
-# 2, behavioural concerns
-# 3, neurodevelopmental concerns
-# 4, family history of genetic problems
-# 9, no information
-###################################################################################
-twin.tab <- table(all.short$is_twin)
-names(twin.tab)<-c('SCT','twin1','twin2')
-
-all.short$bias<-'NA'
-w<-which(all.short$is_twin==0)
-all.short$bias[w]<-0
-w<-c(which(all.short$why_tested==2),which(all.short$why_tested==3))
-all.short$bias[w]<-1
-sct.tab <- table(all.short$trisomy,all.short$bias)
-rownames(sct.tab)<-c('XXX','XXY','XYY')
-colnames(sct.tab)<-c('Low Bias','High Bias','NA')
-#Show tables
-twin.tab
-tab_sct<-sct.tab
-sct.tab
-rowSums(sct.tab)
-
-all.short$parent_conc<-NA #parental concern re language
-w<-which(all.short$is_twin>0)
-all.short$parent_conc[w]<-0
-w<-which(all.short$splang_conc%in%c(2,3))
-all.short$parent_conc[w]<-1
-
-parcon.tab<-table(all.short$parent_conc,all.short$is_twin)
-parcon.tab<-parcon.tab[,2:3]
-rownames(parcon.tab)<-c('No concern','Concern')
-colnames(parcon.tab)<-c('twin1','twin2')
-parcon.tab
-
-#count how many SCT cases were in the earlier 2009 study (Bishop et al 2011 paper)
-print('')
-print('In 2009 study')
-w<-which(all.short$orig_famcode==1)
-origstudy<-table(all.short$bias[w],all.short$trisomy[w])
-colnames(origstudy)<-c('XXX','XXY','XYY')
-rownames(origstudy)<-c('Low Bias','High Bias')
-origstudy
-
-#Count how many cases available for MANOVAs
-#Must have full data on lang or reading (5 yr olds excluded on this basis)
-w<-which(all.short$n_missinglang<2) #we have retained those with one missing value
-tempshort<-all.short[w,]
-sct.tab1 <- table(tempshort$trisomy,tempshort$bias)
-rownames(sct.tab1)<-c('XXX','XXY','XYY')
-colnames(sct.tab1)<-c('Low Bias','High Bias','NA')
-#Show tables
-print('Cases with full data for nv/lang analysis')
-
-sct.tab1
-rowSums(sct.tab1)
-
-w<-which(all.short$n_missingread<2) #we have retained those with one missing value
-tempshort<-all.short[w,]
-sct.tab2 <- table(tempshort$trisomy,tempshort$bias)
-rownames(sct.tab2)<-c('XXX','XXY','XYY')
-colnames(sct.tab2)<-c('Low Bias','High Bias','NA')
-#Show tables
-print('Cases with full data for reading/naming analysis')
-
-sct.tab2
-rowSums(sct.tab2)
-###################################################################################
-```
-
-
-
-```{r groupcreate}
-##Create 8 groups:
-# 1. XXX-nobias
-# 2. XXY-nobias
-# 3. XYY-nobias
-# 4. XXX-hibias
-# 5. XXY-hibias
-# 6. XYY-hibias
-# 7. twin_noconcern
-# 8. twin_concern
-# NB as currently defined, not taking into account co-twin status. So a twin_noconcern could have cotwin with concern, ie have family risk.
-
-#####################################################################################
-#first code Speech-language therapy (SLT) into 0, 1 or 2;  2 indicates SALT beyond 4 yr, 1 is assessment or preschool only
-all.short$slt.code<-0
-w<-c(which(all.short$slt==1),which(all.short$slt==8))
-all.short$slt.code[w]<-1
-w<-c(which(all.short$slt==2),which(all.short$slt==3))
-all.short$slt.code[w]<-2
-
-
-all.short<-filter(all.short,is_twin<2) #remove twin2
-all.short$group8<-all.short$trisomy
-w<-which(all.short$bias==1)
-all.short$group8[w]<-all.short$group8[w]+3 #convert 1 2 3 to 4 5 6
-w<-which(all.short$is_twin>0) #just focus on twins
-all.short$group8[w]<-7
-w<-which(all.short$parent_conc==1) #coded as NA for SCTs, so only twins coded here
-all.short$group8[w]<-8
-
-#add twins with SLT code 2 to group 8, even if no parental concern
-w<-intersect(which(all.short$group8==7),which(all.short$slt.code==2))
-all.short$group8[w]<-8
-
-#Tried removing those with affected cotwin, but it has little effect other than to reduce N.
-#This is therefore not done at present, though code retained.
-#Set remove.by.cotwin to 1 if you want this to run
-remove.by.cotwin<-0
-if(remove.by.cotwin==1){
-  #now remove from group 7 those who have an affected cotwin: either SLT or concerns
-  cotwins<-filter(twin.short,is_twin==2)
-  f<-which(all.short$group8==7)
-  cotwinremove<-vector()
-  for (i in 1:length(f)){
-    thisrow<-f[i]
-    thisfam<-all.short$fam_id[thisrow]
-    g<-which(cotwins$fam_id==thisfam)
-    thisslt<-cotwins$slt[g]
-    thislangconcern<-cotwins$splang_conc[g]
-    if(thisslt==2 || thisslt==3 || thislangconcern==2 ||thislangconcern==3)
-    {cotwinremove<-c(cotwinremove,thisrow)}
-  }
-  all.short<-all.short[-cotwinremove,]
-}
-#Create factor for overall group
-all.short$group8level<-all.short$group8#useful to retain numeric code before converting to factor
-all.short$group8<-as.factor(all.short$group8)
-levels(all.short$group8)<-c('XXX.lowbias','XXY.lowbias','XYY.lowbias',
-                            'XXX.hibias','XXY.hibias','XYY.hibias',
-                            'Twin: No Concerns','Twin: Lang concerns')
-
-#Add code for thse with NA data on the language tests
-#For MANOVA, only those with complete data are included
-all.short$langdata_complete<-1 #default: updated after interpolating values if only one missing
-mycols<-colnames(all.short)
-mcx1 <-which(mycols=='Matrices')
-mcx2<-which(mycols=='DigitName')
-for (i in mcx1:mcx2){
-  w <- which(is.na(all.short[,i]))
-  all.short$langdata_complete[w]<-0
-  
-}
-
-```
-
-```{r get.covariates}
-##Covariates
-# a)	Educational level of mother and father, transformed into an ordinal scale based on age at leaving full-time education/qualifications obtained, with points of 0 (prior to age 16 years), 1 (16 years/did GCSE or O-levels), 2 (18 years/ did A-levels), 3 (21 years, degree), 4 (postgraduate study). 
-# 
-# b)	An index of multiple deprivation based on postcode was obtained for those living in England from the website http://imd-by-postcode.opendatacommunities.org/. This uses local statistics from the Department for Communities and Local Government to rank 32,844 postcodes on the basis of a weighted sum based on income, employment, education, health, crime, housing and living environment. The rank score was converted to a z-score to give a normally-distributed variable.  
-# 
- 
-# c) Family history of language problems: added after reading Boada et al, who suggest this could explain heterogeneity.
-
-
-#Parental educational level
-par.ed <-aggregate(all.short$mo_educ, by=list(all.short$group8),
-                   FUN=mean, na.rm=TRUE)
-pirateplot(mo_educ~group8,data=all.short)
-pirateplot(fa_educ~group8,data=all.short)
-
-
-
-firsttwin<-min(which(all.short$is_twin==TRUE))
-
-dopirate<-0 #toggle to 1 to see pirateplot (not really needed here, but useful as eg of plot labeling)
-if (dopirate==1){
-  pirateplot(neighborz~group8,data=all.short,xaxt='n')
-  text(1,3.2,'XXX',cex=.8)
-  text(2,3.2,'XXY',cex=.8)
-  text(3,3.2,'XYY',cex=.8)
-  text(4,3.2,'XXX',cex=.8)
-  text(5,3.2,'XXY',cex=.8)
-  text(6,3.2,'XYY',cex=.8)
-  text(7,3.4,'Twin\nno concerns',cex=.8)
-  text(8,3.2,'Twin\nlanguage\nproblems ',cex=.8)
-  text(2,-3,'<-------Low bias------->')
-  text(5,-3,'<-------High Bias------->')
-}
-
-
-
-
-print('Family history of language problems')
-
-fh.tab<-table(all.short$group8,all.short$fh_langprob)
-round(prop.table(fh.tab,1),3)
-chisq.test(fh.tab)
-
-n.col<-length(colnames(all.short)) #we will use this in later block as start column when adding new columns with all scaled on same scale
-```
-
-
-```{r DLDcategories}
+```{r DLDcategories, include=FALSE}
 #Proportions meeting criteria for DLD
 # And proportions having SALT
 # Coded as: 
@@ -480,9 +266,6 @@ all.short$Ntestlow[w]<-all.short$Ntestlow[w]+1
 w<-which(is.na(all.short[,g]))
 all.short$Ntestdone[w]<-all.short$Ntestdone[w]-1
 
-#table of whole range of low test
-lowtab<- table(all.short$group8,all.short$Ntestlow)
-round(prop.table(lowtab,1),2)
 
 #binarise Ntestlow into 0/1 and 2+
 all.short$dldcat<-0
@@ -493,7 +276,7 @@ w<-which(all.short$pass_hearing==0)
 all.short$dldcat[w]<-4
 
 #asd use rater 1 dsm5, DAWBA gives 1 unsure, 2 ASD, 3 Asperger and 4 other. We have used the 4 = other for cases such as SCD where only 2 domains are met
-w<-c(which(all.short$asd_dsm_r1==2),which(all.short$asd_dsm_r1==3)) #categories 2-3 treated as Asd
+w<-c(which(all.short$asd_dsm_agree==2),which(all.short$asd_dsm_agree==3)) #categories 2-3 treated as Asd
 all.short$dldcat[w]<-3
 #lowIQ
 w<-which(all.short$piq<70)
@@ -503,14 +286,175 @@ all.short$dldlevel<-all.short$dldcat #retain numeric level for easy of filtering
 
 all.short$dldcat<-as.factor(all.short$dldcat)
 levels(all.short$dldcat)<-c('TD','DLD','lowIQ','ASD','hearing')
-dldcat<-table(all.short$dldcat,all.short$group8)
 
-round(prop.table(dldcat,2),2)
 
-round(table(all.short$dldcat,all.short$slt.code),2) #check how SALT relates to DLD status
+
 ```
 
-```{r make.subfiles}
+```{r groupcreate, include=FALSE}
+##Create 8 groups:
+# 1. XXX-nobias
+# 2. XXY-nobias
+# 3. XYY-nobias
+# 4. XXX-hibias
+# 5. XXY-hibias
+# 6. XYY-hibias
+# 7. twin_noconcern
+# 8. twin_concern
+# NB as currently defined, not taking into account co-twin status. So a twin_noconcern could have cotwin with concern, ie have family risk.
+
+# Trisomies - divided according to reason for diagnosis
+# why tested used to make bias column: coded as: 
+# 0, maternal age
+# 1, medical concerns
+# 2, behavioural concerns
+# 3, neurodevelopmental concerns
+# 4, family history of genetic problems
+# 9, no information
+#####################################################################################
+all.short<-filter(all.short,is_twin<2) #remove twin2
+#At this point nobody is excluded from SCT group
+
+# 
+# Twins recruited in relation to splang_conc, which is coded as
+# 0, never
+# 1, preschool only
+# 2, continuing, mild
+# 3, continuing, severe
+# 4, reading concerns only
+# 9, unclear
+# We used categorisation to subdivide twins; categories 2 and 3 distinguished.
+# 
+
+#Next bit of coding is to subdivide twins into concerns or not
+#first code SLT into 0, 1 or 2;  2 indicates SALT beyond 4 yr, 1 is assessment or preschool only
+all.short$slt.code<-0
+w<-c(which(all.short$slt==1),which(all.short$slt==8))
+all.short$slt.code[w]<-1
+w<-c(which(all.short$slt==2),which(all.short$slt==3))
+all.short$slt.code[w]<-2
+
+
+all.short$group8<-all.short$trisomy
+all.short$bias<-'NA'
+w<-which(all.short$is_twin==0)
+all.short$bias[w]<-0
+w<-c(which(all.short$why_tested==2),which(all.short$why_tested==3))
+all.short$bias[w]<-1
+w<-which(all.short$bias==1)
+all.short$group8[w]<-all.short$group8[w]+3 #convert 1 2 3 to 4 5 6
+
+w<-which(all.short$is_twin>0) #just focus on twins
+all.short$group8[w]<-7
+w<-which(all.short$splang_conc%in%c(2,3)) #coded as NA for SCTs, so only twins coded here
+all.short$group8[w]<-8
+
+#add twins with SLT code 2 to group 8, even if no parental concern
+w<-intersect(which(all.short$group8==7),which(all.short$slt.code==2))
+all.short$group8[w]<-8
+
+#Got v. confused about 'Language Concern', defined by group 8, and 'Parental concern', which contributes to Lang Concern but is not the same.
+#Henceforth, make new column lang_concern and use this to identify group 8
+all.short$lang_concern<-NA
+w<-which(all.short$group8==7)
+all.short$lang_concern[w]<-0
+w<-which(all.short$group8==8)
+all.short$lang_concern[w]<-1
+
+#Create factor for overall group
+all.short$group8level<-all.short$group8#useful to retain numeric code before converting to factor
+all.short$group8<-as.factor(all.short$group8)
+levels(all.short$group8)<-c('XXX.lowbias','XXY.lowbias','XYY.lowbias',
+                            'XXX.hibias','XXY.hibias','XYY.hibias',
+                            'Twin: No Concerns','Twin: Lang concerns')
+```                            
+
+
+```{r ncheck, include=FALSE}
+## Step 3
+
+# #Check that Ns match those in the protocol
+# Numbers are greater than for Newbury et al, as some children did not feature in that study because of lack of DNA.
+
+###################################################################################
+#start by making new column that just denotes if excluded bcs asd etc
+all.short$myexclude<-0
+w<-which(all.short$include_cat>1)
+all.short$myexclude[w]<-1
+#Twin tab count is prior to ASD exclusions
+twin.tab <- table(all.short$is_twin)
+names(twin.tab)<-c('SCT','twin1')
+
+twin.tab
+
+
+all.complete<-all.short #preserve copy of file with excluded cases, call it all.complete
+
+all.complete.tab<-table(all.complete$group8,all.complete$myexclude)
+all.complete.tab
+
+all.short<-all.short[all.short$myexclude==0,] #now remove the excluded cases
+sct.tab <- table(all.short$trisomy,all.short$bias)
+rownames(sct.tab)<-c('XXX','XXY','XYY')
+colnames(sct.tab)<-c('Low Bias','High Bias','NA')
+#Show tables
+
+tab_sct<-sct.tab
+sct.tab
+rowSums(sct.tab)
+
+
+langcon.tab<-table(all.short$lang_conc,all.short$is_twin)
+
+rownames(langcon.tab)<-c('No concern','Concern')
+
+langcon.tab
+
+#count how many SCT cases were in the earlier 2009 study (Bishop et al 2011 paper)
+print('')
+print('In 2009 study')
+w<-which(all.short$orig_famcode==1)
+origstudy<-table(all.short$bias[w],all.short$trisomy[w])
+colnames(origstudy)<-c('XXX','XXY','XYY')
+rownames(origstudy)<-c('Low Bias','High Bias')
+origstudy
+
+#Count how many cases available for MANOVAs
+#Must have full data on piq, genlang and verbmem (5 yr olds excluded on this basis)
+all.short$for.manova<-1
+w<-which(is.na(all.short$piq))
+all.short$for.manova[w]<-0
+w<-which(is.na(all.short$genlang))
+all.short$for.manova[w]<-0
+w<-which(is.na(all.short$verbmem))
+all.short$for.manova[w]<-0
+
+
+w<-which(all.short$for.manova==1) #retain cases with missing reading factor
+tempshort<-all.short[w,]
+sct.tab1 <- table(tempshort$trisomy,tempshort$bias)
+rownames(sct.tab1)<-c('XXX','XXY','XYY')
+colnames(sct.tab1)<-c('Low Bias','High Bias','NA')
+#Show tables
+print('Cases with full data for nv/lang analysis')
+
+sct.tab1
+rowSums(sct.tab1)
+
+w<-which(all.short$n_missingread<2) #we have retained those with one missing value
+tempshort<-all.short[w,]
+sct.tab2 <- table(tempshort$trisomy,tempshort$bias)
+rownames(sct.tab2)<-c('XXX','XXY','XYY')
+colnames(sct.tab2)<-c('Low Bias','High Bias','NA')
+#Show tables
+print('Cases with full data for reading/naming analysis')
+
+sct.tab2
+rowSums(sct.tab2)
+###################################################################################
+```
+
+```{r make.subfiles, include=FALSE}
 ##Analyse language test and reading data
 # First select the data 
 # 
@@ -527,9 +471,7 @@ exclude.tab<-table(all.short$dldcat,all.short$bias,all.short$trisomy) #can index
 ageband.group.tab<-table(all.short$ageband,all.short$group8level)
 n.5yr1<-sum(ageband.group.tab[1,1:3]) #N 5 yr olds after exclusions - lobias
 n.5yr2<-sum(ageband.group.tab[1,4:6]) #N 5 yr olds after exclusions - hibias
-missing.tab<-table(all.short$langdata_complete,all.short$group8level)
-n.misslang1<-sum(missing.tab[1,1:3]) #N all missing - lobias
-n.misslang2<-sum(missing.tab[1,4:6])#N all missing - hibias
+
 cccNtab<-table(all.short$ccc2_consistent,all.short$group8level,useNA='ifany')
 n.missccc<-sum(cccNtab[3,1:6])
 n.badccc<-sum(cccNtab[1,1:6])
@@ -540,7 +482,7 @@ levels(lobias.sct$Group)<-c('XXX','XXY','XYY','Twin')
 
 
 #exclude those with incomplete data as they won't feature in MANOVA
-lobias.sct2<-filter(lobias.sct,langdata_complete==1) 
+lobias.sct2<-filter(lobias.sct,for.manova==1) 
 
 #exclude those outside twin age band - this is a new file so we can compute medians for those separately
 lobias.sct3<-filter(lobias.sct2,ageband==2)
@@ -552,16 +494,16 @@ trisomy.only<-filter(all.short,group8level<7)  #NB with 8x we omit the ASD etc e
 
 #create table for reporting demographics
 #age done using aggregate because something odd happens when using summarise!
-agemean.tab <-aggregate(all.short$Age, by=list(all.short$group8level),
+agemean.tab <-aggregate(all.short$age, by=list(all.short$group8level),
                         FUN=mean, na.rm=TRUE)
-agesd.tab <-aggregate(all.short$Age, by=list(all.short$group8level),
+agesd.tab <-aggregate(all.short$age, by=list(all.short$group8level),
                       FUN=sd, na.rm=TRUE)
 
 mybkg.tab <- data.frame(all.short %>%
                           group_by(group8level) %>%
-                          summarise(N = length(Age),
-                                    Age   = mean(Age),
-                                    Age.SD   = sd(Age),
+                          summarise(N = length(age),
+                                    Age   = mean(age),
+                                    Age.SD   = sd(age),
                                     MotherEd   = mean(mo_educ, na.rm = TRUE),
                                     MotherEd.SD   = sd(mo_educ, na.rm = TRUE),
                                     Deprivation = mean(neighborz, na.rm = TRUE),
@@ -639,7 +581,7 @@ manova.write <- function(mycomparison,effectnames,offset,manova.stats,manova.dat
 
 
 
-```{r lang.manova}
+```{r lang.manova, include=FALSE}
 ## Now run manovas - use the functions defined above
 #create dataframe to hold results from all Manovas
 manova.dataframe<-data.frame(matrix(NA,nrow=3,ncol=7))
@@ -652,7 +594,7 @@ manova.ccc.df<-manova.dataframe #just copying basic file
 gp.sctlow<-filter(lobias.sct2,group8level<4)
 
 #find col numbers for columns to use
-psychrange<-which(colnames(gp.sctlow) %in% c('piq','genlang','verbmem','literacy'))
+psychrange<-which(colnames(gp.sctlow) %in% c('piq','genlang','verbmem'))
 gpcolumn<-which(colnames(gp.sctlow)=='group8level')
 gpvalues<-c(1,2,3)
 covcolumns<-which(colnames(gp.sctlow) %in% c('mo_educ','neighborz'))
@@ -683,12 +625,12 @@ summary(lowtest.aov)
 ```
 
 
-```{r sct.vs.dld}
+```{r sct.vs.dld, include=FALSE}
 #for comparison with twin group, need to restrict to those aged 6-11
 w<-c(which(lobias.sct2$ageband==2))
 lobias.agematch<-lobias.sct2[w,]
 
-psychrange<-which(colnames(gp.sctlow) %in% c('piq','genlang','verbmem','literacy'))
+psychrange<-which(colnames(gp.sctlow) %in% c('piq','genlang','verbmem'))
 gpcolumn<-which(colnames(gp.sctlow)=='is_twin')
 gpvalues<-c(0,1)
 covcolumns<-which(colnames(gp.sctlow) %in% c('mo_educ','neighborz'))
@@ -730,12 +672,12 @@ moedregt<-lm(psych.vars[wt]~lobias.agematch$mo_educ[wt])
 ```
 
 
-```{r manova.bias}
+```{r manova.bias, include=FALSE}
 trisomy.only<-filter(trisomy.only,ageband>1) #remove youngest bcs missing data
-trisomy.only<-filter(trisomy.only,langdata_complete==1)
+trisomy.only<-filter(trisomy.only,for.manova==1)
 
 
-psychrange<-which(colnames(trisomy.only) %in% c('piq','genlang','verbmem','literacy'))
+psychrange<-which(colnames(trisomy.only) %in% c('piq','genlang','verbmem'))
 gpcolumn<-which(colnames(trisomy.only)=='bias')
 gpvalues<-c(0,1)
 covcolumns<-which(colnames(trisomy.only) %in% c('mo_educ','neighborz'))
@@ -758,12 +700,12 @@ manova.dataframe<-manova.write(mycomparison,effectnames,offset,manova.stats,mano
 
 summary.aov(mymanova.fit) #- if you want to inspect individual language measures
 ```
-```{r fhist.compare}
+```{r fhist.compare, include=FALSE}
 #just do basic linear regression to check if any association
 myp<-vector()
 myr2 <- vector()
 trisomy.only<-data.frame(trisomy.only)
-for (i in 1:4){
+for (i in 1:3){
   mycol <- trisomy.only[,psychrange[i]]
   myfh <- summary(lm(mycol~trisomy.only$fh_langprob))
   myp[i]<-myfh$coefficients[2,4]
@@ -774,8 +716,8 @@ for (i in 1:4){
 }
 ```
 
-```{r beeswarm.function}
-make.beeswarm <- function(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,
+```{r beeswarm.function, include=FALSE}
+make.beeswarm <- function(mydata,groupcol,pchcol,varlist,namelist,meanfile,pngname,pngdim,
                           pngwidth,pngheight,groupcolor,mylims,dodiffmean,addtext){
 #Now do a grid of beeswarm plots
 
@@ -792,10 +734,10 @@ grouplevel<-sort(unique(mydata[,groupcol]))
 
 ngroup<-length(grouplevel)
 
-pointcol<-c(10,16,1) #use open circle, filled circle, circle +, for ageband 1-3
-agebit<-pointcol[mydata[,subgroupcol]]
-testrange<-which(colnames(mydata)%in%varlist)
+testrange<-vector()
 for (i in 1:length(varlist)){
+  testrange<-c(testrange,which(colnames(mydata)==varlist[i]))
+  #need to go through names one by one in loop, otherwise it will reorder them!
   mytitle<-namelist[i]
   mylabel<-'' #default is to not label y axis unless it is left-most column
   if((i-1)%%pngdim[2]==0){ #heh! gets modulus of i-1 relative to n columns, which is zero if leftmost!
@@ -803,29 +745,33 @@ for (i in 1:length(varlist)){
   }
   
   beeswarm(jitter(mydata[,testrange[i]],3)~mydata[,groupcol] , xlab='Group',ylab=mylabel,spacing=.8,
-           pch = 16,pwpch=agebit,cex=1.5,col=groupcolor,main=mytitle,ylim=mylims[1:2],
+           pch = 16,pwpch=mydata[,pchcol],cex=1.5,col=groupcolor,main=mytitle,ylim=mylims[1:2],
            cex.axis=1.21,cex.lab=1.5,cex.main=1.5) 
 
   #add means
   for (g in 1:ngroup){
     myg<-grouplevel[g]
     mm<-mean(mydata[mydata[,groupcol]==myg,testrange[i]],na.rm=TRUE) #means for whole sample by group
-    segments(g-.4,mm,g+.4,mm,col = 1,lty=1,lwd=2) #plot straight solid lines at mean for each group
+    segments(g-.4,mm,g+.4,mm,col = 1,lty=2,lwd=2) #plot straight dotted lines at mean for each group
     
-    #plot dotted lines for means for age-matched groups, i.e ageband2
-    if(dodiffmean==1){
-      #identify cases for each group in ageband2
-      w1<-which(mydata[,groupcol]==myg)
-      w2<-which(mydata$ageband==2)
-    shortrange<-intersect(w1,w2)
+    #plot solid lines for means for age-matched groups, i.e ageband2
+    if(dodiffmean>0){
+      #identify cases with pch1, i.e. those matched to twins in age, excluding ASD
+      w1<-which(mydata[,pchcol]==1)
+      if (dodiffmean==2){
+        w1<-which(mydata[,pchcol]<15) #include anyone who isn't ASD/lowIQ
+      }
+      w2<-which(mydata[,groupcol]==myg)
+     shortrange<-intersect(w1,w2)
     mm2<-mean(mydata[shortrange,testrange[i]],na.rm=TRUE)
-    segments(g-.4,mm2,g+.4,mm2,col = 1,lty=2,lwd=2) #dotted line for age 6-11
+    segments(g-.4,mm2,g+.4,mm2,col = 1,lty=1,lwd=2) #solid line for age 6-11
     }
   }
   abline(a=mylims[3],b=0,col='darkgray',lty=1)
   abline(a=mylims[4],b=0,col='darkgray',lty=2)
   abline(a=mylims[5],b=0,col='darkgray',lty=2)
   
+  #Now add polygon defining shaded areas for TD twin mean range
   mean_TD<-mean(meanfile[,testrange[i]],na.rm=T)
   sd_TD<-sd(meanfile[,testrange[i]],na.rm=T)
   
@@ -834,24 +780,49 @@ for (i in 1:length(varlist)){
   
   polygon(c(0,0,(ngroup+1),(ngroup+1)), c(up.lim, low.lim, low.lim, up.lim),
           col=adjustcolor("yellow",alpha.f=0.3), border = NA)
-  if(addtext==1){
-  text(2,mylims[2],'<---------Low Bias--------->')
-  text(5,mylims[2],'<---------High Bias--------->')
-  }
+  
+
+if(addtext==1){
+  text(2,mylims[2],'<--------Low Bias-------->',cex=1.2)
+  text(5,mylims[2],'<--------High Bias-------->',cex=1.2)
+}
 }
 dev.off()
 }
 
 ```
 
-```{r beeswarm1}
+```{r beeswarm1, include=F,message=FALSE}
 #call the make.beeswarm function - this creates a png file
-groupcol<-which(colnames(lobias.sct2)=='Group')
-subgroupcol<-which(colnames(lobias.sct2)=='ageband')
+#because we need to have codes for excluded cases, start with all.complete
+#make a column that will give the symbol code (pch)
+all.complete$pch<-1 #default code: ageband 2, no exclusion, open circle
+w<-which(all.complete$ageband==1)
+all.complete$pch[w]<-12 # ageband 1, square with t-cross
+w<-which(all.complete$ageband==3)
+all.complete$pch[w]<-13 #ageband 3, circle with x-cross
+
+w<-which(all.complete$piq<70)
+all.complete$pch[w]<-18 #filled triangle for low IQ
+w<-which(all.complete$include_cat==2)
+all.complete$pch[w]<-15 #filled square for ASD
+
+#also make a Group column with sensible naming for groups
+
+
+bee.file1<-filter(all.complete,group8level%in%c(1:3,8))
+bee.file1$Group<-as.factor(bee.file1$group8level)
+levels(bee.file1$Group)<-c('XXX','XXY','XYY','Twin')
+groupcol<-which(colnames(bee.file1)=='Group')
+pchcol<-which(colnames(bee.file1)=='pch')
+#pch column will be used to specify shape according to subgroup
+#NB for this first plot, we only show the included cases.
+
+#We will plot literacy factor, though it doesn't feature in MANOVA
 varlist<-c('piq','genlang','verbmem','literacy')
 namelist<-c('Nonverbal Ability','Core Language','Verbal production/memory','Literacy skills')
 meanfile<-twin.TD
-pngname<-'beeswarm_lowbias4gp'
+pngname<-'beeswarm_lowbias4gp_includedonly'
 pngdim<-c(2,2)
 pngwidth<-3000
 pngheight<-3000
@@ -859,11 +830,15 @@ groupcolor<-c(2,2,2,4) #specify colours for each group - 3 trisomies the same, t
 mylims<-c(55,135,100,85,70) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
 dodiffmean<-1
 addtext<-0
-mydata<-data.frame(lobias.sct2)
-levels(mydata$Group)[4]<-'Twin +\nConcerns'
-make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
-                          groupcolor,mylims,dodiffmean,addtext)
 
+#for this plot, we will only have those with include_cat==1
+w<-which(bee.file1$include_cat==1)
+mydata<-bee.file1[w,]
+levels(mydata$Group)[4]<-'Twin +\nConcerns'
+make.beeswarm(mydata,groupcol,pchcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+                          groupcolor,mylims,dodiffmean,addtext)
+```
+```{r beeswarm14, include=FALSE}
 #Also do beeswarm for all 14 measures for supplementary table
 
 varlist<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','NwdRep','Oromotor',
@@ -871,11 +846,11 @@ varlist<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','NwdRep','Oromotor
  namelist<-c('Matrices','Block Design','Vocabulary','Comprehension','Sentence Rep','Nonword Rep','Oromotor Skills',
                    'Reading Acc.','Reading Comp.','Reading Rate','TOWRE words','TOWRE nonwords',
                    'Picture Naming','Digit Naming')  
-pngname<-'beeswarm14_lowbias4gp'
+pngname<-'beeswarm14_lowbias4gp_all'
 pngdim<-c(4,4)
 pngwidth<-4000
 pngheight<-4000
-make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+make.beeswarm(mydata,groupcol,pchcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
                           groupcolor,mylims,dodiffmean,addtext)
  
 ```
@@ -883,50 +858,53 @@ make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngd
 
 
 
-```{r bias.beeswarm}
+```{r bias.beeswarm, include=FALSE}
 ##Comparison of low and High Bias groups
 #Use trisomy.only group for this
 
 
-groupcol<-which(colnames(trisomy.only)=='group8level')
-subgroupcol<-which(colnames(trisomy.only)=='ageband')
+bee.file2<-filter(all.complete,group8level%in%c(1:6))
+bee.file2$Group<-as.factor(bee.file2$group8level)
+groupcol<-which(colnames(bee.file2)=='Group')
+pchcol<-which(colnames(bee.file2)=='pch')
 varlist<-c('piq','genlang','verbmem','literacy')
 namelist<-c('Nonverbal Ability','Core Language','Verbal production/memory','Literacy skills')
 meanfile<-twin.TD
-pngname<-'beeswarm_bias.gp'
+pngname<-'beeswarm_bias_all.gp'
 pngdim<-c(2,2)
 pngwidth<-3000
 pngheight<-3000
 groupcolor<-c(2,2,2,1,1,1) #specify colours for each group 
 mylims<-c(55,135,100,85,70) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
-dodiffmean<-0
+dodiffmean<-2 #this will plot for whole group, but also with ASD/lowIQ omitted
 addtext<-1
-mydata<-trisomy.only
-mydata$group8level<-as.factor(mydata$group8level)
+mydata<-bee.file2
 
-levels(mydata$group8level)<-c('XXX','XXY','XYY','XXX*','XXY*','XYY*')
-make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+levels(mydata$Group)<-c('XXX','XXY','XYY','XXX*','XXY*','XYY*')
+make.beeswarm(mydata,groupcol,pchcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
                           groupcolor,mylims,dodiffmean,addtext)
 
 ```
-```{r ccc2filemake}
+```{r ccc2filemake, include=FALSE}
 ##CCC-2 analysis
 # Consider CCC-2 profiles for SCTs. Also include twins with concerns as comparison group.  Plot subscales; also analyse the GCC and SIDC.
 
-w<-which(colnames(all.short)=='ccc_a')
-x<-which(colnames(all.short)=='group8')
-y<-which(colnames(all.short)=='group8level')
-z<-which(colnames(all.short)=='trisomy')
-z1<-which(colnames(all.short)=='bias')
-z2<-which(colnames(all.short)=='dldlevel')
-z3<-which(colnames(all.short)=='mo_educ')
-z4<-which(colnames(all.short)=='neighborz')
-z5<-which(colnames(all.short)=='is_twin')
-z6<-which(colnames(all.short)=='ageband')
+w<-which(colnames(all.complete)=='ccc_a')
+x<-which(colnames(all.complete)=='group8')
+y<-which(colnames(all.complete)=='group8level')
+z<-which(colnames(all.complete)=='trisomy')
+z1<-which(colnames(all.complete)=='bias')
+z2<-which(colnames(all.complete)=='dldlevel')
+z3<-which(colnames(all.complete)=='mo_educ')
+z4<-which(colnames(all.complete)=='neighborz')
+z5<-which(colnames(all.complete)=='is_twin')
+z6<-which(colnames(all.complete)=='ageband')
+z7<-which(colnames(all.complete)=='pch')
+z8<-which(colnames(all.complete)=='include_cat')
 #make file with ID,  and CCC results, as well as group8; gender, age added at end
-cccbit<-all.short[,c(1,(w-2):(w+10),x,y,z,z1,z2,z3,z4,z5,z6,2,3)]#2 before ccc_a is GCC and SIDC
+cccbit<-all.complete[,c(1,(w-2):(w+10),x,y,z,z1,z2,z3,z4,z5,z6,z7,z8,2,3)]#2 before ccc_a is GCC and SIDC
 
-cccbit<-filter(cccbit,dldlevel<2) #remove ASD, low IQ etc
+#cccbit<-filter(cccbit,dldlevel<2) #remove ASD, low IQ etc
 w<-which(is.na(cccbit$ccc2_consistent))
 cccbit$ccc2_consistent[w]<--1 #we need a count of missing data, so convert NA to -1
 consistent.ccc<-table(cccbit$group8,cccbit$ccc2_consistent)
@@ -952,7 +930,7 @@ print(paste('Twin: language concerns:',ccc.no[4]))
 ccc.inconsist<-round(100*sum(consistent.ccc[,2])/sum(consistent.ccc[,2:3]),1)
 
 ```
-```{r logreg.cccresponse}
+```{r logreg.cccresponse, include=FALSE}
 ##Analysis to explore factors affecting response rates on CCC-2
 
 all.short2<-all.short
@@ -975,10 +953,8 @@ all.short2$mo_educ<-car::recode(all.short2$mo_educ,"0=1") #recode 0 as 1.
 
 all.short2$mo_educ<-as.factor(all.short2$mo_educ) #make factor for GLM
 #run logistic regression
-NR1 <- glm(response ~ lang_severity + mo_educ  + SCT,family=binomial(link='logit'),data=all.short2)
-#NB singlepar variable excluded here as it is not available for public dataset
-
-nonresp.summary<-summary(NR1)
+NR1 <- glm(response ~ lang_severity + mo_educ +  SCT,family=binomial(link='logit'),data=all.short2)
+nonresp.summary<-summary(NR1)  #single parent excluded because of confidentiality
 
 png_ccc<-'png.cccresp.png'#name to save png file
 png(png_ccc,width=1800,height=1350,res=300)
@@ -1003,8 +979,8 @@ legend(4, .4, legend=c("Twin", "Trisomy"),
 dev.off()
 ```
 
-```{r ccc.df}
-##Now create df for CCC-2 for 8 groups
+```{r ccc.df, include=FALSE}
+##Now create dataframe for CCC-2 for 8 groups
 
 #First remove the cases with no response or inconsistent
 ccc.data<-filter(cccbit,ccc2_consistent>0)
@@ -1025,7 +1001,7 @@ colnames(ccc.df)<-c('Group','N','GCC.mean','GCC.se','SIDC.mean','SIDC.se','A.mea
                     'I.mean','I.se','J.mean','J.se')
 ```
 
-```{r makelongcccdata}
+```{r makelongcccdata, include=FALSE}
 #Need data in long form for ggplot2
 #set up the long form df with data from scale A
 ccc.dflong<-ccc.df[1:8,c(1,2,2,7:8)]
@@ -1052,7 +1028,7 @@ ccc.dflong$lines<-as.factor(linetypes)
 ccc.dflong$plotgroup<-rep(c('XXX','XXY','XYY','XXX','XXY','XYY','twin_typical','twin_concerns'),10)
 ```
 
-```{r plotccc}
+```{r plotccc,echo=FALSE}
 
 png_ccc<-'cccplot.png' #name to save png file
 png(png_ccc,width=2000,height=1200,res=300)
@@ -1077,7 +1053,8 @@ cccplot
 dev.off()
 ```
 
-```{r ccc2.manova}
+
+```{r ccc2.manova, include=FALSE}
 ##Manova for CCC-2
 #Follow https://www.statmethods.net/stats/anova.html
 #First just do groups 1-3 - use the do.manova function
@@ -1130,7 +1107,7 @@ ccc.manovafit3<-do.manova(mydata,mycolrange,gpcolumn,gpvalues,covcolumns)
 manova.stats<-summary(ccc.manovafit3, test="Wilks")$stats
 offset<-nrow(manova.ccc.df)
 mycomparison<-'C. Bias '
-effectnames<-c('Bias','Mo. education','Neighbourhood Advantage','Bias x Trisomy')
+effectnames<-c('Bias','Mo. education','Neighbourhood Advantage')
 manova.ccc.df<-manova.write(mycomparison,effectnames,offset,manova.stats,manova.ccc.df)
 
 
@@ -1154,16 +1131,19 @@ p.lowgcc.twinTD<-100*sum(mygcctab[7,2]/sum(mygcctab[7,]))
 p.lowgcc.twinLD<-100*sum(mygcctab[8,2]/sum(mygcctab[8,]))
 ```
 
-```{r beeswarm.ccc}
+```{r beeswarm.ccc, include=FALSE}
 #initial beeswarm parallels that for the psychometric tests with 3 Low Bias gp and LDtwin
 
 w<-which(ccc.data$group8level%in%c(1,2,3,8))
 mydata<-ccc.data[w,]
+w<-which(mydata$include_cat==1) #don't show ASD/ID in initial plot
+mydata<-mydata[w,]
 groupcol<-which(colnames(mydata)=='group8level')
-subgroupcol<-which(colnames(mydata)=='ageband')
+pchcol<-which(colnames(mydata)=='pch')
 varlist<-c('ccc_struct','ccc_prag','ccc_autfeat')
 namelist<-c('Language Structure','Pragmatics','Autistic Features')
 w1<-which(ccc.data$group8level==7)
+langcol<-0 #missing cases not included here
 meanfile<-ccc.data[w1,]
 pngname<-'beeswarm_ccc.gp'
 pngdim<-c(2,2)
@@ -1173,19 +1153,18 @@ groupcolor<-c(2,2,2,4) #specify colours for each group
 mylims<-c(0,15,10,7,4) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
 dodiffmean<-1
 addtext<-0
-subgroupcol<-'ageband' #no subgrouping
 mydata$group8level<-as.factor(mydata$group8level)
 levels(mydata$group8level)<-c('XXX','XXY','XYY','Twin +\nConcerns')
 #levels(mydata$group8level)<-c('XXX','XXY','XYY','XXX*','XXY*','XYY*')
-make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+make.beeswarm(mydata,groupcol,pchcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
                           groupcolor,mylims,dodiffmean,addtext)
 
 ```
-```{r beeswarm.biasccc}
+```{r beeswarm.biasccc,include=FALSE}
 w<-which(ccc.data$group8level<7)
 mydata<-ccc.data[w,]
 groupcol<-which(colnames(mydata)=='group8level')
-subgroupcol<-which(colnames(mydata)=='ageband')
+pchcol<-which(colnames(mydata)=='pch')
 varlist<-c('ccc_struct','ccc_prag','ccc_autfeat')
 namelist<-c('Language Structure','Pragmatics','Autistic Features')
 w1<-which(ccc.data$group8level==7)
@@ -1196,374 +1175,14 @@ pngwidth<-3000
 pngheight<-3000
 groupcolor<-c(2,2,2,1,1,1) #specify colours for each group -red and black
 mylims<-c(0,15,10,7,4) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
-dodiffmean<-0
+dodiffmean<-2
 addtext<-1
 subgroupcol<-'ageband' #no subgrouping
 mydata$group8level<-as.factor(mydata$group8level)
 levels(mydata$group8level)<-c('XXX','XXY','XYY','XXX*','XXY*','XYY*')
-make.beeswarm(mydata,groupcol,subgroupcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+make.beeswarm(mydata,groupcol,pchcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
                           groupcolor,mylims,dodiffmean,addtext)
 ```
-
-
-
-```{r flow_sct}
-## Flow diagrams
-
-all.short$exclude<-car::recode(all.short$dldlevel,"0=0;1=0;2=1;3=1;4=1")
-all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
-
-
-y1<-table(all.short$is_twin)[[1]]
-
-biasLow <- table(all.short$bias)[[1]]
-biasHigh <- table(all.short$bias)[[2]]
-#--------------------------------------------------------------------------------#
-
-mytab<-table(all.short$trisomy,all.short$bias,all.short$exclude)
-
-#--------------------------------------------------------------------------------#
-mytab1<-table(all.short$langdata_complete,all.short$group8level)
-#those with complete language data in row 2
-
-#--------------------------------------------------------------------------------#
-
-all.short.age<-all.short[all.short$ageband==2,]
-
-mytab2<-table(all.short.age$trisomy,all.short.age$bias,all.short.age$exclude)
-
-
-#--------------------------------------------------------------------------------#
-all.short.ccc<-all.short[all.short$ccc2_data==1,]
-mytab3<-table(all.short.ccc$trisomy,all.short.ccc$bias,all.short.ccc$exclude)
-#--------------------------------------------------------------------------------#
-excl3 <- sum(mytab[1:3,1,2])
-excl3a <- mytab[1,1,2]
-excl3b <- mytab[2,1,2]
-excl3c <- mytab[3,1,2]
-
-excl4 <- sum(mytab[1:3,2,2])
-excl4a <- mytab[1,2,2]
-excl4b <- mytab[2,2,2]
-excl4c <- mytab[3,2,2]
-
-xxx_a0<-mytab[1,1,1]
-xxx_a1<-mytab1[2,1]
-xxx_a2<-mytab2[1,1,1]
-xxx_a3<-mytab3[1,1,1]
-
-xxy_a0<-mytab[2,1,1]
-xxy_a1<-mytab1[2,2]
-xxy_a2<-mytab2[2,1,1]
-xxy_a3<-mytab3[2,1,1]
-
-xyy_a0<-mytab[3,1,1]
-xyy_a1<-mytab1[2,3]
-xyy_a2<-mytab2[3,1,1]
-xyy_a3<-mytab3[3,1,1]
-
-xxx_b0<-mytab[1,2,1]
-xxx_b1<-mytab1[2,4]
-xxx_b2<-mytab2[1,2,1]
-xxx_b3<-mytab3[1,2,1]
-
-xxy_b0<-mytab[2,2,1]
-xxy_b1<-mytab1[2,5]
-xxy_b2<-mytab2[2,2,1]
-xxy_b3<-mytab3[2,2,1]
-
-xyy_b0<-mytab[3,2,1]
-xyy_b1<-mytab1[2,6]
-xyy_b2<-mytab2[3,2,1]
-xyy_b3<-mytab3[3,2,1]
-
-#now create flow chart ; TB denotes top to bottom
-#Need to add labels along the side: top row 'Reason for testing or Time of testing'
-#Then trisomy, then with DAWBA data
-
-flow1<-DiagrammeR::grViz("
-              digraph a_nice_graph {
-              
-              # node definitions with substituted label text
-              node [shape = plaintext, fontname = Helvetica]
-              X[label='@@1']
-              Y[label= 'Ascertainment\\nbias']
-              Z[label = 'Trisomy']
-              
-              node [shape=square,fixedsize = true, width = 1.2,height=1.2]
-              A[label='@@2',fillcolor=lightBlue]
-              
-              C[label='@@3']
-              D[label='@@4']
-
-              E[label='@@5']
-              F[label='@@6']
-              G[label='@@7']
-              H[label='@@8']
-
-              I[label='@@9']
-              J[label='@@10']
-              K[label='@@11']
-              L[label='@@12']
-
-              node [shape = plaintext]
-              Q[label='* With complete language data, ** Complete language: Aged 6 to 11 yr, *** With useable CCC-2 data']
-              
-              # edge definitions with the node IDs
-              A -> {C,D}
-              {rank=same ;C -> H}
-              C -> {rank=same ;E,F,G}
-              {rank=same ;D -> L}
-              D -> {rank=same ;I,J,K}
-             
-              X -> Y [alpha=0,color='white']
-              Y -> Z [alpha=0,color='white']
-              F -> Q [alpha=0,color='white']
-              }
-              
-              [1]: paste0(' ')
-              [2]: paste0('SCT:\\n N = ',y1)
-              [3]: paste0('Low Bias,\\n N = ',biasLow)
-              [4]: paste0('High Bias, \\nN = ',biasHigh)
-              [5]: paste0('XXX','\\n', 'N = ',xxx_a0,'\\n','N* = ',xxx_a1,'\\n', 'N** = ',xxx_a2,'\\n', 'N*** = ',xxx_a3)
-              [6]: paste0('XXY',' \\n', 'N = ',xxy_a0,' \\n','N* = ',xxy_a1,' \\n', 'N** = ',xxy_a2,' \\n', 'N*** = ',xxy_a3)
-              [7]: paste0('XYY',' \\n','N = ',xyy_a0,' \\n', 'N* = ',xyy_a1,' \\n', 'N** = ',xyy_a2,' \\n', 'N*** = ',xyy_a3)
-              [8]: paste0('Excluded',' \\n', '(N = ',excl3,')\\n',excl3a,' XXX','\\n',excl3b,' XXY','\\n',excl3c,' XYY')
-              [9]: paste0('XXX',' \\n', 'N = ',xxx_b0,' \\n','N* = ',xxx_b1,' \\n', 'N** = ',xxx_b2,' \\n', 'N*** = ',xxx_b3)
-              [10]: paste0('XXY',' \\n', 'N = ',xxy_b0,' \\n','N* = ',xxy_b1,' \\n', 'N** = ',xxy_b2,' \\n', 'N*** = ',xxy_b3)
-              [11]: paste0('XYY',' \\n','N = ',xyy_b0,' \\n', 'N* = ',xyy_b1,' \\n', 'N** = ',xyy_b2,' \\n', 'N*** = ',xyy_b3)
-              [12]: paste0('Excluded',' \\n', '(N = ',excl4,')\\n',excl4a,' XXX','\\n',excl4b,' XXY','\\n',excl4c,' XYY')
-              ")
-
-flow1 %>% export_svg %>% charToRaw %>% rsvg_png("SCT_flow.png")
-
-```
-```{r flow_SCT_LR}
-#rotate flow diagram to fit more easily on the page
-
-flow1a<-DiagrammeR::grViz("
-              digraph a_nice_graph {
-              graph[layout = dot, rankdir = LR]
-              # node definitions with substituted label text
-              node [shape = plaintext, fontname = Helvetica]
-              
-              # node definitions with substituted label text
-              node [shape = plaintext, fontname = Helvetica]
-              X[label='* With complete language data,\n ** Complete language: Aged 6 to 11 yr,\n *** With useable CCC-2 data']
-              Y[label= 'Ascertainment\\nbias']
-              Z[label = 'Trisomy']
-              
-              node [shape=square]
-              A[label='@@2',fillcolor=lightBlue]
-              
-              C[label='@@3']
-              D[label='@@4']
-
-              E[label='@@5']
-              F[label='@@6']
-              G[label='@@7']
-              H[label='@@8']
-
-              I[label='@@9']
-              J[label='@@10']
-              K[label='@@11']
-              L[label='@@12']
-
-              node [shape = plaintext]
-              
-              
-              # edge definitions with the node IDs
-              A -> {C,D}
-              {rank=same ;C -> H}
-              C -> {rank=same ;E,F,G}
-              {rank=same ;D -> L}
-              D -> {rank=same ;I,J,K}
-             
-              X -> Y [alpha=0,color='white']
-              Y -> Z [alpha=0,color='white']
-            
-              }
-              
-              [1]: paste0(' ')
-              [2]: paste0('SCT:\\n N = ',y1)
-              [3]: paste0('Low Bias,\\n N = ',biasLow)
-              [4]: paste0('High Bias, \\nN = ',biasHigh)
-              [5]: paste0('XXX','\\n', 'N = ',xxx_a0,'\\n','N* = ',xxx_a1,'\\n', 'N** = ',xxx_a2,'\\n', 'N*** = ',xxx_a3)
-              [6]: paste0('XXY',' \\n', 'N = ',xxy_a0,' \\n','N* = ',xxy_a1,' \\n', 'N** = ',xxy_a2,' \\n', 'N*** = ',xxy_a3)
-              [7]: paste0('XYY',' \\n','N = ',xyy_a0,' \\n', 'N* = ',xyy_a1,' \\n', 'N** = ',xyy_a2,' \\n', 'N*** = ',xyy_a3)
-              [8]: paste0('Excluded',' \\n', '(N = ',excl3,')\\n',excl3a,' XXX','\\n',excl3b,' XXY','\\n',excl3c,' XYY')
-              [9]: paste0('XXX',' \\n', 'N = ',xxx_b0,' \\n','N* = ',xxx_b1,' \\n', 'N** = ',xxx_b2,' \\n', 'N*** = ',xxx_b3)
-              [10]: paste0('XXY',' \\n', 'N = ',xxy_b0,' \\n','N* = ',xxy_b1,' \\n', 'N** = ',xxy_b2,' \\n', 'N*** = ',xxy_b3)
-              [11]: paste0('XYY',' \\n','N = ',xyy_b0,' \\n', 'N* = ',xyy_b1,' \\n', 'N** = ',xyy_b2,' \\n', 'N*** = ',xyy_b3)
-              [12]: paste0('Excluded',' \\n', '(N = ',excl4,')\\n',excl4a,' XXX','\\n',excl4b,' XXY','\\n',excl4c,' XYY')
-              ")
-
-flow1a %>% export_svg %>% charToRaw %>% rsvg_png("SCT_flow_LR.png")
-
-```
-
-
-
-```{r flow_twins}
-
-#Now do plot for twin data 
-
-y1<-table(all.short$is_twin)[[2]]
-
-exc1<-table(all.short$exclude[all.short$is_twin==1])[[2]]
-inc1<-table(all.short$exclude[all.short$is_twin==1])[[1]]
-
-all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
-
-all.short.exc<-all.short[all.short$exclude==0 & all.short$is_twin==1,]
-
-noconcernM<-table(all.short.exc$parent_conc[all.short.exc$female==0])[[1]]
-concernM<-table(all.short.exc$parent_conc[all.short.exc$female==0])[[2]]
-
-noconcernF<-table(all.short.exc$parent_conc[all.short.exc$female==1])[[1]]
-concernF<-table(all.short.exc$parent_conc[all.short.exc$female==1])[[2]]
-
-CCC_LI_Y <- table(all.short.exc$ccc2_data[all.short.exc$parent_conc==1])[[2]]
-CCC_LI_N <- table(all.short.exc$ccc2_data[all.short.exc$parent_conc==1])[[1]]
-
-CCC_TD_Y <- table(all.short.exc$ccc2_data[all.short.exc$parent_conc==0])[[2]]
-CCC_TD_N <- table(all.short.exc$ccc2_data[all.short.exc$parent_conc==0])[[1]]
-
-#now create flow chart ; TB denotes top to bottom
-
-label3<-' '
-
-flow2<-DiagrammeR::grViz("
-            digraph twinflow {
-            
-            # node definitions with substituted label text
-            node [shape = plaintext, fontname = Helvetica]
-            X[label='@@1']
-             Y[label= 'Exclude:\\n ASD, IQ, hearing']
-            Z[label= 'Total N twin children']
-            Q[label='CCC-2 data\\n available']
-            
-           node [shape=square,fixedsize = true, width = 1.4,height=1.2]
-            I[label='@@10']
-            A[label='@@2',fillcolor=lightBlue]
-            B[label='@@3']
-            
-            C[label='@@4']
-            D[label='@@5']
-            E[label='@@6']
-            F[label='@@7']
-            G[label='@@8']
-            H[label='@@9']
-            
-            # edge definitions with the node IDs
-            I -> {A B}
-            B -> {G H}
-            G -> {C D}
-            H -> {E F}
-            
-            X -> Y [alpha=0,color='white']
-            Y -> Z [alpha=0,color='white']
-            Z -> Q [alpha=0,color='white']
-            }
-            
-            [1]: paste0(label3, ':\\n ',' ')
-            [2]: paste0('Excluded:\\n N = ',exc1)
-            [3]: paste0('Included:\\n N = ',inc1)
-            [4]: paste0('with CCC-2:\\nN = ',CCC_LI_Y)
-            [5]: paste0('without CCC-2:\\nN = ',CCC_LI_N)
-            [6]: paste0('with CCC-2:\\nN = ',CCC_TD_Y)
-            [7]:  paste0('without CCC-2:\\nN = ',CCC_TD_N)
-            [8]: paste0('LI: \\n Parental concern \\n or SALT,\\n N (male) = ',concernM,'\\n N (female) = ',concernF)
-            [9]: paste0('TD: \\n No concern \\n No SALT,\\n N (male) = ',noconcernM,'\\n N (female) = ',noconcernF)
-            [10]: paste0(y1,' twin pairs, \\n 1 selected at \\n random')
-            
-            ")
-
-flow2 %>% export_svg %>% charToRaw %>% rsvg_png("twins_flow.png")
-
-```
-
-```{r flow_twins_LR}
-
-#Now do plot for twin data - rotated version 
-
-y1<-table(all.short$is_twin)[[2]]
-
-exc1<-table(all.short$exclude[all.short$is_twin==1])[[2]]
-inc1<-table(all.short$exclude[all.short$is_twin==1])[[1]]
-
-all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
-
-all.short.exc<-all.short[all.short$exclude==0 & all.short$is_twin==1,]
-
-noconcernM<-table(all.short.exc$parent_conc[all.short.exc$female==0])[[1]]
-concernM<-table(all.short.exc$parent_conc[all.short.exc$female==0])[[2]]
-
-noconcernF<-table(all.short.exc$parent_conc[all.short.exc$female==1])[[1]]
-concernF<-table(all.short.exc$parent_conc[all.short.exc$female==1])[[2]]
-
-CCC_LI_Y <- table(all.short.exc$ccc2_data[all.short.exc$parent_conc==1])[[2]]
-CCC_LI_N <- table(all.short.exc$ccc2_data[all.short.exc$parent_conc==1])[[1]]
-
-CCC_TD_Y <- table(all.short.exc$ccc2_data[all.short.exc$parent_conc==0])[[2]]
-CCC_TD_N <- table(all.short.exc$ccc2_data[all.short.exc$parent_conc==0])[[1]]
-
-#now create flow chart ; TB denotes top to bottom
-
-label3<-' '
-
-flow4<-DiagrammeR::grViz("
-            digraph twinflow {
-            graph[layout = dot, rankdir = LR]
-            # node definitions with substituted label text
-            node [shape = plaintext, fontname = Helvetica]
-            X[label='@@1']
-            Y[label='@@1']
-            Z[label= 'N children']
-            Q[label='CCC-2 data\\n available']
-            
-           node [shape=square,fixedsize = true, width = 1.4,height=1.2]
-            I[label='@@10']
-            A[label='@@2',fillcolor=lightBlue]
-            B[label='@@3']
-            
-            C[label='@@4']
-            D[label='@@5']
-            E[label='@@6']
-            F[label='@@7']
-            G[label='@@8']
-            H[label='@@9']
-            
-         
-            # edge definitions with the node IDs
-            I -> {A B}
-            B -> {G H}
-            G -> {C D}
-            H -> {E F}
-            
-       
-            X -> Y [alpha=0,color='white']
-            Y -> Z [alpha=0,color='white']
-            Z -> Q [alpha=0,color='white']
-
-            }
-            
-            [1]: paste0(label3, ':\\n ',' ')
-            [2]: paste0('Excluded:\\n N = ',exc1,'\\nLow PIQ, ASD or\\nhearing loss')
-            [3]: paste0('Included:\\n N = ',inc1)
-            [4]: paste0('with CCC-2:\\nN = ',CCC_LI_Y)
-            [5]: paste0('without CCC-2:\\nN = ',CCC_LI_N)
-            [6]: paste0('with CCC-2:\\nN = ',CCC_TD_Y)
-            [7]:  paste0('without CCC-2:\\nN = ',CCC_TD_N)
-            [8]: paste0('Language: \\n Parental concern \\n or SALT,\\n N (male) = ',concernM,'\\n N (female) = ',concernF)
-            [9]: paste0('No concerns: \\n No SALT,\\n N (male) = ',noconcernM,'\\n N (female) = ',noconcernF)
-            [10]: paste0(y1,' twin pairs, \\n one per pair \\nselected at \\n random')
-            
-            ")
-
-flow4 %>% export_svg %>% charToRaw %>% rsvg_png("twins_flow_LR.png")
-```
-
 
 ```{r langcutoffs, include=FALSE}
 #First rank order the tests according to N low
@@ -1634,6 +1253,250 @@ lown.df[9:11,3:8]<-planglowcount[4:6,]
 ```
 
 
+```{r flow_SCT_LR, include=FALSE}
+#rotate flow diagram to fit more easily on the page
+#recomputing all Ns to be sure they are correct.
+table1<-table(all.complete$include_cat,all.complete$group8level)
+y1<-sum(table1[,1:6])
+biasLow<-sum(table1[,1:3])
+biasHigh<-sum(table1[,4:6])
+excl3a<-sum(table1[2:4,1])
+excl3b<-sum(table1[2:4,2])
+excl3c<-sum(table1[2:4,3])
+
+excl4a<-sum(table1[2:4,4])
+excl4b<-sum(table1[2:4,5])
+excl4c<-sum(table1[2:4,6])
+
+excl3<-excl3a+excl3b+excl3c
+excl4<-excl4a+excl4b+excl4c
+xxx_a0<-table1[1,1]
+xxy_a0<-table1[1,2]
+xyy_a0<-table1[1,3]
+xxx_b0<-table1[1,4]
+xxy_b0<-table1[1,5]
+xyy_b0<-table1[1,6]
+
+#all.short file excluded the ASD etc
+table2<-table(all.short$group8level,all.short$for.manova)
+xxx_a1<-table2[1,2]
+xxy_a1<-table2[2,2]
+xyy_a1<-table2[3,2]
+xxx_b1<-table2[4,2]
+xxy_b1<-table2[5,2]
+xyy_b1<-table2[6,2]
+
+w<-which(all.short$ageband==2)
+table3<-table(all.short$group8level[w],all.short$for.manova[w])
+xxx_a2<-table3[1,2]
+xxy_a2<-table3[2,2]
+xyy_a2<-table3[3,2]
+xxx_b2<-table3[4,2]
+xxy_b2<-table3[5,2]
+xyy_b2<-table3[6,2]
+
+table4<-table(all.short$group8level,all.short$ccc2_consistent)
+xxx_a3<-table4[1,2]
+xxy_a3<-table4[2,2]
+xyy_a3<-table4[3,2]
+xxx_b3<-table4[4,2]
+xxy_b3<-table4[5,2]
+xyy_b3<-table4[6,2]
+
+flow1a<-DiagrammeR::grViz("
+              digraph a_nice_graph {
+              graph[layout = dot, rankdir = LR]
+              # node definitions with substituted label text
+              node [shape = plaintext, fontname = Helvetica]
+              
+              # node definitions with substituted label text
+              node [shape = plaintext, fontname = Helvetica]
+              X[label='* With complete language data,\n ** Complete language: aged 6 to 11 yr,\n *** With useable CCC-2 data']
+              Y[label= 'Ascertainment\\nbias']
+              Z[label = 'Trisomy']
+              
+              node [shape=square]
+              A[label='@@2',fillcolor=lightBlue]
+              
+              C[label='@@3']
+              D[label='@@4']
+
+              E[label='@@5']
+              F[label='@@6']
+              G[label='@@7']
+              H[label='@@8']
+
+              I[label='@@9']
+              J[label='@@10']
+              K[label='@@11']
+              L[label='@@12']
+
+              node [shape = plaintext]
+              
+              
+              # edge definitions with the node IDs
+              A -> {C,D}
+              {rank=same ;C -> H}
+              C -> {rank=same ;E,F,G}
+              {rank=same ;D -> L}
+              D -> {rank=same ;I,J,K}
+             
+              X -> Y [alpha=0,color='white']
+              Y -> Z [alpha=0,color='white']
+            
+              }
+              
+              [1]: paste0(' ')
+              [2]: paste0('SCT:\\n N = ',y1)
+              [3]: paste0('Low Bias,\\n N = ',biasLow)
+              [4]: paste0('High Bias, \\nN = ',biasHigh)
+              [5]: paste0('XXX','\\n', 'N = ',xxx_a0,'\\n','N* = ',xxx_a1,'\\n', 'N** = ',xxx_a2,'\\n', 'N*** = ',xxx_a3)
+              [6]: paste0('XXY',' \\n', 'N = ',xxy_a0,' \\n','N* = ',xxy_a1,' \\n', 'N** = ',xxy_a2,' \\n', 'N*** = ',xxy_a3)
+              [7]: paste0('XYY',' \\n','N = ',xyy_a0,' \\n', 'N* = ',xyy_a1,' \\n', 'N** = ',xyy_a2,' \\n', 'N*** = ',xyy_a3)
+              [8]: paste0('Excluded',' \\n', '(N = ',excl3,')\\n',excl3a,' XXX','\\n',excl3b,' XXY','\\n',excl3c,' XYY')
+              [9]: paste0('XXX',' \\n', 'N = ',xxx_b0,' \\n','N* = ',xxx_b1,' \\n', 'N** = ',xxx_b2,' \\n', 'N*** = ',xxx_b3)
+              [10]: paste0('XXY',' \\n', 'N = ',xxy_b0,' \\n','N* = ',xxy_b1,' \\n', 'N** = ',xxy_b2,' \\n', 'N*** = ',xxy_b3)
+              [11]: paste0('XYY',' \\n','N = ',xyy_b0,' \\n', 'N* = ',xyy_b1,' \\n', 'N** = ',xyy_b2,' \\n', 'N*** = ',xyy_b3)
+              [12]: paste0('Excluded',' \\n', '(N = ',excl4,')\\n',excl4a,' XXX','\\n',excl4b,' XXY','\\n',excl4c,' XYY')
+              ")
+
+flow1a %>% export_svg %>% charToRaw %>% rsvg_png("SCT_flow_LR.png")
+
+```
+
+
+
+
+
+```{r flow_twins_LR, include=FALSE}
+
+#Now do plot for twin data - rotated version 
+
+y1<-table(all.complete$is_twin)[[2]]
+
+exc2<-table(all.complete$include_cat[all.complete$is_twin==1])[[2]]#asd exclude
+exc3<-table(all.complete$include_cat[all.complete$is_twin==1])[[3]]#iq exclude
+exc4<-table(all.complete$include_cat[all.complete$is_twin==1])[[4]]#hearing exclude
+exc1<-exc2+exc3+exc4
+inc1<-table(all.complete$include_cat[all.complete$is_twin==1])[[1]]
+
+all.short$ccc2_data<-car::recode(all.short$ccc2_consistent,"1=1;0=0;NA=0")
+
+
+
+noconcernM<-table(all.short$lang_conc[all.short$female==0])[[1]]
+concernM<-table(all.short$lang_conc[all.short$female==0])[[2]]
+
+noconcernF<-table(all.short$lang_conc[all.short$female==1])[[1]]
+concernF<-table(all.short$lang_conc[all.short$female==1])[[2]]
+
+CCC_LI_Y <- table(all.short$ccc2_data[all.short$lang_conc==1])[[2]]
+CCC_LI_N <- table(all.short$ccc2_data[all.short$lang_conc==1])[[1]]
+
+CCC_TD_Y <- table(all.short$ccc2_data[all.short$lang_conc==0])[[2]]
+CCC_TD_N <- table(all.short$ccc2_data[all.short$lang_conc==0])[[1]]
+
+
+#now create flow chart ; TB denotes top to bottom
+
+label3<-' '
+
+flow4<-DiagrammeR::grViz("
+            digraph twinflow {
+            graph[layout = dot, rankdir = LR]
+            # node definitions with substituted label text
+            node [shape = plaintext, fontname = Helvetica]
+            X[label='@@1']
+            Y[label='@@1']
+            Z[label= 'N children']
+            Q[label='CCC-2 data\\n available']
+            
+           node [shape=square,fixedsize = true, width = 1.4,height=1.2]
+            I[label='@@10']
+            A[label='@@2',fillcolor=lightBlue]
+            B[label='@@3']
+            
+            C[label='@@4']
+            D[label='@@5']
+            E[label='@@6']
+            F[label='@@7']
+            G[label='@@8']
+            H[label='@@9']
+            
+         
+            # edge definitions with the node IDs
+            I -> {A B}
+            B -> {G H}
+            G -> {C D}
+            H -> {E F}
+            
+       
+            X -> Y [alpha=0,color='white']
+            Y -> Z [alpha=0,color='white']
+            Z -> Q [alpha=0,color='white']
+
+            }
+            
+            [1]: paste0(label3, ':\\n ',' ')
+            [2]: paste0('Excluded:\\nLow PIQ (N = ', exc2,')\\nASD (N = ', exc3,') or \\nhearing loss\\n(N = ',exc4,')')
+            [3]: paste0('Included:\\n N = ',inc1)
+            [4]: paste0('with CCC-2:\\nN = ',CCC_LI_Y)
+            [5]: paste0('without CCC-2:\\nN = ',CCC_LI_N)
+            [6]: paste0('with CCC-2:\\nN = ',CCC_TD_Y)
+            [7]:  paste0('without CCC-2:\\nN = ',CCC_TD_N)
+            [8]: paste0('Language: \\n Parental concern \\n or SALT,\\n N (male) = ',concernM,'\\n N (female) = ',concernF)
+            [9]: paste0('No concerns: \\n No SALT,\\n N (male) = ',noconcernM,'\\n N (female) = ',noconcernF)
+            [10]: paste0(y1,' twin pairs, \\n one per pair \\nselected at \\n random')
+            
+            ")
+
+flow4 %>% export_svg %>% charToRaw %>% rsvg_png("twins_flow_LR.png")
+```
+
+```{r famhist,include=FALSE}
+#Taking up suggestion of Boada et al to look at FH lang problems in SCT
+#N with fh=2 is low, so make into 2 categories: FH+ and fh-
+#(fh 2 means more than one affected relative)
+
+all.short$fh <- all.short$fh_langprob+1
+w<-which(all.short$fh==3)
+all.short$fh[w]<-2
+beeswarm(genlang~group8level,data=all.short,pwcol=all.short$fh)
+
+#Nothing very compelling on eyeballing.
+#Also tried substituting this as covariate instead of deprivation index: no hint of any effect.
+
+
+```
+
+```{r Ftestvariance, include=FALSE}
+#To test Skuse idea of less variance for XYY than others
+
+myxyy<-filter(all.short,group8level==3,for.manova==1)
+myx<-filter(all.short,group8level<3,for.manova==1) #XXX and XXY
+
+for (mytest in psychrange){
+colnames(myx)[mytest]
+myFtest<-var.test(myx[,mytest],myxyy[,mytest])
+}
+
+#No significant differences in variance for combined X group vs Y group
+
+
+myxyy<-filter(ccc.data,group8level==3)
+myx<-filter(ccc.data,group8level<3) #XXX and XXY
+cccrange<-which(colnames(ccc.data)%in%c('ccc_struct','ccc_prag','ccc_autfeat'))
+for (mytest in cccrange){
+colnames(myx)[mytest]
+myFtest<-var.test(myx[,mytest],myxyy[,mytest])
+
+myFtest
+}
+
+#No significant differences in variance for combined X group vs Y group
+
+```
+
 
 
 
@@ -1641,12 +1504,14 @@ lown.df[9:11,3:8]<-planglowcount[4:6,]
 sessionInfo()
 ```
 
+\pagebreak 
 ![*Figure 1. Numbers of children with sex chromosome trisomies included in different analyses.*](SCT_flow_LR.png){size="120%"}
 
+\pagebreak
 ![*Figure 2. Numbers of twin children with and without language concerns.*](twins_flow_LR.png){size="120%"}
 
 
-
+\pagebreak
 ```{r table2,include=TRUE}
 
 ft2<-regulartable(mybkg.tab2)
@@ -1671,10 +1536,12 @@ ft2
 
 
 
-![*Figure 3: Distributions of scores on four clusters of psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group. Filled circles show cases in age range 6 to 11 yr. Dotted line is mean for 6-11 yr olds, solid line is mean for whole sample. Yellow band is mean +/- 1 SD for No Concern comparison group.*](beeswarm_lowbias4gp.png)
+\pagebreak
+![*Figure 3: Distributions of scores on four clusters of psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group. Open circles show cases in age range 6 to 11 yr. Solid line is mean for 6-11 yr olds, dashed line is mean for whole sample including those outside 6-11 yr age range. Yellow band is mean +/- 1 SD for No Concern comparison group. group.*](beeswarm_lowbias4gp_includedonly.png)
 
   
 
+\pagebreak
 ```{r table3,include=TRUE,echo=FALSE}
 
 manova.dataframePT<-manova.dataframe
@@ -1707,16 +1574,25 @@ ft3
 
 ```
 
-*Table 3. Results 3 MANOVAs (A, B and C) testing for overall group differences on four composites from psychometric tests, with covariates of mother's education and Neighbourhood Advantage index.*  
+*Table 3. Results 3 MANOVAs (A, B and C) testing for overall group differences on three composites from psychometric tests (Nonverbal Ability, Core Language and Verbal Production/Memory), with covariates of mother’s education and Neighbourhood Advantage index.*  
   
+\pagebreak 
+![*Figure 4:  Distributions of scores on four clusters of psychometric tests for the Low Bias vs High Bias trisomy groups. Unfilled circles show cases in age range 6 to 11 yr, unfilled circles with a cross show older children, unfilled squares with cross show 5-year-olds. Cases with ASD (filled squares) and intellectual disability (filled diamonds) are included in the plot, but were excluded from the analysis comparing bias groups. Asterisk denotes High Bias group. Solid lines are group means for children included in MANOVA; dashed lines show means with ASD/ID cases included. Yellow band is mean +/- 1 SD for No Concern comparison group.* ](beeswarm_bias_all.gp.png)  
 
-![*Figure 4: Distributions of scores on psychometric composites for the Low Bias vs High Bias trisomy groups. Filled circles show cases in age range 6 to 11 yr, unfilled circles show older children. Asterisk denotes High Bias group. Continuous lines are group means. Yellow band is mean +/- 1 SD for No Concern comparison group.* ](beeswarm_bias.gp.png)  
+\pagebreak   
+   
+![*Figure 5: Mean scores on the three CCC-2 composites for trisomy and comparison groups. The yellow shaded band shows mean +/-1 SD for the No Concerns twin group. For trisomies, dashed lines show mean for whole group, and solid lines show means for children aged 6 to 11 years.*](beeswarm_ccc.gp.png)
 
-![*Figure 5: Mean scores on the three CCC-2 composites for trisomy and comparison groups. The yellow shaded band shows mean +/-1 SD for the No Concerns twin group. For trisomies, continuous lines show mean for whole group, and dotted lines show means for children aged 6 to 11 years.*](beeswarm_ccc.gp.png)
+  
+    
+      
+\pagebreak     
 
-![*Figure 6: Mean scores on the three CCC-2 composites for Low Bias vs High Bias trisomy groups, with the latter denoted by asterisks. For trisomies, continuous lines show mean for whole group, and dotted lines show means for children aged 6 to 11 years.The yellow shaded band shows mean +/-1 SD for the No Concerns twin group.*](beeswarm_cccbias.gp.png)
+
+![*Figure 6: Mean scores on the three CCC-2 composites for Low Bias vs High Bias trisomy groups, with the latter denoted by asterisks. For trisomies, solid lines show mean for children included in MANOVA, and dashed lines show means for with cases of ASD or low IQ included. The yellow shaded band shows mean +/-1 SD for the No Concerns twin group.*](beeswarm_cccbias.gp.png)
 
 
+\pagebreak
 ```{r table4,include=TRUE}
 manova.ccc.PT<-manova.ccc.df
 
@@ -1750,7 +1626,7 @@ ft4
 
 
 
- 
+\pagebreak
 
 ```{r table5,include=TRUE}
 
@@ -1779,13 +1655,15 @@ ft5 <- font(ft5, fontname = "Times")
 
 ft5
 ```
+ 
 *Table 5. Percentages of children meeting criteria for impairment (score < 86) on a given number of tests (T0 to T5).*  
 
+\pagebreak 
+![*Figure S1: Distributions of scores on the fourteen measures from psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group. Filled circles show cases in age range 6 to 11 yr. Continous line is mean for 6-11 yr olds, dotted line is mean for whole sample. Yellow band is mean +/- 1 SD for No Concern comparison group.*](beeswarm14_lowbias4gp_all.png)
 
-![*Figure S1: Distributions of scores on the fourteen measures from psychometric tests for the Low Bias trisomy groups and the Language Concerns Comparison group. Filled circles show cases in age range 6 to 11 yr. Continous line is mean for 6-11 yr olds, dotted line is mean for whole sample. Yellow band is mean +/- 1 SD for No Concern comparison group.*](beeswarm14_lowbias4gp.png)
 
 
-
+\pagebreak 
 ```{r TableS1, echo=FALSE,include=TRUE}
 #This is an absolute nightmare to construct bcs the row names aren't included in regulartable so have to be bolted on in a data.frame, but all the values from the regression coefficients are in a matrix, and tend to turn to factors in the data table. It gets v fiddly indeed to change 0 to .001 after rounding....
 regnames<-c('Intercept','Lang.severity','Mo_educ2','Mo_educ3','Mo_educ4','Trisomy/twin')
@@ -1815,8 +1693,10 @@ st2
 *Table S1. Estimates of regression coefficients with CCC-2 completion rate as dependent variable, and parent and child variables as predictors.*
 N.B. The single parent variable is deleted from the open data file, so some slight differences in output here.
 
+\pagebreak
 ![*Figure S2. Fitted regression lines for predicting CCC-2 completion from child status.* ](png.cccresp.png) 
 
+\pagebreak 
 ![*Figure S3. Means for CCC-2 scales for trisomy groups subdivided by bias type (continuous lines = Low Bias, and dotted lines = High Bias) and for the two twin groups. Error bars show standard errors.*](cccplot.png)
 
 
