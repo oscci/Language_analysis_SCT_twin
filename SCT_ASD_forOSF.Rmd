@@ -1,0 +1,839 @@
+
+```{r load_packages, include = FALSE}
+#devtools::install_github("crsh/papaja")
+library(papaja)
+library(tidyverse)
+library(knitr) #for kable
+library(pander)
+library(gridExtra)
+library(grid)
+library(Hmisc)
+library(doBy)
+library(beeswarm)
+library(DiagrammeR) #Needed for flowcharts
+library(DiagrammeRsvg)#Needed for flowcharts
+library(magrittr)#Needed for flowcharts
+library(svglite)#Needed for flowcharts
+library(rsvg)#Needed for flowcharts
+library(car)
+library(lavaan) #for language factor extraction
+library(semPlot)
+library(kableExtra)
+library(flextable)
+library(ggfortify) #see https://www.r-bloggers.com/dimensionality-reduction-for-visualization-and-prediction/
+library(cluster)
+library(ggplot2)
+
+library(mvnormtest) #check assumptions for MANOVA
+library(ggpubr)
+
+library(lsr) #for correlations
+
+dopng <- 0 #toggle for png figures
+options(scipen=999)
+```
+
+
+```{r readredcap, include=FALSE}
+#########################################################################################
+## Step 1 - this is identical to script for language phenotype paper except twins are omitted
+#Read in latest SCT from redcap.
+
+
+#redcap.dir <-"c:/Users/pthompson/Dropbox/project SCT analysis/Data from Redcap/"
+redcap.dir <-"~/Dropbox/ERCadvanced/project SCT analysis/Data from Redcap/"
+
+#Use latest version - this includes consensus DAWBA diagnosis for SCTs
+#Automated diagnosis added 30th Nov, with Soc Aptitude Scale data
+sct.redcap <- 'SCTData_DATA_2019-01-05_0947.csv'
+#updated to include code indicating whether participated in prior study, with prior diagnosis if so
+sct.data <- read.csv(paste0(redcap.dir,sct.redcap),stringsAsFactors = FALSE)
+names(sct.data)[1]<-"record_id"
+#Some name changes now obsolete, as done for compatibility with twins. Retain these here.
+#Nb Fam position: Coded so if you subtract 1 you get N older sibs: disregards birth order of twins
+w<-which(colnames(sct.data)=='position_in_family')
+colnames(sct.data)[w] <-'fam_position'
+w<-which(colnames(sct.data)=='fh_langprobs')
+colnames(sct.data)[w] <-'fh_langprob' #1 if 1 aff relative, 2 if more than one
+#NB this dld_rd categorisation not currently used
+
+#add gender info to sct data so it merges properly
+sct.data$female<-0
+w<-which(sct.data$trisomy==1)
+sct.data$female[w]<-1 #XXX cases are female
+
+sct.data$fam_id<-NA #dummy column to ensure merges ok
+
+# 
+sct.data$parent_conc<-NA
+
+
+#########################################################################################
+#----------------------------------------------------------------------------------
+```
+
+
+```{r colselect, include=FALSE}
+#########################################################################################
+#Focus on columns to be used in this analysis 
+#(includes DAWBA etc, cf. language pheno paper)
+
+#Also now reading in DAWBA bands: Goodman, A., Heiervang, E., Collishaw, S., & Goodman, R. (2010). The 'DAWBA bands' as an ordered-categorical measure of child mental health: description and validation in British and Norwegian samples. Social Psychiatry and Psychiatric Epidemiology, 46, 521-532. doi:10.1007/s00127-010-0219-x
+
+#Specify columns to retain that are common to both sct and twin
+#NB we are using oromotor_ss2, which is renormed against the TD twin group
+#NB also include SRS items that form short scale
+
+#NB for ASD and Socphobia from DAWBA, we now have a variable called 'asd_dsm_agree',
+#and 'socphob_dsm_agree'. This is consensus rating: if R1 and R2 agreed, we used that,
+#otherwise DVMB reviewed the DAWBA and made a consensus rating.
+#We will use this for main diagnostic analysis.
+
+keepcols <- c('record_id','fam_id','female','age_at_test','parent_conc','partial_testing','pass_hearing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
+              'sent_rep_ss','nonword_rep_ss','oromotor_ss_2','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','dyslexia','lang_disorder',
+              'mo_educ','fa_educ','deprivation_index','fam_structure','fh_langprob',
+              'gcc','scdi','ccc_a','ccc_b','ccc_c','ccc_d','ccc_e','ccc_f',
+              'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent',
+              'srs_item10', 'srs_item14', 'srs_item16', 'srs_item18', 'srs_item24', 
+              'srs_item28', 'srs_item29', 'srs_item33', 'srs_item35', 'srs_item37',
+              'srs_item44', 'srs_item50', 'srs_item51', 'srs_item56', 'srs_item58', 'srs_item65',
+              'socaw_ss','soccomm_ss','soccog_ss','socmot_ss','autfeat_ss','srs_t_score', 
+              'asd_dsm_agree','socphob_dsm_agree','rater1','rater2','asd_dsm_r1', 'adhd_comb_dsm_r1', 'adhd_hyp_dsm_r1', 'adhd_inatt_dsm_r1', 'generalized_anx_dsm_r1',
+              'social_anx_dsm_r1', 'separation_anx_dsm_r1', 'other_anx_dsm_r1', 'phobia_dsm_r1',
+              'depression_dsm_r1', 'opp_def_dsm_r1', 'conduct_dsm_r1', 'chronic_tic_dsm_r1', 
+              'tourette_dsm_r1', 'anorexia_dsm_r1', 'autism_icd_r1', 'hyperkinetic_icd_r1',
+              'generalized_anx_icd_r1', 'social_anx_icd_r1', 'separation_anx_icd_r1', 'other_anx_icd_r1',
+              'phobia_icd_r1', 'minor_depression_icd_r1', 'mod_depression_icd_r1', 'sev_depression_icd_r1',
+              'opp_def_icd_r1', 'soc_conduct_icd_r1', 'unsoc_conduct_icd_r1', 'fam_conduct_icd_r1',
+              'chronic_tic_icd_r1', 'tourette_icd_r1', 'anorexia_icd_r1',
+              'cgas_r1', 'cgas_r2','honosca_disruptive_r1', 
+              'honosca_adhd_symptoms_r1', 'honosca_self_injury_r1', 'honosca_sub_misuse_r1',
+              'honosca_sholastic_lang_r1', 'honosca_phys_illness_r1', 'honosca_pschotic_r1',
+              'honosca_somatic_r1', 'honosca_emotional_r1', 'honosca_peers_r1', 'honosca_selfcare_ind_r1',
+              'honosca_family_r1', 'honosca_school_att_r1',
+              'dawba_id', 'emotional', 'conduct', 'hyperactivity', 'peer', 'prosocial', 'impact',
+              'dawba_sdq_complete', 'sepanx_concern', 'loss_af', 'taken_from_af', 'school_ref', 
+              'sleep_alone', 'sleep_af', 'sleep_away', 'room_alone', 'home_alone', 'sep_nightmare',
+              'somatic_sep', 'sep_antic_anx', 'sep_symptoms_1mo', 'sep_age_of_onset', 'sep_distress',
+              'sep_impact_family', 'sep_impact_friends', 'sep_impact_learning', 'sep_impact_leisure',
+              'sep_burden', 'socanx_concerns', 'new_people', 'many_people', 'soc_eating', 'soc_speaking',
+              'soc_reading', 'soc_writing', 'soc_vs_sep', 'adults_kids', 'can_socialise', 'cause_fear',
+              'cause_litprobs', 'socanx_age_onset', 'socanx_dur_mo', 'socfear_level', 'socfear_freq',
+              'avoid_soc', 'socanx_impact', 'fear_excessive', 'upset_socfear', 'socanx_burden',
+              'generous', 'lively', 'keen2learn', 'affectionate', 'reliable', 'easygoing', 'fun', 'interested',
+              'caring', 'bounces', 'grateful', 'indepdt', 'helps', 'gets_on', 'homework', 'creative', 'family',
+              'appearance', 'good_school', 'polite', 'good_sport', 'tidy', 'good_friends', 'good_behav',
+              'sas_laugh', 'sas_chat', 'sas_flexible', 'sas_defuse', 'sas_lose', 'sas_ease', 'sas_tom',
+              'sas_apolog', 'sas_leader', 'sas_socaware', 'sas_total', 'dawba_positive_complete',
+              'makefriends', 'keepfriends', 'nfriends', 'share_interest', 'joint', 'confide', 'gen_reason',
+              'mentalage', 'langlevel', 'langage', 'langcope', 'speech3yr', 'soc3yr', 'play3yr', 'ritual3yr',
+              'ment3yr', 'continued_diffs', 'words2yr', 'phrase3yr', 'toddlergesture', 'toddlergames',
+              'shareenjoy', 'repetitive', 'unusual', 'imagplay', 'adjustsplay', 'turntaking', 'obsession',
+              'topic', 'dominates', 'dominateconv', 'interferes', 'goodconv', 'goodsustain', 'chats',
+              'adjustsconv', 'nonvbl_blank', 'can_read_nv', 'abnormal_eye', 'echoing', 'repquest', 
+              'repcliche', 'strongroutine', 'changeroutine', 'flapping', 'parconcern', 'distress',
+              'impactfam', 'impactfriend', 'impactlearn', 'impactleisur', 'asd_burden',
+              'suddenonset', 'ageonset','asd_dsm_r2','autism_icd_r2','social_anx_dsm_r2',
+              'social_anx_icd_r2',
+              'sepaband',  'spphband', 'sophband',  'panband', 'agoband',  'ptsdband', 'ocdband',  'genaband', 'depband',  'adhdbandd', 'adhdtype',  'oddband', 'cdband',  'eatband',  'ticbandd',  'asdband')
+
+
+sct.short <- select(sct.data,keepcols) #NB 'select' is ambiguous between packages but should work ok if we use formr (otherwise need dplyr::select)
+
+#########################################################################################
+
+```
+
+```{r combinefiles, include=FALSE}
+###################################################################################################
+#Add columns that are specific to twins or SCTs so all aligned
+#Select data for short file
+
+
+sct.short$is_twin <- 0 #this specifies child is not a twin but a trisomy
+sct.short$zygosity <- NA
+
+sct.short$trisomy <- sct.data$trisomy
+sct.short$pre_postnatal_diag <- sct.data$pre_postnatal_diag
+sct.short$why_tested <-sct.data$why_tested
+sct.short$orig_famcode<-0
+sct.short$orig_famcode[sct.data$orig_famcode>0]<-1 #if seen before this is 1
+sct.short$splang_conc<-NA
+sct.short$pheno_include<-1
+#----------------------------------------------------------------------------------
+#Previously all.short used when bolting SCT and twin files together: now obsolete
+all.short <-sct.short
+
+#remove case of isochromosome
+w<-which(all.short$trisomy==9)
+all.short<-all.short[-w,]
+
+all.short$bias<-0
+w<-c(which(all.short$why_tested==2),which(all.short$why_tested==3))
+all.short$bias[w]<-1
+
+#rename age variable
+w<-which(colnames(all.short)=='age_at_test')
+colnames(all.short)[w]<-'Age'
+
+#add a column identifying age range: 1 = <6, 2 = 6-11;11, 3 = 12+
+all.short$ageband<-2
+w<-which(all.short$Age<72)
+all.short$ageband[w]<-1
+
+w<-which(all.short$Age>143)
+all.short$ageband[w]<-3
+
+#age band for SDQ norms makes distinction between 5-10 yr and 11-16
+all.short$ageSDQ<-2
+w<-which(all.short$Age<132)
+all.short$ageSDQ[w]<-1
+
+```
+
+
+```{r missingcheck, include=FALSE}
+#----------------------------------------------------------------------------------
+# These next chunks are taken direct from the lang-pheno script
+
+##Step 2
+#Deal with missing data
+#Codes are
+
+#999 – test not given
+#998 – result not valid (maladministration)
+#997 – result not valid (child refusal etc.)
+#996 – child too old/young for norms
+
+#Check for nonword rep - in some cases OK to substitute low score, if child unable to attempt task. 
+
+all.short$pass_hearing[all.short$pass_hearing==9]<-NA #change 9 to NA for pass_hearing
+#NB these include both refusal and equipment failure
+
+all.short$piq[all.short$piq==999]<-NA
+
+#missing data has codes of 996-999 for language tests
+w <- which(all.short$nonword_rep_ss>900)
+print('Cases with missing nonword rep data: ')
+all.short$record_id[w]
+#These cases all checked : all SCT cases who either were not tested because v limited spoken language, or who refused spoken tests or had low scores on other language tests. All these cases assigned a scaled score of 3.
+all.short$nonword_rep_ss[w] <- 3
+
+#999 is code where child was not tested bcs too low-functioning
+w <- which(all.short$wasi_vocab_ss==999)
+print('Cases with missing Vocab data (999) reassigned to floor: ')
+all.short$record_id[w]
+#These assigned SS of 2.33 SD below mean (equivalent to 3 on NEPSY scale)
+all.short$wasi_vocab_ss[w] <- 25
+
+w <- which(all.short$wdck_jhsn_ss==999)
+print('Cases with missing Woodcock_J data (999) reassigned to floor: ')
+all.short$record_id[w]
+#These assigned SS of 2.33 SD below mean (equivalent to 3 on NEPSY scale)
+all.short$wdck_jhsn_ss[w] <- 55
+
+w <- which(all.short$sent_rep_ss==999)
+print('Cases with missing Sent rep data (999) reassigned to floor:: ')
+all.short$record_id[w]
+#These assigned SS of 2.33 SD below mean (equivalent to 3 on NEPSY scale)
+all.short$sent_rep_ss[w] <- 3
+
+w <- which(all.short$oromotor_ss_2==999)
+print('Cases with missing oromotor data (999) reassigned to floor:: ')
+all.short$record_id[w]
+#These assigned SS of 55 , as this corresponds to floor in this sample
+all.short$oromotor_ss_2[w] <- 55
+
+#Now count how many tests have missing data
+mycols<-colnames(all.short)
+#Identify the range of columns where 900+ is missing data code
+mc <-which(mycols=='wasi_matrices_ss')
+mc0<-which(mycols=='nonword_rep_ss') #end of range for spoken language
+mc1<-which(mycols=='phab_digit_ss') #end of range of reading related
+mc2<-which(mycols=='ccc_a') #end of range of reading related
+mc3<-which(mycols=='ccc_j') #end of range of reading related
+
+all.short$n_missinglang<-0
+for(i in 1:nrow(all.short)){
+  mytests<-all.short[i,mc:mc0]
+  n.na<- length(which(is.na(mytests)))
+  n9<- length(which(mytests>900))
+  all.short$n_missinglang[i]<-(n.na+n9)
+  
+}
+table(all.short$n_missinglang,all.short$ageband)
+
+all.short$n_missingread<-0
+for(i in 1:nrow(all.short)){
+  mytests<-all.short[i,(mc0+1):mc1]
+  n.na<- length(which(is.na(mytests)))
+  n9<- length(which(mytests>900))
+  all.short$n_missingread[i]<-(n.na+n9)
+  
+}
+table(all.short$n_missingread,all.short$ageband)
+
+
+#Put in NA for missing data codes all lang/read/CCC-2
+for (i in c(mc:mc1,mc2:mc3)){
+  w <- which(all.short[,i]>900)
+  all.short[w,i]<-NA
+}
+
+n.col<-length(colnames(all.short)) #define n.col here
+
+#Parental educ variables, missing is 9
+w<-which(all.short$mo_educ==9)
+all.short$mo_educ[w]<-NA
+w<-which(all.short$fa_educ==9)
+all.short$fa_educ[w]<-NA
+w<-which(all.short$fh_langprob==9)
+all.short$fh_langprob[w]<-NA
+
+```
+
+```{r rescalelang, include=FALSE}
+#Rescale all variables to mean 100 and SD 15 and save in new columns
+#This is taken from language phenotypes Rmd script; probably not needed here
+short.langnames<-c('Matrices','Blocks','Vocab','Comprehnsn','SentRep','NwdRep','Oromotor',
+                   'ReadAcc','ReadComp','ReadRate','TOWREwd','TOWREnwd',
+                   'PicName','DigitName')
+
+#convert all variables to same scale: mean 100 and SD 15
+#This has to be hard coded because different tests on different scales
+langcog.cols<-c("wasi_matrices_ss" ,"wasi_block_design_ss", "wasi_vocab_ss" ,
+                "wdck_jhsn_ss" , "sent_rep_ss" , "nonword_rep_ss",  "oromotor_ss_2",
+                "nara_acc_ss" ,"nara_comp_ss","nara_rate_ss" ,"towre_words_ss",
+                "towre_nonwords_ss","phab_pic_ss","phab_digit_ss")
+#Note we now are using the oromotor_ss_2 variable: normed against TD twins
+
+lang.cols<-which(colnames(all.short)%in%langcog.cols)
+#NB this finds columns corresponding to langcog.cols, but they will be in the order they occur in file
+#start by just duplicating original scaled scores
+n.new<-length(short.langnames)
+n.col<-dim(all.short)[2] #find final column: will append new ones after this
+nurange<-(n.col+1):(n.col+n.new) #column range for ss values, NB n.col defined in prev block
+all.short[,nurange]<-all.short[,lang.cols]
+colnames(all.short)[nurange]<-short.langnames
+#First 3 are normed with mean 50 and SD 10
+for (i in 1:3){
+  oldmean<-50
+  oldsd<-10
+  all.short[,(i+n.col)]<- 100+15*(all.short[,lang.cols[i]]-oldmean)/oldsd
+}
+
+for (i in c(5,6)){
+  oldmean<-10
+  oldsd<-3
+  all.short[,(i+n.col)]<- 100+15*(all.short[,lang.cols[i]]-oldmean)/oldsd
+}
+
+
+```
+
+
+```{r groupcreate, include=FALSE}
+##Create 8 groups:
+# 1. XXX-nobias
+# 2. XXY-nobias
+# 3. XYY-nobias
+# 4. XXX-hibias
+# 5. XXY-hibias
+# 6. XYY-hibias
+
+
+#####################################################################################
+
+all.short$group8<-all.short$trisomy #group8 is hangover from when we also had twins in the file
+w<-which(all.short$bias==1)
+all.short$group8[w]<-all.short$group8[w]+3 #convert 1 2 3 to 4 5 6
+
+
+#Create factor for overall group
+all.short$group8level<-all.short$group8#useful to retain a column with numeric code before converting to factor (converting factor back to number is a nightmare!)
+all.short$group8<-as.factor(all.short$group8)
+levels(all.short$group8)<-c('XXX.lowbias','XXY.lowbias','XYY.lowbias',
+                            'XXX.hibias','XXY.hibias','XYY.hibias'
+                        )
+
+#Add code for thse with NA data on the language tests
+
+all.short$langdata_complete<-1 #default: updated after interpolating values if only one missing
+mycols<-colnames(all.short)
+mcx1 <-which(mycols=='Matrices')
+mcx2<-which(mycols=='DigitName')
+for (i in mcx1:mcx2){
+  w <- which(is.na(all.short[,i]))
+  all.short$langdata_complete[w]<-0
+  
+}
+
+
+```
+
+
+```{r dawba_select_data, include=FALSE}
+
+#code those without dawba data
+w<-which(is.na(all.short$asd_dsm_r1 )) #If DAWBA done, will have ASD coded
+all.short$withdawba<-1
+all.short$withdawba[w]<-0
+my.dawba1<-all.short[-w,] #short file just has those who did DAWBA
+
+#check if no dawba group is different on language level
+#using langfactor 
+my.t.dawba <- t.test(all.short$Vocab~all.short$withdawba)
+
+#compute SRS brief - nb items have been re-ordered so this selects those in SRS brief
+w1<-which(colnames(my.dawba1)=='srs_item10')
+w2<-which(colnames(my.dawba1)=='srs_item65')
+my.dawba1$srsbrief <-rowSums(my.dawba1[,w1:w2])
+
+# Neurodev diag is coded from parental interview only: 0, none, 1, ADHD
+# 2, APD (ignored), # 3, ASD, # 4, behav, # 5, dyscalc, # 6, dyslexia
+# 7, dyspraxia, # 8, SLI/DLD, # 9, ID
+#find those where 3 included in the code (ie community diagnosis of ASD)
+temp<-as.character(my.dawba1$neurodev_diag)
+w<-grepl('3', temp)
+my.dawba1$asd<-0
+my.dawba1$asd[w]<-1
+
+
+#compute yes/no score for presence of ASD and ASD- (here called SCD)
+my.dawba1$asd <-my.dawba1$asd_dsm_agree #initialise _ this includes values 1 and 4 for ASD-
+my.dawba1$scd=0
+
+w<-c(which(my.dawba1$asd==1),which(my.dawba1$asd==4)) #find the ASD- cases
+my.dawba1$scd[w]<-1 #assign ASD- cases to 1
+my.dawba1$asd[w]<-0 #assign ASD- cases to 0 for the ASD column
+w<-which(my.dawba1$asd==2) #ASD coded as 2 - needs recoding to 1
+my.dawba1$asd[w]<-1
+
+
+#get ranges for SRS
+my.dawba1$srs_range <-NA
+w<-which(my.dawba1$srs_t_score<91)
+my.dawba1$srs_range[w]<-3
+w<-which(my.dawba1$srs_t_score<75)
+my.dawba1$srs_range[w]<-2
+w<-which(my.dawba1$srs_t_score<61)
+my.dawba1$srs_range[w]<-1
+
+
+
+
+my.dawba<-select(my.dawba1,record_id,Age,female,trisomy,orig_famcode,bias,why_tested,asd,
+                 srs_t_score,socaw_ss,soccog_ss,
+                 soccomm_ss,socmot_ss,autfeat_ss,srsbrief,
+                 asd_dsm_agree,socphob_dsm_agree,
+                 cgas_r1,cgas_r2,rater1,rater2, asd_dsm_r1,autism_icd_r1,social_anx_dsm_r1,
+                 social_anx_icd_r1,asd_dsm_r2,autism_icd_r2,social_anx_dsm_r2,
+                 social_anx_icd_r2,
+                 sepanx_concern,socanx_concerns,soc_vs_sep
+                 ,socfear_level,
+                 group8,group8level,ageband,ageSDQ,
+                 sepaband,  spphband, sophband,  panband, agoband,  ptsdband, ocdband,  genaband, depband,  adhdbandd, adhdtype,  oddband, cdband,  eatband,  ticbandd,  asdband)
+
+#group of 5 from 'emotional' etc are SDQ scales, added Nov 2017; also social anxiety and sep anxiety added. Sas_total is social awareness scale
+#These now converted to T-scores from Goodman norms - see above
+my.dawba$Group <- my.dawba$group8 #for compatibility with later routines
+
+
+```
+
+```{r getages, include=FALSE}
+#Add information about mean age for each group, as well as % in ageSDQ bands
+mymeanages <- aggregate(my.dawba$Age, by=list(my.dawba$group8level),
+  FUN=mean, na.rm=TRUE)
+mysdages <- aggregate(my.dawba$Age, by=list(my.dawba$group8level),
+  FUN=sd, na.rm=TRUE)
+agetab<-table(my.dawba$group8,my.dawba$ageSDQ)
+
+mymeanage.bias <- aggregate(my.dawba$Age, by=list(my.dawba$bias),
+  FUN=mean, na.rm=TRUE)
+mysdage.bias <- aggregate(my.dawba$Age, by=list(my.dawba$bias),
+  FUN=sd, na.rm=TRUE)
+
+```
+
+```{r readwriteOSF}
+my.dawbaOSF<-my.dawba[,-c(1,7,18:21,23,25,27,29:32,33,37)] #remove unwanted columns
+my.dawbaOSF$Age<-round((my.dawbaOSF$Age/12-.5),0) #convert to whole years
+write.table(my.dawbaOSF,'SCT_DAWBA_OSF.csv',col.names=TRUE,row.names=FALSE,sep=",")
+
+my.dawba<-read.csv('SCT_DAWBA_OSF.csv',stringsAsFactors=FALSE)
+my.dawba$group8<-as.factor(my.dawba$group8)
+
+```
+```{r in.prev.study, include=FALSE}
+#count how many SCT cases were in the earlier 2009 study (Bishop et al 2011 paper)
+print('')
+print('In 2009 study')
+w<-which(my.dawba$orig_famcode==1)
+Norig<-length(w)
+origstudy<-table(my.dawba$bias[w],my.dawba$trisomy[w])
+colnames(origstudy)<-c('XXX','XXY','XYY')
+rownames(origstudy)<-c('Low Bias','High Bias')
+
+
+```
+
+
+```{r socanx, include=TRUE}
+#Start with DAWBA diagnoses: focus on ASD and social anxiety; use consensus diagnoses
+#ASD is coded 2 for ASD and 1 for partial symptoms (eg SCD)
+#SocPhobia is coded 2 for definite and 1 for unsure.
+#Unsure for soc phobia is rare, and so recoded here to 0
+w<-which(my.dawba$socphob_dsm_agree==1)
+my.dawba$socphob_dsm_agree[w]<-0
+w<-which(my.dawba$asd_dsm_agree==4) #code used for Asperger (old def) = ASD-
+my.dawba$asd_dsm_agree[w]<-1
+my.dawba$bicode<- 10*my.dawba$asd_dsm_agree+my.dawba$socphob_dsm_agree
+my.dawba$bicode2<-as.factor(my.dawba$bicode)
+
+levels(my.dawba$bicode2)  <- c('Neither','Social Phobia','ASD-','ASD- +Social Phobia','ASD','ASD+Social Phobia')                                                      
+mytab<-table(my.dawba$bicode2,my.dawba$group8) 
+mytab<-mytab[,1:6] #omit twins
+myprop<-prop.table(mytab,2) #proportions by column (2nd parameter denotes row =1 or col=2)
+# mytab<-as.data.frame.matrix(mytab)
+# myprop<-as.data.frame.matrix(myprop)
+nicetab <- data.frame(matrix(NA,nrow=8,ncol=7))
+#can't have blank colnames, so using dots for now. Each must be unique
+colnames(nicetab)<-c('.','-','Low Bias','..','...','High Bias','....')
+nicetab[1,] <- c('Diagnosis','XXX','XXY','XYY','XXX','XXY','XYY')
+nicetab[2,]<-c('N',colSums(mytab))
+myorder<-c(1,4,2,5,3,6) #reorder the rows to be more logical
+for (thisrow in 1:6){
+  for (thiscol in 2:7){
+    nicetab[(2+myorder[thisrow]),thiscol]<-paste0(mytab[thisrow,(thiscol-1)],' (',
+                                                  round(100*myprop[thisrow,(thiscol-1)],1),'%)')
+  }
+}
+nicetab[3:8,1]<-c('Neither','ASD-','ASD','Social Phobia only','Social Phobia+ASD-','Social Phobia+ASD')
+#rate of Social Phobia
+forchi<-matrix(c(22,21,31,0,7,1),nrow=2,byrow=TRUE)
+chisq.test(forchi)
+
+#check if presence of diagnosis influences re-participation
+sct.only<-filter(my.dawba,group8level<7) #removetwins
+byprevious<-table(sct.only$bicode2,sct.only$orig_famcode)
+mat.for.chi<-matrix(c(byprevious[1,1],byprevious[1,2],
+                      sum(byprevious[2:5,1]),sum(byprevious[2:5,2])),nrow=2,byrow=TRUE)
+chisq.test(mat.for.chi)
+
+nicetab
+```
+
+
+
+```{r make.oddsratio, include=FALSE}
+do.OR <- function(MeltzN,Meltzp,sctN,sctaff){
+
+Meltzaff <- round(MeltzN*Meltzp/100,0)
+Meltznon <-MeltzN-Meltzaff
+odds1 <-Meltzaff/Meltznon
+
+odds2 <-sctaff/(sctN-sctaff)
+oddsr <-odds2/odds1
+logoddsr <-log(oddsr)
+se.logoddsr <-sqrt(1/Meltzaff+1/Meltznon+1/sctaff+1/(sctN-sctaff))
+ci.low <-round(logoddsr-1.96*se.logoddsr,2)
+ci.hi <- round(logoddsr+1.96*se.logoddsr,2)
+return(c(oddsr,logoddsr,ci.low,ci.hi))
+}
+```
+
+```{r dawbabands, include=TRUE}
+bandtable <- table(sct.only$sophband,sct.only$group8level)
+#Look for evidence of milder social problems using DAWBA bands
+bandprop<- prop.table(bandtable,2)
+goodmanband <- c(6514,996,208,41,18)
+ 
+#goodmanband <-c(4846,2701,146,84) sep anx
+
+ #Ns with band scores 0, 1, 2 3, 4 in British parent report epi sample
+ #From supplementary material to Goodman et al 2011 DAWBA band paper
+ #Downloaded from https://link.springer.com/article/10.1007%2Fs00127-010-0219-x
+ 
+ goodmanp <-goodmanband/sum(goodmanband)
+ 
+nicebandtab<-data.frame(matrix(NA, ncol=8, nrow=nrow(bandtable))) 
+colnames(nicebandtab)<-c('Band','B-CAMHS','XXX-low','XXY-low','XYY-low',
+                         'XXX-high','XXY-high','XYY-high')
+nicebandtab[,1]<-rownames(bandtable)
+nicebandtab[,2]<-paste0(goodmanband,' (',round(100*goodmanp,1),'%)')
+for(i in 1:6){
+  nicebandtab[,(i+2)]<-paste0(bandtable[,i],' (',round(100*bandprop[,i],1),'%)')
+}
+ 
+lorisk <-filter(sct.only,group8level<4) #analysis applies only to lorisk cases
+
+kband<-kruskal.test(lorisk$sophband~lorisk$group8level) 
+#oddsratios for band 2 or over in the low risk group
+sophbandOR<-data.frame(matrix(NA, nrow=4,ncol=3)) #initialise
+colnames(sophbandOR)<-c('XXX-low','XXY-low','XYY-low')
+rownames(sophbandOR)<-c('OR','logOR','low95CIlog','high95CIlog')
+MeltzN<-sum(goodmanband)
+Meltzp<-sum(goodmanband[3:nrow(bandtable)])/MeltzN
+
+for (sct in 1:3){
+  sctN<-sum(bandtable[,sct])
+  sctaff<-sum(bandtable[3:nrow(bandtable),sct])
+  sophbandOR[,sct]<-round(do.OR(MeltzN,Meltzp,sctN,sctaff),1)
+  
+}
+nicebandtab
+```
+
+
+
+```{r beeswarm.function, include=FALSE}
+make.beeswarm <- function(mydata,groupcol,subgroupcol,colvalues,varlist,namelist,pngname,pngdim,
+                          pngwidth,pngheight,groupcolor,mylims,dodiffmean,addtext,yaxislabel){
+  #Now do a grid of beeswarm plots
+  
+  png_bees<-paste0(pngname,'.png')#name to save png file
+  png(png_bees,width=pngwidth,height=pngheight,res=300)
+  par(mfrow=pngdim) #5 row and 3 columns
+  par(mar=c(5.5,5.1,4.1,1),mgp=c(4, 2, 0)) #mar sets the bottom, left, top and right margins
+  #mgp – sets  axis label locations relative to the edge of the inner plot window. The first value represents the location the labels (i.e. xlab and ylab in plot), the second the tick-mark labels, and third the tick marks. The default is c(3, 1, 0). Here need 4,2,0 to avoid 2-line label colliding with frame.
+  
+  #beeswarm jittered values (last value in jitter statement determines amount of jitter)
+  
+  grouplevel<-sort(unique(mydata[,groupcol]))
+  #list of group values in numeric order
+  
+  ngroup<-length(grouplevel)
+  
+  pointcol<-c(16,17) #use filled circle then triangle for ageband 1-2 
+  min.val<-min(mydata[,subgroupcol]) #because m/f is coded 0/1 need to check minimum value, so can 
+  #add one to code for points if we are using m/f
+  min.offset<-0
+  if(min.val==0){min.offset <- 1}
+  agebit<-pointcol[mydata[,subgroupcol]+min.offset]
+  testrange<-which(colnames(mydata)%in%varlist)
+  for (i in 1:length(varlist)){
+    mytitle<-namelist[i]
+    mylabel<-'' #default is to not label y axis unless it is left-most column
+    if((i-1)%%pngdim[2]==0){ #heh! gets modulus of i-1 relative to n columns, which is zero if leftmost!
+      mylabel<-yaxislabel
+    }
+    
+    beeswarm(jitter(mydata[,testrange[i]],3)~mydata[,groupcol] , xlab='Group',ylab=mylabel,spacing=.8,
+             pch = 16,pwpch=agebit,cex=1.5,pwcol = colvalues,main=mytitle,ylim=mylims[1:2],
+             cex.axis=1.21,cex.lab=1.5,cex.main=1.5,xaxt='n')
+    
+       #limits for T-score at +/- 1 SD
+    up.lim<-60
+    low.lim<-40
+    
+  #  polygon(c(0,0,(ngroup+1),(ngroup+1)), c(up.lim, low.lim, low.lim, up.lim),
+  #          col=adjustcolor("yellow",alpha.f=0.3), border = NA)
+    if(addtext==1){
+      text(2,(mylims[1]+2),'<------Low Bias------>',cex=1.5)
+      text(5,(mylims[1]+2),'<------High Bias------>',cex=1.5)
+    }
+     #add lines for limits
+      abline(a=mylims[3],b=0,col='darkgray',lty=1)
+    abline(a=mylims[4],b=0,col='darkgray',lty=2)
+    abline(a=mylims[5],b=0,col='darkgray',lty=2)
+   
+    #add means
+    for (g in 1:ngroup){
+      myg<-grouplevel[g]
+      mm<-mean(mydata[mydata[,groupcol]==myg,testrange[i]],na.rm=TRUE) #means for whole sample by group
+      segments(g-.4,mm,g+.4,mm,col = 1,lty=1,lwd=2) #plot straight solid lines at mean for each group
+      
+      #plot dotted lines for means for age-matched groups, i.e ageband2
+      if(dodiffmean==1){
+        #identify cases for each group in ageband2
+        w1<-which(mydata[,groupcol]==myg)
+        w2<-which(mydata$ageband==2)
+        shortrange<-intersect(w1,w2)
+        mm2<-mean(mydata[shortrange,testrange[i]],na.rm=TRUE)
+        segments(g-.4,mm2,g+.4,mm2,col = 1,lty=2,lwd=2) #dotted line for age 6-11
+      }
+    }
+    
+  
+    axis(1,at=1:6,labels=c('XXX','XXY','XYY','XXX','XXY','XYY'),cex.axis=1.5)
+  }
+  dev.off()
+}
+
+```
+
+
+
+
+
+```{r beeswarmSRS,include=FALSE}
+pngname<-'beeswarm_srs_T_2018'
+pngdim<-c(3,2)
+pngwidth<-3000
+pngheight<-3000
+varlist<-c('socaw_ss','soccog_ss','soccomm_ss','socmot_ss','autfeat_ss','srs_t_score')
+namelist<-c('Soc. Awareness','Soc. Cognition','Soc. Communication','Soc. Motivation',
+            'Autistic Features','Total SRS')
+mylims<-c(0,100,50,60,70) #first 2 values are yaxis lims, then values for lines at mean -1sd and -2sd
+yaxislabel <- 'T-score (high = impairment)'
+groupcol<-which(colnames(my.dawba)=='group8')
+subgroupcol<-which(colnames(my.dawba)=='ageSDQ')
+
+pngdim<-c(3,2)
+pngwidth<-3000
+pngheight<-3000
+
+#We want this order "None","Social Phobia","ASD","ASD-","Social Phobia+ASD","Social Phobia+ASD-")
+diaglist<-c(0,2,20,10,22,12)
+
+my.dawba$bicode3<-my.dawba$bicode #initialise
+for (d in 1:length(diaglist)){
+  w<-which(my.dawba$bicode3==diaglist[d])
+  my.dawba$bicode3[w]<-d
+}
+
+mycols<- c("grey66", "cornflowerblue","red", "hotpink1","purple","blue")
+
+dodiffmean<-0
+addtext<-0
+w<-which(my.dawba$group8level <7)
+mydata<-my.dawba[w,]
+mydata$group8<-droplevels(mydata$group8)#need this to stop it remembering empty level!
+#levels(mydata$Group)[4]<-'Twin +\nConcerns'
+colvalues<-mycols[mydata$bicode3]
+addtext<-1
+make.beeswarm(mydata,groupcol,subgroupcol,colvalues,
+              varlist,namelist,pngname,pngdim,pngwidth,pngheight,
+              groupcolor,mylims,dodiffmean,addtext,yaxislabel)
+
+
+```
+![**Figure `r thisfig`**. _Beeswarm plots: SRS scales and total T-score for the three trisomy groups, subdivided by bias group. Symbol depicts age band (circle 5-10 yr, triangle 11-16 yr. Colour depicts diagnosis: grey = none; light blue = Social Phobia; dark blue = Social Phobia+ASD-; pink = ASD-; red = ASD; purple = Social Phobia+ASD)_](beeswarm_SRS_T_2018.png)
+
+```{r permutekruskalfunction,include=FALSE}
+do.permute <- function(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,
+                       mytitle,pngname,prevfile,upperquant){
+  if(n.iter==0){myp<-prevfile} #save time by reading prior file
+  #may need to load this first using load comment
+  else{
+    #allocate group at random for permutation test
+    n.forgp <-table(mydata[,gpcolumn])
+    range1start<-1
+    range2start<-n.forgp[1]+1
+    range3start<-nrow(mydata)+1 #dummy value for case where just 2 groups
+    if(length(gpvalues)>2){
+      range3start <-n.forgp[1]+n.forgp[2]+1}
+    myp<-data.frame(matrix(NA,nrow=n.iter*length(mycolrange),ncol=2))
+    thisrow <- 0
+    mydata$nugp <-mydata[,gpcolumn] #default is correct group value.
+    for (i in 1:n.iter){
+      if (i>1){ #first run retains correct group value but then shuffled for subsequent runs
+        mydata$thisr<-rank(runif(nrow(mydata)))
+        mydata$nugp <- 3
+        w1<-which(mydata$thisr < range3start)
+        w2<-which(mydata$thisr < range2start)
+        mydata$nugp[w1]<-2
+        mydata$nugp[w2]<-1
+      }
+      thisk <- 0
+      for (k in mycolrange){
+        thisrow<-thisrow+1
+        thisk <- thisk+1
+        simk<- kruskal.test(mydata[,k]~mydata$nugp) 
+        myp[thisrow,1]<-thisk
+        myp[thisrow,2]<-simk$statistic
+      }
+    }
+  }
+  myptrue<-myp[1:length(mycolrange),]
+  mypsim<-myp[-(1:length(mycolrange)),]
+  
+  #see https://www.r-bloggers.com/whisker-of-boxplot/
+  #we want to set the whisker to denote the 97.5% point (ie top end of 95%CI)
+  #ideally for each measure separately, but failing that, for the overall dataset
+  #This version now allows user to specify which upperquantile is used with upperquant
+  myquant<-quantile(mypsim$X2,c(.25,.75,upperquant))
+  myfinmultiplier <- (myquant[3]-myquant[2])/(myquant[2]-myquant[1])
+  png(pngname,width=2000,height=1200,res=300)
+  par(mar=c(4, 12, 1, 1) + 0.1)#bottom, left, top and right margins
+  
+  boxplot(myp$X2~myp$X1,yaxt='n',xlab='Chi square from randomisation',
+          horizontal=TRUE,las=1,outcol='#FFFFFF',outcex=.1,range=myfinmultiplier,
+          main='')
+  axis(2, at=1:length(mycolrange),labels=mylabs,las=2)
+  for (i in 1:length(mycolrange)){
+    text(myptrue[i,2],i,'*',col='red',cex=2.5)
+  }
+  dev.off()
+  
+  
+  return(myp)
+}
+```
+
+
+```{r run.kruskal.permute,include=FALSE}
+#Same routine will be used for various comparisons; each calls the do.permute function above
+load("p1p2.Rdata") #loads in previously created randomised data
+
+#Analysis 1: compare the 3 low bias SCT groups
+mydata<-filter(my.dawba,group8level<4)
+prevfile<-'' #default value
+k.cols <- c("socaw_ss","soccog_ss","soccomm_ss","socmot_ss","autfeat_ss")
+mycolrange<-which(colnames(mydata) %in% k.cols)
+gpcolumn<-which(colnames(mydata)=='group8level')
+gpvalues<-unique(mydata$group8level)
+mylabs<-c('SRS: Social Awareness','SRS: Social Cognition','SRS: Social Communication','SRS: Social Motivation','SRS: Autistic Features')
+n.iter<-0 #set to 0 if you want to use a saved file; otherwise 10000
+if (n.iter==0){prevfile<-myp1} #if n.iter is > 0, this is ignored and new data will be generated
+mytitle<-'Comparing three Low Bias SCT groups' #This was used on plot but currently ignored
+pngname <-'random99_chiplotSRS_LowBias_karyotype.png'
+upperquant <- .99 #specifies upper fins on boxplot
+myp1 <- do.permute(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,
+                   mytitle,pngname,prevfile,upperquant)
+#the function returns the generated dataset (or just repeats the specified one)
+
+#Next compare high bias and low bias SCTs
+#Most parameters are unchanged, but need to specify new dataset and group code
+mydata <-filter(my.dawba,group8level<7)
+gpcolumn<-which(colnames(mydata)=='bias')
+gpvalues<-unique(mydata$bias)
+mytitle<-'Low Bias vs High Bias SCT groups'
+pngname <-'random99_chiplotSRS_low_vs_hibias.png'
+if(n.iter==0){prevfile<-myp2}
+myp2 <- do.permute(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,
+                   mytitle,pngname,prevfile,upperquant)
+
+
+#since it took a while to make these randomised files (about 7 min each), we'll save them
+save(myp1,myp2, file = "p1p2.Rdata")
+#these variables can then be loaded in with 'load("p1p2.Rdata")' and used for prevfile
+
+
+```
+
+
+
+
+```{r srscutoff, include=TRUE}
+my.dawba$srscut75<-NA
+w<-which(my.dawba$srs_t_score>0)
+my.dawba$srscut75[w]<-0
+w1<-which(my.dawba$srs_t_score>74)
+my.dawba$srscut75[w1]<-1
+
+my.dawbashort<-filter(my.dawba,group8level<7)
+srscuttab<-table(my.dawbashort$srscut75,my.dawbashort$asd_dsm_agree)
+colnames(srscuttab)<-c('None','ASD-','ASD')
+rownames(srscuttab)<-c('Below75','75+')
+srscuttab
+```
+
+
+
+
+
+```{r sessinfo, include=TRUE}
+sessionInfo()
+```
