@@ -735,7 +735,10 @@ my.dawba1<-all.short[-w,] #short file just has those who did DAWBA
 #using langfactor 
 temp<-filter(all.short,group8level<7)
 temp$withdawba<--1*temp$withdawba #negative;just to make CI print out more legibly in this direction
-my.t.dawba <- t.test(temp$langfactor~temp$withdawba)
+my.t.dawba <- t.test(temp$Vocab~temp$withdawba) #Changed this AFTER final version was knitted
+w1<-which(temp$withdawba==0)
+sd.dawba0 <-sd(temp$Vocab[w1],na.rm=TRUE)
+sd.dawba1<-sd(temp$Vocab[-w1],na.rm=TRUE)
 
 #compute SRS brief - nb items have been re-ordered so this selects those in SRS brief
 w1<-which(colnames(my.dawba1)=='srs_item10')
@@ -1782,7 +1785,7 @@ One advantage of using DAWBA is that there are comprehensive epidemiological Bri
 
 `r Norig` children had taken part in the previous study by Bishop et al (2011). Information about ASD in that study was available only from parental report: two of the children (8.7%) had been reported by their parents to have a diagnosis of ASD. No information on social anxiety had been collected in the 2011 study. 
 
-In a previous report based on the current sample (Bishop et al, 2018), we noted that the likelihood of parents completing checklists for this study was lower if the child had significant language problems. This prompted us to compare children whose parents did and did not complete the DAWBA, using a language factor score (see below) as an indicator of language level. A t-test revealed that, as before with checklist completion, parents who completed the DAWBA had children with milder language problems: mean factor score for those who completed DAWBA was `r round(my.t.dawba$estimate[2],1)` versus `r round(my.t.dawba$estimate[1],1)` for the remainder, t (`r round(my.t.dawba$parameter,1)`) = `r round(my.t.dawba$statistic,1)`, 95% CI for difference in means = `r round(my.t.dawba$conf.int[1],1)` to `r round(my.t.dawba$conf.int[2],1)`.
+In a previous report based on the current sample (Bishop et al, 2018), we noted that the likelihood of parents completing checklists for this study was lower if the child had significant language problems. This prompted us to compare children whose parents did and did not complete the DAWBA, using a vocabulary test score (see below) as an indicator of language level. A t-test revealed that, as before with checklist completion, parents who completed the DAWBA had children with milder language problems: mean vocabulary score for those who completed DAWBA was `r round(my.t.dawba$estimate[2],1)`(SD = `r sd.dawba1`) versus `r round(my.t.dawba$estimate[1],1)`(SD = `r sd.dawba0`) for the remainder, t (`r round(my.t.dawba$parameter,1)`) = `r round(my.t.dawba$statistic,1)`, 95% CI for difference in means = `r round(my.t.dawba$conf.int[1],1)` to `r round(my.t.dawba$conf.int[2],1)`.
 
 
 ## Material\
@@ -1805,9 +1808,8 @@ The criteria for DSM-IV Social Phobia (now more commonly known as Social Anxiety
 
 The SRS is a 70-item scale designed to measure autism-related impairments as quantitative traits. It is composed of five subscales: social cognition, social awareness, social motivation, social communication and autistic features. Scores on each subscale, and on the total scale, were transformed to T-scores (based on the test manual) with mean 50 and SD of 10, with impairment represented as a positive score. 
 
-## Language factor used to compare those with and without DAWBA scores  
-
-A language factor used by Newbury et al (2018) to represent overall language ability was used to check whether the families who completed DAWBA differed from others (see above). This was derived from factor analysis of four language measures: Verbal Comprehension {Woodcock, 2007 #19530}, Oromotor Sequences {Korkman, 1998 #11973}, Sentence Repetition {Korkman, 1998 #11973} and Vocabulary {Wechsler, 1999 #12412}) which had been administered to a larger sample of children with and without trisomies (see Appendix 3 on https://osf.io/u7dsw/ for details).  
+## Vocabulary measure used to compare those with and without DAWBA scores  
+The Vocabulary subtest from the Wechsler Abbreviated Scale of Intelligence {Wechsler, 1999 #12412} administered to children as part of the language test battery (Bishop et al, 2018) was used to check whether the families who completed DAWBA differed from others (see above). 
 
 ## Additional measures not included in this analysis
 
