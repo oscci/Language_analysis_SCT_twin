@@ -1,5 +1,6 @@
 
 ```{r load_packages, include = FALSE}
+#Not all libraries are used - some are here for historical reasons
 #devtools::install_github("crsh/papaja")
 library(papaja)
 library(tidyverse)
@@ -375,7 +376,7 @@ return(c(oddsr,logoddsr,ci.low,ci.hi))
 ```
 
 ```{r dawbabands, include=TRUE}
-bandtable <- table(sct.only$sophband,sct.only$group8level)
+bandtable <- table(my.dawba$sophband,my.dawba$group8level)
 #Look for evidence of milder social problems using DAWBA bands
 bandprop<- prop.table(bandtable,2)
 goodmanband <- c(6514,996,208,41,18)
@@ -397,7 +398,7 @@ for(i in 1:6){
   nicebandtab[,(i+2)]<-paste0(bandtable[,i],' (',round(100*bandprop[,i],1),'%)')
 }
  
-lorisk <-filter(sct.only,group8level<4) #analysis applies only to lorisk cases
+lorisk <-filter(my.dawba,group8level<4) #analysis applies only to lorisk cases
 
 kband<-kruskal.test(lorisk$sophband~lorisk$group8level) 
 #oddsratios for band 2 or over in the low risk group
