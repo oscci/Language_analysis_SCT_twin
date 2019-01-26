@@ -661,18 +661,6 @@ levels(all.short$group8)<-c('XXX.lowbias','XXY.lowbias','XYY.lowbias',
                             'XXX.hibias','XXY.hibias','XYY.hibias',
                             'Twin: No Concerns','Twin: Lang concerns')
 
-#Add code for thse with NA data on the language tests
-#For MANOVA, only those with complete data are included
-all.short$langdata_complete<-1 #default: updated after interpolating values if only one missing
-mycols<-colnames(all.short)
-mcx1 <-which(mycols=='Matrices')
-mcx2<-which(mycols=='DigitName')
-for (i in mcx1:mcx2){
-  w <- which(is.na(all.short[,i]))
-  all.short$langdata_complete[w]<-0
-  
-}
-
 
 ```
 
@@ -732,14 +720,18 @@ all.short$withdawba[w]<-0
 my.dawba1<-all.short[-w,] #short file just has those who did DAWBA
 
 #check if no dawba group is different on language level
-#using langfactor 
+#using vocab
 temp<-filter(all.short,group8level<7)
 temp$withdawba<--1*temp$withdawba #negative;just to make CI print out more legibly in this direction
-my.t.dawba <- t.test(temp$Vocab~temp$withdawba) #Changed this AFTER final version was knitted
-w1<-which(temp$withdawba==0)
-sd.dawba0 <-sd(temp$Vocab[w1],na.rm=TRUE)
-sd.dawba1<-sd(temp$Vocab[-w1],na.rm=TRUE)
-
+#check if no dawba group is different on language level
+#using vocabulary from WASI
+w<-which(temp$wasi_vocab_ss>900)
+temp$wasi_vocab_ss[w]<-NA
+my.t.dawba <- t.test(temp$wasi_vocab_ss~temp$withdawba)
+mysd.dawba<-aggregate(temp$wasi_vocab_ss, by=list(temp$withdawba),
+  FUN=sd, na.rm=TRUE)
+sd.dawba0 <-round(mysd.dawba[1,2],2)
+sd.dawba1 <-round(mysd.dawba[2,2],2)
 #compute SRS brief - nb items have been re-ordered so this selects those in SRS brief
 w1<-which(colnames(my.dawba1)=='srs_item10')
 w2<-which(colnames(my.dawba1)=='srs_item65')
