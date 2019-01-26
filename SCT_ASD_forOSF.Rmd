@@ -178,7 +178,7 @@ digraph a_nice_graph {
 flow1a %>% export_svg %>% charToRaw %>% rsvg_png("SCT_DAWBA_flow.png")
 
 ```
-![_Figure `r thisfig`. Flowchart showing numbers of children with each karyotype in the study, in relation to whether prenatally or postnatally diagnosed, whether high ascertainment bias, and whether DAWBA was completed._](SCT_DAWBA_flow.png)
+![_ Flowchart showing numbers of children with each karyotype in the study, in relation to whether prenatally or postnatally diagnosed, whether high ascertainment bias, and whether DAWBA was completed._](SCT_DAWBA_flow.png)
 ```{r groupcreate, include=FALSE}
 ##Create 8 groups:
 # 1. XXX-nobias
@@ -544,7 +544,7 @@ make.beeswarm(mydata,groupcol,subgroupcol,colvalues,
 
 
 ```
-![**Figure `r thisfig`**. _Beeswarm plots: SRS scales and total T-score for the three trisomy groups, subdivided by bias group. Symbol depicts age band (circle 5-10 yr, triangle 11-16 yr. Colour depicts diagnosis: grey = none; light blue = Social Phobia; dark blue = Social Phobia+ASD-; pink = ASD-; red = ASD; purple = Social Phobia+ASD)_](beeswarm_SRS_T_2018.png)
+![_Beeswarm plots: SRS scales and total T-score for the three trisomy groups, subdivided by bias group. Symbol depicts age band (circle 5-10 yr, triangle 11-16 yr. Colour depicts diagnosis: grey = none; light blue = Social Phobia; dark blue = Social Phobia+ASD-; pink = ASD-; red = ASD; purple = Social Phobia+ASD)_](beeswarm_SRS_T_2018.png)
 
 ```{r permutekruskalfunction,include=FALSE}
 do.permute <- function(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,
