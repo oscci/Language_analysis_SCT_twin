@@ -72,6 +72,7 @@ library(mvnormtest) #check assumptions for MANOVA
 library(ggpubr)
 library(yarrr) #for pirateplot
 library(lsr) #for correlations
+library(pwr) #for power calculation
 
 dopng <- 0 #toggle for png figures
 numnames<-c('no','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve')
@@ -1402,6 +1403,9 @@ my.dawba$srscut75[w1]<-1
 
 my.dawbashort<-filter(my.dawba,group8level<7)
 srscuttab<-table(my.dawbashort$srscut75,my.dawbashort$asd_dsm_agree)
+
+
+
 ```
 
 ```{r dsmagree, include=FALSE}
@@ -1654,7 +1658,35 @@ flow2<-DiagrammeR::grViz("
 flow2 %>% export_svg %>% charToRaw %>% rsvg_png("twins_flow_dawba.png")
 
 ```
+
+```{r poweranalysis}
+#comparing 3 groups for Low bias only
+lobiastot<-n.K+n.L+n.M
+meltztot <-5219
+meltzhi<-round(meltztot*.05,0)
+meltzlo<-meltztot-meltzhi
+meltzodds<-meltzhi/meltzlo
+
+#compare difft odds ratios
+thisN <- 14 #smallest N in low bias group
+#try with N of 1 or more affected group
+for (i in 1:5){
+simodds<-i/(thisN-i)
+simlogOR <-log(simodds/meltzodds)
+
+se.simlogOR <-sqrt(1/meltzhi+1/meltzlo+1/i+1/(thisN-i))
+print(paste(i,round(simlogOR,2),round(se.simlogOR,2),round(simlogOR-1.96*se.simlogOR,2)))
+}
+
+pwr.anova.test(k = 3,  sig.level = 0.05,n = (n.K+n.L+n.M),power=.8)
+
+pwr.t2n.test(n1 = (n.K+n.L+n.M), n2= (n.N+n.O+n.P),  sig.level =.05, power =.8 )
+```
+
+
 ```{r SocialPhobiaN,include=FALSE}
+
+#For SE of log odds ratio: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1127651/
 socanx.xxy1 <- sum(mytab[c(2,4,6),2]) #low bias xxy cases with SocAnx
 socanxplus.xxy1 <- sum(mytab[c(4,6),2])#low bias xxy cases with SocAnx+ASD/ASD-
 socanx.xxy2 <- sum(mytab[c(2,4,6),5])#hi bias xxy cases with SocAnx
@@ -1729,7 +1761,14 @@ ci.hi.xxy <- round(logoddsr.xxy+1.96*se.logoddsr.xxy,2)
 ci.low.xyy <-round(logoddsr.xyy-1.96*se.logoddsr.xyy,2)
 ci.hi.xyy <- round(logoddsr.xyy+1.96*se.logoddsr.xyy,2)
 ```
-
+# Things to do before submitting
+1. Move tables and figures to end
+2. Autoformat references, and ensure left-justified
+3. Check heading of tables for extraneous characters
+4. Check numbered section that has somehow got its own weird format
+5. Add page numbers
+6. Abstract, keywords etc change
+7. Authors add details (current APA is not compatible)
 
 # Abstract
 
@@ -1784,7 +1823,7 @@ In a previous report based on the current sample (Bishop et al, 2018), we noted 
 
 ### Psychiatric evaluation
 \
-One or both parents were asked to complete the online Development and Wellbeing Assessment (DAWBA) {Goodman, 2000 #18146} in their own time; `r (n.K+n.L+n.M+n.N+n.O+n.P-1)` families of children with SCT (one with two affected children) complied with this request.
+One or both parents were asked to complete the online Development and Wellbeing Assessment (DAWBA)  {Goodman, 2000 #18146} in their own time; `r (n.K+n.L+n.M+n.N+n.O+n.P-1)` families of children with SCT (one with two affected children) complied with this request.
 
 The DAWBA includes a range of questions relating to DSM-IV and ICD-10 diagnostic criteria, risk factors, and impact on the family, which are supplemented by optional free text. 
 
@@ -1792,7 +1831,7 @@ The DAWBA software codes the items relevant to different diagnoses into bands th
 
 All interviews with SCT cases were coded against DSM-IV criteria by the first author (AW); 30 interviews were recoded by a second independent rater (JK), with the remainder recoded by the last author (DB). The rater doing the coding was blind to the trisomy status of the child, although occasionally this was mentioned by parents in free text comments. Cases of disagreement were resolved by the last author (DB), who gave a final consensus rating that was used here. 
 
-To address our questions of interest, we focused on DSM-IV diagnoses of Autism Spectrum Disorder (ASD) and Social Anxiety Disorder. ASD was coded as absent (0) or present (2), with a code of 1 given for significant autism symptoms that fell short of diagnostic criteria. Most of the latter group, which we refer to as the ASD- group, showed evidence of social and communicative difficulties, but did not have sufficient repetitive behaviours and restricted interests to merit an ASD diagnosis. There was agreement between raters on ASD coding for `r percagree1`% of cases, disagreement by one point (ratings of 0/1 or 1/2) in `r percagree2`%, and major disagreement (ratings of 0/2) in `r percagree3`%. There were `r comm_asd_agreetab[2,3]` children whose parents reported an existing diagnosis of ASD, and all of these were identified as definite ASD by DAWBA.  Meltzer et al (2000) provided prevalence figures for the broader ASD category of PDDNOS, so we combined ASD and ASD- when comparing diagnoses with their sample.
+To address our questions of interest, we focused on DSM-IV diagnoses of Autism Spectrum Disorder (ASD) and Social Anxiety Disorder. ASD was coded as absent (0) or present (2), with a code of 1 given for significant autism symptoms that fell short of diagnostic criteria. Most of the latter group, which we refer to as the ASD- group, showed evidence of social and communicative difficulties, but did not have sufficient repetitive behaviours and restricted interests to merit an ASD diagnosis. There was agreement between raters on ASD coding for `r percagree1`% of cases, disagreement by one point (ratings of 0/1 or 1/2) in `r percagree2`%, and major disagreement (ratings of 0/2) in `r percagree3`%. There were `r comm_asd_agreetab[2,3]` children whose parents reported an existing diagnosis of ASD, and all of these were identified as definite ASD by DAWBA. These included two cases who had taken part in the study by Bishop et al (2011). Meltzer et al (2000) provided prevalence figures for the broader ASD category of PDDNOS, so we combined ASD and ASD- when comparing diagnoses with their sample.
 
 The criteria for DSM-IV Social Phobia (now more commonly known as Social Anxiety Disorder) include a marked and persistent fear of one or more social situations where the individual may be subject to scrutiny by others. For a diagnosis of Social Phobia the symptoms must interfere significantly with everyday life. In children, the anxiety must occur in peer settings, not just with adults, must be disproportionate to the situation, and not be better explained by another disorder such as ASD. Social Phobia is differentiated from Separation Anxiety and General Anxiety Disorder by the situational specificity of the anxiety. Social Phobia was coded as present or absent, with `r percagrees1`%, agreement between raters.
 
@@ -1812,7 +1851,13 @@ Children in this study were given additional language and cognitive assessments,
 Ethical approval was obtained for the study in 2011 from the Berkshire NHS Research Ethics Committee (reference 11/SC/0096), and data collection started in August of that year, finishing in October 2016. Families who had expressed interest in the study were interviewed by telephone to assess whether the child met inclusion criteria, and if so, a parent was invited to complete a consent form. Those who gave consent were also asked to view a video about the study with their child to ensure the family understood what was required before asking the child's assent to take part. For those who agreed, an appointment was made to see the child at home or at school, depending on parental preference. Families were widely dispersed around the UK, including Northern Ireland, Scotland, Wales and England. Parents were provided with passwords and a personal link to access the secure DAWBA website. They were asked to complete the DAWBA in their own time, and if they wished could spread the task over several days. The SRS was either completed by the parent while the child was doing language assessments, or was mailed to the parent and returned by post.
 
 ## Data analysis  
-Study data were analysed using R software {R Core Team, 2016 #19256}, with the main database managed using REDCap electronic data capture tools hosted at the University of Oxford {Harris, 2009 #19562}. 
+Study data were analysed using R software {R Core Team, 2016 #19256}, with the main database managed using REDCap electronic data capture tools hosted at the University of Oxford {Harris, 2009 #19562}.(Harris et al., 2009). The original sample size had been determined to give adequate power for genetic analyses reported by Newbury et al. (2018), rather than with phenotypic analyses in mind, and so we conducted additional analyses to consider the power for the current analyses on the reduced sample with DAWBA data.  
+
+For comparing rates of disorder in the Low Bias group with population prevalence figures from Meltzer et al (2000), we used the log odds ratio. For this comparison, the smallest samples used here (N = 14) is sufficiently powered to detect an increase of prevalence of 20% or more, albeit with a large confidence interval. For instance, if the general population prevalence of disorder is 5%, and 3/14 of a trisomy group has disorder, then the log odds ratio is log((3/11)/(5/95)) = 1.64. The standard error of the log odds ratio is the square root of the sum of the reciprocals of the four frequencies {Bland, 2000 #17072}. Since the sample size for Meltzer et al is over 5000 for both boys and girls, then for our example, the standard error would be approximately sqrt(1/250+1/4750+1/3+1/11) = .65, so the 95% confidence interval for the log odds ratio covers `r 1.64-(.65*1.96)` to `r 1.64+(.65*1.96)`.  
+
+For quantitative comparisons between the three Low Bias trisomy groups, we used nonparametric Kruskal Wallis tests.  A rough estimate of power can be obtained using the pwr.anova.test function in R {Champely, 2018 #39191}.  This gives a value of f = .25, corresponding to a medium effect size in {Cohen, 1988 #9165}'s terminology with 80% power and alpha of .05. However, actual power is likely to be lower than this because of the use of unequal group sizes and non-normal measures.  We made a further set of comparisons between the Low Bias and High Bias groups, with all karyotypes combined.  Using the pwr.t2n.test function for computing power of t-test with unequal sizes, gives 80% power to detect a Cohen's d of .61 with alpha of .05.
+Thus for karyotype comparisons in the Low Bias trisomy cases, and between the combined Low Bias vs High Bias groups, our sample is powered to detect only relatively large effects. More subtle effects will require larger samples, which are unlikely to be feasible for a single research centre. This emphasises the need for raw data to be available so that future researchers will be able to combine information across studies.
+ 
 
 # Results
 
@@ -1872,7 +1917,7 @@ thistab<-thistab+1 #increment table counter
 **Test of hypothesis 4**. `r thisfig<-thisfig+1`
 Hypothesis 4 proposed that elevated scores on the SRS would be seen in children with sex chromosome trisomies, but would not necessarily be indicative of ASD. As shown in Figure `r srsfig`, the odds of having a score outside the normal range on the SRS scales is elevated in all three trisomies, especially for children from the High Bias Group.  The last panel of Figure `r srsfig` shows T-scores on the SRS total for children with sex chromosome trisomies in relation to DAWBA diagnoses of ASD, ASD- and Social Phobia. These data show that all but one child with a diagnosis of ASD or ASD- score above the 'Severe' cutoff of 70, but most children in the 'Mild' range of 60-70 do not have a diagnosis of either ASD or ASD-. 
 
-A cutoff total score of 75 has been reported as giving sensitivity and specificity of 0.85 and 0.75 for ASD diagnosis in a population of mixed cases of ASD and other developmental disorders {Bölte, 2011 #19563}. In the current sample, if we group together the ASD and ASD- cases, then with this cutoff, we obtain `r srscuttab[1,1]` true negatives (non-autistic < 75), `r srscuttab[2,1]` false positives (non-autistic > 74), `r srscuttab[1,2]+srscuttab[1,3]` false negatives (autistic < 75), and `r srscuttab[2,2]+srscuttab[2,3]` true positive (autistic > 74), which gives sensitivity of `r round((srscuttab[2,2]+srscuttab[2,3])/(srscuttab[1,2]+srscuttab[1,3] +srscuttab[2,2]+srscuttab[2,3]),2)` and specificity of `r round(srscuttab[1,1]/(srscuttab[1,1]+srscuttab[2,1] ),2)`. If, however, we compute predictive power for diagnosis of ASD, and treat above-cutoff ASD- cases as false positives, sensitivity remains high at `r round(srscuttab[2,3]/sum(srscuttab[1:2,3]),2)` but specificity declines to `r round(sum(srscuttab[1,1:2])/sum(srscuttab[1:2,1:2]),2)`.
+A cutoff total score of 75 has been reported as giving sensitivity and specificity of 0.85 and 0.75 for ASD diagnosis in a population of mixed cases of ASD and other developmental disorders {Bölte, 2011 #19563}. In the current sample, if we group together the ASD and ASD- cases, then with this cutoff, we obtain `r srscuttab[1,1]` true negatives (non-autistic < 75), `r srscuttab[2,1]` false positives (non-autistic > 74), `r srscuttab[1,2]+srscuttab[1,3]` false negatives (autistic < 75), and `r srscuttab[2,2]+srscuttab[2,3]` true positive (autistic > 74), which gives sensitivity of `r round((srscuttab[2,2]+srscuttab[2,3])/(srscuttab[1,2]+srscuttab[1,3] +srscuttab[2,2]+srscuttab[2,3]),2)` and specificity of `r round(srscuttab[1,1]/(srscuttab[1,1]+srscuttab[2,1] ),2)`. If, however, we compute predictive power for diagnosis of ASD, and treat above-cutoff ASD- cases as false positives, sensitivity remains high at `r round(srscuttab[2,3]/sum(srscuttab[1:2,3]),2)` but specificity declines to `r round(sum(srscuttab[1,1:2])/sum(srscuttab[1:2,1:2]),2)`. In general, our results are consistent with those of Bölte et al. (2011), in showing that a cutoff of 75 is effective at identifying children with autistic features, though many of those scoring in this range would not meet full DSMIV criteria, but rather correspond to cases of ASD-. 
 
 
 # Discussion
@@ -1918,6 +1963,16 @@ We offer warmest thanks to the families who took part in the study, and school s
 \newpage
 
 # References
+
+# Data availability statement
+Data and scripts relating to this project, as well as a STROBE checklist, are available on Open Science Framework at this address: https://osf.io/u2c7d/ (DOI 10.17605/OSF.IO/U2C7D). Data are available under the terms of the Creative Commons Zero "No rights reserved" data waiver (CC0 1.0 Public domain dedication).
+
+# Competing interests
+No competing interests were disclosed. 
+
+# Grant information
+This work was funded by Wellcome Trust Programme Grant 082498.
+The funders had no role in study design, data collection and analysis, decision to publish, or preparation of the manuscript. 
 
 
 \setlength{\parindent}{-0.5in}
