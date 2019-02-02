@@ -193,6 +193,12 @@ w<-which(sct.data$trisomy==1)
 sct.data$female[w]<-1 #XXX cases are female
 
 sct.data$fam_id<-NA #dummy column to ensure merges ok
+twin.data$orig_famcode<-NA #dummy column to ensure merges ok
+twin.data$rater1<-NA
+twin.data$rater2<-NA
+twin.data$asd_dsm_r2<-NA
+twin.data$cgas_r2<-NA
+twin.data$social_anx_dsm_r2<-NA
 #########################################################################################
 #----------------------------------------------------------------------------------
 ```
@@ -200,18 +206,55 @@ sct.data$fam_id<-NA #dummy column to ensure merges ok
 
 ```{r colselect, include=FALSE}
 #########################################################################################
-
+#NB this is updated Jan 26 2019 to include the variables used in DAWBA paper.
+#This is just so we can have all together in a deposited data file
 
 #Specify columns to retain that are common to both sct and twin
 #NB we are using oromotor_ss2, which is renormed against the TD twin group
 #Also use the agreed ASD diagnosis from DAWBA (this is a change from submitted version)
-keepcols <- c('record_id','fam_id','female','age_at_test','partial_testing','pass_hearing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
+keepcols <- c('record_id','fam_id','female','age_at_test','orig_famcode','partial_testing','pass_hearing','wasi_matrices_ss','wasi_block_design_ss','wasi_vocab_ss','wdck_jhsn_ss',
               'sent_rep_ss','nonword_rep_ss','oromotor_ss_2','nara_acc_ss',      'nara_comp_ss','nara_rate_ss','towre_words_ss','towre_nonwords_ss','phab_pic_ss','phab_digit_ss','srs_t_score','slt','splang_conc','schooling','piq','neurodev_diag','asd','dyslexia','lang_disorder',
-              'hyperkinetic_icd_r1','adhd_comb_dsm_r1','adhd_hyp_dsm_r1','adhd_inatt_dsm_r1',
-              'conduct_dsm_r1','asd_dsm_agree','autism_icd_r1','srs_t_score',
+              'adhd_comb_dsm_r1','adhd_hyp_dsm_r1','adhd_inatt_dsm_r1',
+              'conduct_dsm_r1','asd_dsm_agree','srs_t_score',
               'gcc','scdi','ccc_a','ccc_b','ccc_c','ccc_d','ccc_e','ccc_f',
               'ccc_g','ccc_h','ccc_i','ccc_j','ccc2_consistent','mo_educ','fa_educ','deprivation_index','fam_structure','fam_position','wordcode','sentcode','walkcode','drycode',
-              'nepsy_oromotor_seq_raw','fh_langprob','reason_coded')
+              'nepsy_oromotor_seq_raw','fh_langprob','reason_coded',
+               'srs_item10', 'srs_item14', 'srs_item16', 'srs_item18', 'srs_item24', 
+              'srs_item28', 'srs_item29', 'srs_item33', 'srs_item35', 'srs_item37',
+              'srs_item44', 'srs_item50', 'srs_item51', 'srs_item56', 'srs_item58', 'srs_item65',
+              'socaw_ss','soccomm_ss','soccog_ss','socmot_ss','autfeat_ss','asd_dsm_agree','socphob_dsm_agree','rater1','rater2','asd_dsm_r1', 'adhd_comb_dsm_r1', 'adhd_hyp_dsm_r1', 'adhd_inatt_dsm_r1', 'generalized_anx_dsm_r1',
+              'social_anx_dsm_r1', 'separation_anx_dsm_r1', 'other_anx_dsm_r1', 'phobia_dsm_r1',
+              'depression_dsm_r1', 'opp_def_dsm_r1', 'conduct_dsm_r1', 'chronic_tic_dsm_r1', 
+              'tourette_dsm_r1', 'anorexia_dsm_r1', 
+              'cgas_r1', 'cgas_r2','honosca_disruptive_r1', 
+              'honosca_adhd_symptoms_r1', 'honosca_self_injury_r1', 'honosca_sub_misuse_r1',
+              'honosca_sholastic_lang_r1', 'honosca_phys_illness_r1', 'honosca_pschotic_r1',
+              'honosca_somatic_r1', 'honosca_emotional_r1', 'honosca_peers_r1', 'honosca_selfcare_ind_r1',
+              'honosca_family_r1', 'honosca_school_att_r1',
+               'emotional', 'conduct', 'hyperactivity', 'peer', 'prosocial', 'impact',
+              'sepanx_concern', 'loss_af', 'taken_from_af', 'school_ref', 
+              'sleep_alone', 'sleep_af', 'sleep_away', 'room_alone', 'home_alone', 'sep_nightmare',
+              'somatic_sep', 'sep_antic_anx', 'sep_symptoms_1mo', 'sep_age_of_onset', 'sep_distress',
+              'sep_impact_family', 'sep_impact_friends', 'sep_impact_learning', 'sep_impact_leisure',
+              'sep_burden', 'socanx_concerns', 'new_people', 'many_people', 'soc_eating', 'soc_speaking',
+              'soc_reading', 'soc_writing', 'soc_vs_sep', 'adults_kids', 'can_socialise', 'cause_fear',
+              'cause_litprobs', 'socanx_age_onset', 'socanx_dur_mo', 'socfear_level', 'socfear_freq',
+              'avoid_soc', 'socanx_impact', 'fear_excessive', 'upset_socfear', 'socanx_burden',
+              'generous', 'lively', 'keen2learn', 'affectionate', 'reliable', 'easygoing', 'fun', 'interested',
+              'caring', 'bounces', 'grateful', 'indepdt', 'helps', 'gets_on', 'homework', 'creative', 'family',
+              'appearance', 'good_school', 'polite', 'good_sport', 'tidy', 'good_friends', 'good_behav',
+              'sas_laugh', 'sas_chat', 'sas_flexible', 'sas_defuse', 'sas_lose', 'sas_ease', 'sas_tom',
+              'sas_apolog', 'sas_leader', 'sas_socaware', 'sas_total', 'dawba_positive_complete',
+              'makefriends', 'keepfriends', 'nfriends', 'share_interest', 'joint', 'confide', 'gen_reason',
+              'mentalage', 'langlevel', 'langage', 'langcope', 'speech3yr', 'soc3yr', 'play3yr', 'ritual3yr',
+              'ment3yr', 'continued_diffs', 'words2yr', 'phrase3yr', 'toddlergesture', 'toddlergames',
+              'shareenjoy', 'repetitive', 'unusual', 'imagplay', 'adjustsplay', 'turntaking', 'obsession',
+              'topic', 'dominates', 'dominateconv', 'interferes', 'goodconv', 'goodsustain', 'chats',
+              'adjustsconv', 'nonvbl_blank', 'can_read_nv', 'abnormal_eye', 'echoing', 'repquest', 
+              'repcliche', 'strongroutine', 'changeroutine', 'flapping', 'parconcern', 'distress',
+              'impactfam', 'impactfriend', 'impactlearn', 'impactleisur', 'asd_burden',
+              'suddenonset', 'ageonset','asd_dsm_r2','social_anx_dsm_r2',
+              'sepaband',  'spphband', 'sophband',  'panband', 'agoband',  'ptsdband', 'ocdband',  'genaband', 'depband',  'adhdbandd', 'adhdtype',  'oddband', 'cdband',  'eatband',  'ticbandd',  'asdband')
 
 #NB asd_dsm_agree does not always agree with parental report. 
 #For DAWBA only definite diagnosis (1) on DSM is used (4 is PDDNOS)
@@ -262,6 +305,18 @@ sct.short$splang_conc<-NA
 
 sct.short$include_cat<-1 #initialise
 twin.short$include_cat<-1 #1 for included cases
+
+#Referral source
+nhscases<-c(70, 212, 213, 214, 215, 218, 221, 222, 223, 225, 229, 231,
+            233, 234, 237, 239, 240, 241, 247, 251, 252, 254, 255, 257,
+            258, 264, 265, 268, 270, 273, 274, 276, 283, 285, 297, 304,
+            306, 307, 310, 318, 319, 321, 322, 323, 327, 328, 329, 331,
+            334, 335, 336, 337, 340, 342, 346, 348, 351, 352, 355, 357,
+            358, 360, 362, 365, 367, 368, 369, 370)
+w<-which(sct.short$record_id %in% nhscases)
+twin.short$nhs<-NA
+sct.short$nhs<-0
+sct.short$nhs[w]<-1
 
 #----------------------------------------------------------------------------------
 #Bolt SCT and twin files together
@@ -319,9 +374,14 @@ shortopen$deprivation_index[w]<-depmax/2
 #Assign avg score to those outside england where no dep index
 shortopen$neighborz<-round(qnorm(shortopen$deprivation_index/depmax),1)
 shortopen$deprivation_index<-NA
-shortopen <- shortopen[,-(52:58)]
+dropcolumns<-c(51:57,117:181,193:247)
+shortopen <- shortopen[,-dropcolumns] #remove info about family structure
+ #and also overly detailed DAWBA information
+nuorder<-c(1, 2, 3, 4, 5, 139, 140, 141, 142, 143, 144, 145, 146, 147, 49, 50, 52, 53, 23, 24, 25, 27, 28, 29, 30, 26, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 51, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 22, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 76, 77, 35, 75, 78, 121, 80, 122, 79, 31, 32, 33, 34, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138)
+shortopen<-shortopen[,nuorder]
 write_csv(shortopen,'bishop_sct_twin_opendata_2019.csv')
 ```
+
 
 ```{r missingcheck, include=FALSE}
 ##Step 2
@@ -1135,10 +1195,13 @@ for (i in 1:length(varlist)){
   abline(a=mylims[4],b=0,col='darkgray',lty=2)
   abline(a=mylims[5],b=0,col='darkgray',lty=2)
   
-  #Now add polygon defining shaded areas for TD twin mean range
+  mean_TD<-100
+  sd_TD<-15
+  if(length(meanfile)>1){
+   #Now add polygon defining shaded areas for TD twin mean range
   mean_TD<-mean(meanfile[,testrange[i]],na.rm=T)
   sd_TD<-sd(meanfile[,testrange[i]],na.rm=T)
-  
+  }
   up.lim<-mean_TD+sd_TD
   low.lim<-mean_TD-sd_TD
   
@@ -1246,6 +1309,28 @@ addtext<-1
 mydata<-bee.file2
 
 levels(mydata$Group)<-c('XXX','XXY','XYY','XXX*','XXY*','XYY*')
+make.beeswarm(mydata,groupcol,pchcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
+                          groupcolor,mylims,dodiffmean,addtext)
+```
+```{r newsplot}
+#Added Feb 2nd 2019 - make a plot for newsletter with less complexity
+varlist<-c('verbmem')
+namelist<-c('Verbal Memory')
+meanfile<-twin.TD
+pngname<-'beeswarm_fornewsletter'
+pngdim<-c(1,1)
+w<-which(bee.file2$group8level<4)
+mydata<-bee.file2[w,]
+groupcolor<-c(2,3,4) #specify colours for each group 
+dodiffmean<-0
+addtext<-0
+meanfile<-NA
+pngwidth<-2000
+pngheight<-1500
+mydata$pch[mydata$pch %in% c(1,12,13)] <- 16 #default is filled circle; remove age coding
+groupcol<-which(colnames(mydata)=='trisomy')
+mydata$trisomy<-as.factor(mydata$trisomy)
+levels(mydata$trisomy)<-c('XXX','XXY','XYY')
 make.beeswarm(mydata,groupcol,pchcol,varlist,namelist,meanfile,pngname,pngdim,pngwidth,pngheight,
                           groupcolor,mylims,dodiffmean,addtext)
 
