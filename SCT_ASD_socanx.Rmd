@@ -1,6 +1,6 @@
 ---
-title             : "Autism spectrum disorder and social anxiety in children with sex chromosome trisomies"
-shorttitle        : "ASD and social anxiety in trisomies"
+title             : "Autism and social anxiety in children with sex chromosome trisomies"
+shorttitle        : "Autism and social anxiety in trisomies"
 author: 
   - name          : "Alexander Wilson"
     affiliation   : "1"
@@ -89,6 +89,11 @@ options(scipen=999)
 
 ```{r readredcap, include=FALSE}
 #########################################################################################
+## This still has original terminology
+## Terminology has been updated in the published paper and in the Rmd for OSF
+## ASD -> autism; ASD- -> PDDNOS (also some changes in reference to Meltzer)
+
+
 ## Step 1 - this is identical to script for language phenotype paper
 #Read in latest SCT from redcap.
 #Do the same for the twins. 
