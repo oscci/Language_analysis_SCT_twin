@@ -1,4 +1,47 @@
 
+---
+title: "Autism and social anxiety in children with sex chromosome trisomies"
+author:
+- address: Department of Experimental Psychology, Anna Watts Building, Woodstock Road,
+    Oxford, UK, OX2 6GG
+  affiliation: '1'
+  corresponding: no
+  email: dorothy.bishop@psy.ox.ac.uk
+  name: Alexander Wilson
+- affiliation: '1'
+  name: Judith King
+- affiliation: '1'
+  name: Dorothy V. M. Bishop
+always_allow_html: yes
+output:
+  html_document:
+    df_print: paged
+  papaja::apa6_word: default
+  pdf_document: default
+bibliography: /Users/dorothybishop/endnotehome/!bishoprefs2019.enl
+class: man
+figsintext: no
+figurelist: no
+footnotelist: no
+keywords: Autism, social anxiety, sex chromosome trisomy, trisomy X, Klinefelter syndrome,
+  XYY syndrome, DAWBA, SRS, SDQ
+lang: english
+lineno: yes
+author_note: null
+shorttitle: ASD and social anxiety in trisomies
+tablelist: no
+affiliation:
+- id: '1'
+  institution: University of Oxford
+wordcount: X
+---
+```{r set-options, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE, cache = FALSE, error = TRUE)
+thistab<-0 #counter for tables
+thisfig<-0 #counter for figures
+```
+
 ```{r load_packages, include = FALSE}
 #Not all libraries are used - some are here for historical reasons
 #devtools::install_github("crsh/papaja")
@@ -313,8 +356,8 @@ rownames(origstudy)<-c('Low Bias','High Bias')
 
 
 ```{r socanx, include=TRUE}
-#Start with DAWBA diagnoses: focus on ASD and social anxiety; use consensus diagnoses
-#ASD is coded 2 for ASD and 1 for partial symptoms (eg SCD)
+#Start with DAWBA diagnoses: focus on Autism and social anxiety; use consensus diagnoses
+#ASD is coded 2 for Autism and 1 for partial symptoms (PDDNOS)
 #SocPhobia is coded 2 for definite and 1 for unsure.
 #Unsure for soc phobia is rare, and so recoded here to 0
 w<-which(my.dawba$socphob_dsm_agree==1)
@@ -324,7 +367,7 @@ my.dawba$asd_dsm_agree[w]<-1
 my.dawba$bicode<- 10*my.dawba$asd_dsm_agree+my.dawba$socphob_dsm_agree
 my.dawba$bicode2<-as.factor(my.dawba$bicode)
 
-levels(my.dawba$bicode2)  <- c('Neither','Social Phobia','ASD-','ASD- +Social Phobia','ASD','ASD+Social Phobia')                                                      
+levels(my.dawba$bicode2)  <- c('Neither','Social Phobia','PDDNOS','PDDNOS+Social Phobia','Autism','Autism+Social Phobia')                                                      
 mytab<-table(my.dawba$bicode2,my.dawba$group8) 
 mytab<-mytab[,1:6] #omit twins
 myprop<-prop.table(mytab,2) #proportions by column (2nd parameter denotes row =1 or col=2)
@@ -342,7 +385,7 @@ for (thisrow in 1:6){
                                                   round(100*myprop[thisrow,(thiscol-1)],1),'%)')
   }
 }
-nicetab[3:8,1]<-c('Neither','ASD-','ASD','Social Phobia only','Social Phobia+ASD-','Social Phobia+ASD')
+nicetab[3:8,1]<-c('Neither','PDDNOS','Autism','Social Phobia only','Social Phobia+PDDNOS','Social Phobia+Autism')
 #rate of Social Phobia
 forchi<-matrix(c(22,21,31,0,7,1),nrow=2,byrow=TRUE)
 chisq.test(forchi)
@@ -519,7 +562,7 @@ pngdim<-c(3,2)
 pngwidth<-3000
 pngheight<-3000
 
-#We want this order "None","Social Phobia","ASD","ASD-","Social Phobia+ASD","Social Phobia+ASD-")
+#We want this order "None","Social Phobia","Autism","PDDNOS","Social Phobia+Autism","Social Phobia+PDDNOS")
 diaglist<-c(0,2,20,10,22,12)
 
 my.dawba$bicode3<-my.dawba$bicode #initialise
@@ -544,7 +587,7 @@ make.beeswarm(mydata,groupcol,subgroupcol,colvalues,
 
 
 ```
-![_Beeswarm plots: SRS scales and total T-score for the three trisomy groups, subdivided by bias group. Symbol depicts age band (circle 5-10 yr, triangle 11-16 yr. Colour depicts diagnosis: grey = none; light blue = Social Phobia; dark blue = Social Phobia+ASD-; pink = ASD-; red = ASD; purple = Social Phobia+ASD)_](beeswarm_SRS_T_2018.png)
+![_Beeswarm plots: SRS scales and total T-score for the three trisomy groups, subdivided by bias group. Symbol depicts age band (circle 5-10 yr, triangle 11-16 yr. Colour depicts diagnosis: grey = none; light blue = Social Phobia; dark blue = Social Phobia+PDDNOS; pink = PDDNOS; red = Autism; purple = Social Phobia+Autism)_](beeswarm_SRS_T_2018.png)
 
 ```{r permutekruskalfunction,include=FALSE}
 do.permute <- function(mydata,mycolrange,gpcolumn,gpvalues,n.iter,mylabs,
@@ -660,7 +703,7 @@ my.dawba$srscut75[w1]<-1
 
 my.dawbashort<-filter(my.dawba,group8level<7)
 srscuttab<-table(my.dawbashort$srscut75,my.dawbashort$asd_dsm_agree)
-colnames(srscuttab)<-c('None','ASD-','ASD')
+colnames(srscuttab)<-c('None','PDDNOS','Autism')
 rownames(srscuttab)<-c('Below75','75+')
 srscuttab
 ```
